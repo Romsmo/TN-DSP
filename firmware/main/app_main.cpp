@@ -20,19 +20,17 @@ void heap_report(const char* when) {
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
 }
 
-void i2c_scan() {
+void i2c_check() {
     i2c_master_bus_handle_t bus = hal::esp::i2c_bus();
-    ESP_LOGI(TAG, "I2C scan (SDA=%d SCL=%d):", BSP_I2C_PIN_SDA, BSP_I2C_PIN_SCL);
-    for (uint8_t a = 1; a < 0x7F; ++a) {
-        if (i2c_master_probe(bus, a, 50) == ESP_OK) {
-            const char* who = a == BSP_TOUCH_I2C_ADDR      ? " touch"
-                              : a == BSP_IOEXP_I2C_ADDR     ? " TCA9554"
-                              : a == BSP_RTC_I2C_ADDR        ? " PCF85063"
-                              : (a == 0x6A || a == 0x6B)     ? " QMI8658?"
-                              : a == BSP_AUDIO_ES8311_I2C_ADDR ? " ES8311?"
-                                                              : "";
-            ESP_LOGI(TAG, "  0x%02X%s", a, who);
-        }
+    struct { uint8_t addr; const char* name; } known[] = {
+        {BSP_TOUCH_I2C_ADDR, "touch FT6x36"}, {BSP_IOEXP_I2C_ADDR, "TCA9554"},
+        {BSP_RTC_I2C_ADDR, "PCF85063"}, {0x6B, "QMI8658"},
+        {BSP_AUDIO_ES8311_I2C_ADDR, "ES8311"},
+    };
+    for (auto& d : known) {
+        esp_err_t r = ESP_FAIL;
+        for (int i = 0; i < 3 && r != ESP_OK; ++i) r = i2c_master_probe(bus, d.addr, 100);
+        ESP_LOGI(TAG, "  0x%02X %-14s %s", d.addr, d.name, r == ESP_OK ? "OK" : "--");
     }
 }
 
@@ -50,7 +48,7 @@ extern "C" void app_main(void) {
                 BSP_PROTOCOL_VERSION);
     hal::esp::nvs_instance();
     heap_report("boot");
-    i2c_scan();
+    i2c_check();
 
     hal::esp::DisplayInit di = hal::esp::display_bringup();
     ESP_LOGI(TAG, "panel controller id 0x%02X", di.controller_id);
@@ -89,6 +87,8 @@ extern "C" void app_main(void) {
     hal::esp::lvgl_unlock();
 
     hal::Buttons* btn = hal::esp::buttons_instance();
+    uint32_t ticks = 0;
+    uint64_t last_beat = 0;
     while (true) {
         if (btn->poll_boot() == hal::ButtonEvent::LongPress) {
             runner.sm().toggle_demo();
@@ -100,6 +100,15 @@ extern "C" void app_main(void) {
             mgr->set_view(vm);
             hal::esp::lvgl_unlock();
         });
+        ++ticks;
+        const uint64_t now = clk->now_ms();
+        if (now - last_beat >= 3000) {
+            last_beat = now;
+            const core::ViewModel vm = runner.sm().view();
+            ESP_LOGI(TAG, "beat: %lu ticks, screen=%d overlay=%d, heap %u B",
+                     (unsigned long)ticks, (int)vm.screen, (int)vm.overlay,
+                     (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+        }
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
@@ -111,7 +120,7 @@ extern "C" void app_main(void) {
                 BSP_PROTOCOL_VERSION);
     hal::esp::nvs_instance();
     heap_report("boot");
-    i2c_scan();
+    i2c_check();
 
     hal::Clock* clk = hal::esp::clock_instance();
     hal::Buttons* btn = hal::esp::buttons_instance();

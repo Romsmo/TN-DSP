@@ -2,12 +2,17 @@
 
 The firmware is brought up in phases so each step is flashable and observable.
 
-| Phase | `CONFIG_BDSP_ENABLE_DISPLAY` | What runs | Deps |
-|---|---|---|---|
-| **A** | off | board smoke: NVS init, I2C bus scan (finds touch / TCA9554 / RTC / …), heap report, BOOT button click + long-press | `driver`, `esp_driver_i2c`, `nvs_flash` |
-| **B** | on | + SH8601 QSPI display, LVGL, touch, the real UI driven by `MockTransport` (demo timeline) | + `esp_lcd_sh8601`, `lvgl` |
-| **C** | on | + SD card (FATFS), RTC time, real BOOT-long-press → demo toggle | + `fatfs`, `sdmmc` |
-| **D** | on | + NimBLE peripheral (real `BleTransport`), ES8311 audio | + `bt`, `esp_codec_dev` |
+| Phase | `CONFIG_BDSP_ENABLE_DISPLAY` | What runs | Deps | State |
+|---|---|---|---|---|
+| **A** | off | board smoke: NVS init, targeted I2C probe (touch / TCA9554 / RTC / IMU / codec), heap report, BOOT button click + long-press | `driver`, `esp_driver_i2c`, `nvs_flash` | ✅ runs |
+| **B** | on | + CO5300 QSPI display (`esp_lcd_sh8601` driver), LVGL, polled touch, the real UI driven by `MockTransport` (looping demo timeline) | + `esp_lcd_sh8601`, `lvgl` | ✅ runs on hardware |
+| **C** | on | + SD card (FATFS), RTC time, real BOOT-long-press → demo toggle | + `fatfs`, `sdmmc` | next |
+| **D** | on | + NimBLE peripheral (real `BleTransport`), ES8311 audio | + `bt`, `esp_codec_dev` | next |
+
+Phase-B notes (2026-08-29): `lv_init()` must run before `lv_display_create()` (the driver does
+it). LVGL heap is 160 KB (`CONFIG_LV_MEM_SIZE_KILOBYTES`) — the full screen/overlay tree does not
+fit in the 64 KB default. The panel is a **CO5300** (`0xDA` → `0xFF`), not an SH8601, but the
+`esp_lcd_sh8601` init table brings it up fine.
 
 ## Environment
 

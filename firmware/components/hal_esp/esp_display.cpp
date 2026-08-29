@@ -81,6 +81,7 @@ public:
 }  // namespace
 
 lv_display_t* display_init(hal::DisplayDriver** out_driver) {
+    if (!lv_is_initialized()) lv_init();
     g_flush_done = xSemaphoreCreateBinary();
 
     spi_bus_config_t bus = {};

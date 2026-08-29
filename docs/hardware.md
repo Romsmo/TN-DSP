@@ -34,7 +34,7 @@
 |---|---|---|
 | Panel | AMOLED, round, 466 × 466, 16.7 M colours | S1 |
 | Interface | QSPI | S1 |
-| Controller IC | **CO5300** per S1; Waveshare IDF example drives it with `esp_lcd_sh8601` | S1, S4 |
+| Controller IC | **CO5300** — confirmed on hardware: ID reg `0xDA` reads `0xFF`. Driven by `esp_lcd_sh8601` v2.0.1 without issue (`disp_on_off` succeeds). | S1, S4, on-target |
 | Init sequence | 7 vendor commands in S4 (`0x44 0x01 0xD1`, `0x35 0x00`, `0x53 0x20`, …) | S4 |
 | Clock | 40 MHz, quad mode, `SPI_DMA_CH_AUTO`, max transfer `H*V*16/8` | S4 |
 | LVGL buffers | 2 × `466 × 50 × 2` bytes, `MALLOC_CAP_DMA`, partial render mode | S4 |
@@ -69,20 +69,28 @@
 | Buttons | BOOT + PWR | S1 |
 | Battery | 3.7 V Li-ion, MX1.25, on-board charge/discharge; ADC voltage sense | S1 |
 
+## Confirmed on hardware (phase-B bring-up, 2026-08-29)
+
+- Display controller = **CO5300** (`0xDA` → `0xFF`).
+- I²C bus at SDA=18 / SCL=8 works; every expected device ACKs its address:
+  touch `0x38`, TCA9554 `0x20`, PCF85063 `0x51`, **QMI8658 `0x6B`** (SA0 = 1), ES8311 `0x18`.
+- BOOT button on **`GPIO9`** (input, pull-up) — click / long-press read fine.
+- RAM after LVGL + display + full UI: ~172 KB internal free, largest block ~144 KB. Fits with margin.
+- Touch reports coordinates when the panel is touched; the FT6x36 occasionally NACKs a poll while
+  the panel DMA is busy (mitigated with a 100 kHz bus + one retry + silenced `i2c.master` log).
+
 ## `TODO(verify)` — needs the C6 schematic PDF (`docs/vendor/`)
 
 - Battery-sense ADC GPIO + divider ratio; charge-status signal; charge IC part.
-- I²S pin map (BCLK / WS / DOUT / DIN / MCLK); ES8311 I²C address; whether ES7210 (mic) is used.
+- I²S pin map (BCLK / WS / DOUT / DIN / MCLK); whether ES7210 (mic) is used. (ES8311 addr `0x18` confirmed.)
 - **Whether SD truly shares `SPI2_HOST` with the display, or has its own pins/host.** S3 sets
   `SDSPI_HOST == LCD_HOST == SPI2_HOST`. If shared, display DMA and SD access must be mutually
   excluded → affects audio streaming off the render path.
 - SD card pins (CLK / CMD / D0 / CS).
 - TE (tearing-effect) line — init enables TE output (`0x35 0x00`); is a GPIO wired to the ESP?
-- BOOT button GPIO (likely `GPIO9` on C6) and PWR button behaviour.
+- PWR button behaviour.
 - Full TCA9554 pin assignment (what P0–P6 control: resets? SD power? backlight?).
-- QMI8658 I²C address (`0x6A` / `0x6B`), PCF85063 I²C address (`0x51`).
-- Confirm display controller silicon: read ID register `0xDA` at bring-up
-  (SH8601 → `0x86`, CO5300 → `0xFF`) and log it; keep both init tables.
+- Touch axis orientation vs. the panel (needs an interactive calibration check).
 
 ## Reference components (pinned in `firmware/idf_component.yml`)
 

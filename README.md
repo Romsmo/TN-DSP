@@ -15,9 +15,10 @@ state it receives and emits raw interaction events.
 - **Target board:** Waveshare **ESP32-C6-Touch-AMOLED-1.43** (466×466 round AMOLED, no PSRAM). See
   [`docs/hardware.md`](docs/hardware.md).
 - **Stack:** ESP-IDF ≥ 5.3, LVGL 9, C++17, NimBLE, hand-rolled CBOR.
-- **Status:** M0–M7 complete (host-testable core + UI + simulator + protocol). On-target bring-up
-  (display / touch / BLE flashing) pending an ESP-IDF environment — the firmware layer is written
-  but not yet compiled against IDF.
+- **Status:** M0–M8 complete (host-testable core + UI + simulator + protocol). Firmware **phase B**
+  runs on hardware: CO5300 QSPI panel + LVGL + polled touch + the full UI driven by the mock demo
+  timeline. Phase C (SD, RTC) and phase D (NimBLE, audio) are next — see
+  [`docs/firmware-bringup.md`](docs/firmware-bringup.md).
 
 > The companion **Flutter app is not in this repo**. This repo defines the BLE protocol
 > ([`docs/ble-protocol.md`](docs/ble-protocol.md)), a Python stand-in ([`tools/fake_app.py`](tools/fake_app.py)),

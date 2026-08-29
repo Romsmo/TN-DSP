@@ -43,6 +43,7 @@ private:
     bool                  running_ = false;
     uint64_t              start_ms_ = 0;
     size_t                next_ = 0;
+    uint32_t              seq_ = 0;
     uint64_t              last_delivered_ms_ = 0;
     transport::LinkStatus link_ = transport::LinkStatus::Disconnected;
 

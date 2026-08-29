@@ -19,6 +19,7 @@ void MockTransport::start() {
     start_ms_ = clock_.now_ms();
     last_delivered_ms_ = start_ms_;
     next_ = 0;
+    seq_ = 0;
 }
 
 void MockTransport::stop() {
@@ -39,6 +40,9 @@ bool MockTransport::poll(DisplayState& out) {
         delivered = true;
     }
     if (delivered) {
+        // Own the sequence number so a looping script keeps advancing instead of
+        // replaying stale seqs the state machine would reject.
+        out.stateSeq = ++seq_;
         last_delivered_ms_ = now;
         return true;
     }
