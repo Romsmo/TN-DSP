@@ -31,6 +31,9 @@ public:
     // Return to the plain button view (called when Settings is left).
     void reset();
 
+    // sim / preview: 0 = buttons, 1 = reset confirm, 2 = update info.
+    void preview_panel(int which);
+
     lv_obj_t* root() { return root_; }
 
 private:

@@ -165,6 +165,15 @@ void dump_all() {
             sim::save_screenshot("connect-qr");
             g_mgr->show_connect_qr(false);
         }
+        if (sim::scenario_at(i).nav == sim::Nav::Settings) {
+            g_mgr->show_settings_panel(1);
+            settle(20);
+            sim::save_screenshot("settings-reset");
+            g_mgr->show_settings_panel(2);
+            settle(20);
+            sim::save_screenshot("settings-updates");
+            g_mgr->show_settings_panel(0);
+        }
     }
     if (g_current) load_static(*g_current);
 }

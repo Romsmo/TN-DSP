@@ -55,6 +55,7 @@ public:
     void set_link_status(const char* text);
     void set_connect_qr(const char* payload);   // store link for the pairing QR
     void show_connect_qr(bool on);              // sim/preview: reveal the QR view
+    void show_settings_panel(int which);        // sim/preview: 0 buttons / 1 reset / 2 updates
 
     Tile    current() const { return current_; }
     Overlay overlay() const { return overlay_; }

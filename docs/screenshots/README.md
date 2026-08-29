@@ -12,6 +12,8 @@ artifact on every run.
 | `melden.png` | report screen | Rotary crown: categories ride the rim, green lens at 12 o'clock marks the pick, centre hub shows it large ("Melden:" + title) and is tapped to send. |
 | `confirm.png` | `confirmPromptActive` | ~96 % scrim over Home, "Gesehen?", Ja/Nein split, countdown ring inside the bezel. |
 | `settings.png` | settings tile | 2×2 round buttons — Ton, Einheiten, Zurücksetzen (factory reset), Updates (no "Tag/Nacht", no "Handy verbinden"), version/proto/link footer. |
+| `settings-reset.png` | reset confirm | Modal "Werkseinstellung?" — Abbrechen (accent, default) over Zurücksetzen (plain). |
+| `settings-updates.png` | update info | Modal note: firmware updates arrive over Bluetooth via the app. Tap / chevron to close. |
 | `connect.png` | unbonded | "Verbinde dein Mobilgerät" + button; shown until first bond. |
 | `connect-qr.png` | unbonded, button tapped | Store QR + 3-step guide (Bluetooth an · verbinden · App öffnen). |
 

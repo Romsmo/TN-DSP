@@ -181,6 +181,10 @@ void SettingsScreen::show_panel(lv_obj_t* panel, bool on) {
 
 void SettingsScreen::reset() { show_panel(nullptr, false); }
 
+void SettingsScreen::preview_panel(int which) {
+    show_panel(which == 1 ? reset_panel_ : which == 2 ? updates_panel_ : nullptr, which != 0);
+}
+
 void SettingsScreen::set_sound(bool on) {
     sound_on_ = on;
     sound_btn_->set_icon(assets::icon(on ? assets::Icon::Volume2 : assets::Icon::VolumeX), 26);
