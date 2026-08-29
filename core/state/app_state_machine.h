@@ -48,6 +48,12 @@ public:
     const DisplayState& effective_state() const { return effective_; }
     bool                demo() const { return demo_; }
 
+    // The local Settings. `settings_dirty()` is set when the user changed one
+    // here (so the runner can persist + push it) and cleared by the runner.
+    const Settings& settings() const { return settings_; }
+    bool settings_dirty() const { return settings_dirty_; }
+    void clear_settings_dirty() { settings_dirty_ = false; }
+
     static constexpr uint32_t kMeldenTimeoutMs = 15000;
     static constexpr uint32_t kHeartbeatMs     = 10000;
 
@@ -59,6 +65,7 @@ private:
     OfflineCache           cache_;
 
     DisplayState effective_{};
+    bool         settings_dirty_ = false;
     bool         have_live_ = false;
     bool         bonded_ = false;
     bool         demo_ = false;

@@ -68,3 +68,39 @@ TEST_CASE("AppRunner drives the audio service") {
     }
     CHECK(drv.written.size() > 0);   // demo cues played
 }
+
+TEST_CASE("AppRunner: Settings sync both ways + persistence") {
+    fakes::Clock clk;
+    fakes::Nvs nvs;
+    transport::mock::MockTransport mock(clk);
+    mock.start();
+
+    SettingsStore store(nvs);
+    AppRunner runner(mock, clk);
+    runner.set_settings_store(&store);
+    runner.set_settings(store.load());
+
+    auto noop = [](const DisplayState&, const ViewModel&) {};
+
+    // Local change -> pushed to the transport + persisted.
+    runner.sm().set_units(true);
+    runner.step(noop);
+    CHECK(mock.settings_pushes() == 1);
+    CHECK(mock.pushed_settings().useMph);
+    CHECK(store.load().useMph);
+    CHECK_FALSE(runner.sm().settings_dirty());
+
+    // No spurious re-push on the next tick.
+    runner.step(noop);
+    CHECK(mock.settings_pushes() == 1);
+
+    // Remote write -> adopted + persisted, not echoed back.
+    Settings remote;
+    remote.useMph = true;
+    remote.soundEnabled = true;
+    mock.inject_settings(remote);
+    runner.step(noop);
+    CHECK(runner.sm().settings().soundEnabled);
+    CHECK(store.load().soundEnabled);
+    CHECK(mock.settings_pushes() == 1);   // adopting a remote change doesn't re-push
+}

@@ -66,11 +66,13 @@ void AppStateMachine::request_connect() {
 
 void AppStateMachine::set_sound(bool on) {
     settings_.soundEnabled = on;
+    settings_dirty_ = true;
     sink_.emit(DeviceEvent{SettingsSoundToggle{on}});
 }
 
 void AppStateMachine::set_units(bool use_mph) {
     settings_.useMph = use_mph;
+    settings_dirty_ = true;
     sink_.emit(DeviceEvent{SettingsUnitChanged{use_mph}});
 }
 

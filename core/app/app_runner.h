@@ -1,6 +1,6 @@
 // core/app/app_runner.h — the shared main-loop body: poll the transport, feed the
-// state machine, pump audio, hand the view to a renderer. Used by both the
-// firmware composition root and the simulator.
+// state machine, pump audio, sync + persist settings, hand the view to a
+// renderer. Used by both the firmware composition root and the simulator.
 #pragma once
 
 #include <cstdint>
@@ -9,6 +9,7 @@
 #include "core/audio/audio_service.h"
 #include "core/model/display_state.h"
 #include "core/model/settings.h"
+#include "core/settings/settings_store.h"
 #include "core/state/app_state_machine.h"
 #include "core/state/view_model.h"
 #include "hal/clock.h"
@@ -27,6 +28,8 @@ public:
         sm_.set_settings(s);
         if (audio_) audio_->apply_settings(s);
     }
+    // When set, remote Settings writes and local Settings changes are persisted.
+    void set_settings_store(SettingsStore* s) { store_ = s; }
 
     using Renderer = std::function<void(const DisplayState&, const ViewModel&)>;
 
@@ -34,6 +37,19 @@ public:
     void step(const Renderer& render) {
         DisplayState ds;
         if (transport_.poll(ds)) sm_.on_state(ds);
+
+        // Settings written by the app -> adopt + persist locally.
+        Settings incoming;
+        if (transport_.poll_settings(incoming)) {
+            set_settings(incoming);
+            if (store_) store_->save(incoming);
+        }
+        // Settings changed here -> push to the app + persist.
+        if (sm_.settings_dirty()) {
+            sm_.clear_settings_dirty();
+            transport_.push_settings(sm_.settings());
+            if (store_) store_->save(sm_.settings());
+        }
 
         // A connected link that has gone quiet counts as "the app went away":
         // fall back to the cache + the no-app badge until packets resume.
@@ -60,6 +76,7 @@ private:
     hal::Clock&            clock_;
     AppStateMachine        sm_;
     audio::AudioService*   audio_ = nullptr;
+    SettingsStore*         store_ = nullptr;
     uint32_t               epoch_base_ = 1'700'000'000;
 };
 

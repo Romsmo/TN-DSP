@@ -27,14 +27,27 @@ public:
     transport::LinkStatus link() const override { return link_; }
     bool poll(core::DisplayState& out) override;
     void emit(const core::DeviceEvent& e) override { events_.push_back(e); }
-    void push_settings(const core::Settings& s) override { last_settings_ = s; }
-    bool poll_settings(core::Settings&) override { return false; }
+    void push_settings(const core::Settings& s) override {
+        last_settings_ = s;
+        ++settings_pushes_;
+    }
+    bool poll_settings(core::Settings& out) override {
+        if (!incoming_settings_new_) return false;
+        incoming_settings_new_ = false;
+        out = incoming_settings_;
+        return true;
+    }
     bool state_stale() const override;
 
     // test / sim introspection
     const std::vector<core::DeviceEvent>& events() const { return events_; }
     void clear_events() { events_.clear(); }
     const core::Settings& pushed_settings() const { return last_settings_; }
+    int  settings_pushes() const { return settings_pushes_; }
+    void inject_settings(const core::Settings& s) {   // simulate an app-side write
+        incoming_settings_ = s;
+        incoming_settings_new_ = true;
+    }
 
 private:
     hal::Clock&           clock_;
@@ -49,6 +62,9 @@ private:
 
     std::vector<core::DeviceEvent> events_;
     core::Settings                 last_settings_{};
+    int                            settings_pushes_ = 0;
+    core::Settings                 incoming_settings_{};
+    bool                           incoming_settings_new_ = false;
 };
 
 // A ready-made demo timeline: home -> hazard approach with countdown -> confirm

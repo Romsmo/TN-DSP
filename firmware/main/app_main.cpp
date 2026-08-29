@@ -14,6 +14,17 @@
 namespace {
 const char* TAG = "app";
 
+// UTC epoch seconds for a Gregorian date (newlib has no timegm). Hinnant's algo.
+int64_t utc_epoch(int y, unsigned m, unsigned d, unsigned hh, unsigned mm, unsigned ss) {
+    y -= m <= 2;
+    const int64_t era = (y >= 0 ? y : y - 399) / 400;
+    const unsigned yoe = static_cast<unsigned>(y - era * 400);
+    const unsigned doy = (153u * (m + (m > 2 ? -3u : 9u)) + 2u) / 5u + d - 1u;
+    const unsigned doe = yoe * 365u + yoe / 4u - yoe / 100u + doy;
+    const int64_t days = era * 146097 + static_cast<int64_t>(doe) - 719468;
+    return days * 86400 + hh * 3600 + mm * 60 + ss;
+}
+
 void heap_report(const char* when) {
     ESP_LOGI(TAG, "heap @%s: internal %u B free, largest block %u B", when,
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
@@ -79,6 +90,8 @@ extern "C" void app_main(void) {
 #endif
         ble.set_caps(caps);
     }
+    static transport::mux::MuxTransport mux(ble, mock);
+    static core::AppRunner runner(mux, *clk);
     ble.on_time_set([](uint32_t epochS, int16_t tzOffsetMin) {
         std::time_t t = static_cast<std::time_t>(epochS) + tzOffsetMin * 60;
         std::tm tm{};
@@ -91,16 +104,38 @@ extern "C" void app_main(void) {
         rt.minute = static_cast<uint8_t>(tm.tm_min);
         rt.second = static_cast<uint8_t>(tm.tm_sec);
         hal::esp::rtc_instance()->set(rt);
+        runner.set_epoch_base(epochS - static_cast<uint32_t>(clk->now_ms() / 1000));
         ESP_LOGI(TAG, "RTC set from BLE: %04u-%02u-%02u %02u:%02u", rt.year, rt.month, rt.day,
                  rt.hour, rt.minute);
     });
-    static transport::mux::MuxTransport mux(ble, mock);
-    static core::AppRunner runner(mux, *clk);
     mux.start();
 #else
     mock.start();
     static core::AppRunner runner(mock, *clk);
 #endif
+
+    static core::SettingsStore settings_store(*hal::esp::nvs_instance(), BSP_NVS_NS_SETTINGS);
+    runner.set_settings(settings_store.load());
+    runner.set_settings_store(&settings_store);
+
+    // Seed wall-clock from the battery-backed RTC (until the app sends Time).
+    {
+        hal::RtcDriver* rtc = hal::esp::rtc_instance();
+        hal::RtcTime rt;
+        if (rtc->get(rt) && rtc->valid()) {
+            const int64_t epoch =
+                utc_epoch(rt.year, rt.month, rt.day, rt.hour, rt.minute, rt.second);
+            if (epoch > 0) {
+                runner.set_epoch_base(static_cast<uint32_t>(epoch) -
+                                      static_cast<uint32_t>(clk->now_ms() / 1000));
+            }
+            ESP_LOGI(TAG, "RTC valid: %04u-%02u-%02u %02u:%02u:%02u", rt.year, rt.month, rt.day,
+                     rt.hour, rt.minute, rt.second);
+        } else {
+            ESP_LOGI(TAG, "RTC not set (lost power)");
+        }
+    }
+
     static ui::ScreenManager* mgr = nullptr;
 
     hal::esp::lvgl_lock();
