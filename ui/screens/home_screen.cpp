@@ -12,7 +12,7 @@
 namespace ui {
 
 namespace {
-constexpr int kSideSign = 48;   // left/right context signs, same size both sides
+constexpr int kSideSign = 54;   // left/right context signs, same size both sides
 }
 
 HomeScreen::HomeScreen(lv_obj_t* parent) {
@@ -91,8 +91,8 @@ void HomeScreen::set_state(const core::DisplayState& s) {
     place_center(chevrons_->root(), 233, shown ? 168 : 240);
     // Columns flank the sign, vertically centred on it and pulled well inside the
     // round bezel.
-    place_center(left_->root(), 100, 306);
-    place_center(right_->root(), 366, 306);
+    place_center(left_->root(), 97, 306);
+    place_center(right_->root(), 369, 306);
 }
 
 }  // namespace ui

@@ -140,8 +140,13 @@ void ScreenManager::set_view(const core::ViewModel& vm) {
     } else if (vm.overlay != core::OverlayKind::Confirm && confirm_->active()) {
         confirm_->set_active(false);
     }
-    if (vm.navLocked) lv_obj_remove_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
-    else lv_obj_add_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
+    // Lock the tileview under the confirm prompt, and on Melden (the rotary
+    // crown owns all drags there — leave via its back chevron or the timeout).
+    if (vm.navLocked || vm.screen == core::Screen::Melden) {
+        lv_obj_remove_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
+    } else {
+        lv_obj_add_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
+    }
 
     overlay_ = want_connect                            ? Overlay::Connect
                : want_settings                         ? Overlay::None
