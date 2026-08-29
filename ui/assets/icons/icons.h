@@ -5,21 +5,28 @@
 namespace ui::assets {
 
 enum class Icon {
+    ArrowLeftRight,
     ArrowLeft,
     Bluetooth,
+    Camera,
+    CarFront,
+    Caravan,
     Check,
     ChevronUp,
     CircleParking,
+    Construction,
     Gauge,
     Globe,
     OctagonX,
     Plus,
+    Radar,
     Settings,
     Smartphone,
     TriangleAlert,
     Volume2,
     VolumeX,
     WifiOff,
+    Wrench,
     _Count,
 };
 

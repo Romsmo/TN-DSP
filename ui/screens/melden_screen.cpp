@@ -2,6 +2,8 @@
 
 #include "core/catalog/category_registry.h"
 #include "core/model/units.h"
+#include "ui/assets/icons/icons.h"
+#include "ui/assets/signs/sign_catalog.h"
 #include "ui/i18n/category_label.h"
 #include "ui/i18n/i18n.h"
 #include "ui/theme/fonts.h"
@@ -19,13 +21,12 @@ struct MeldenScreen::Entry {
 };
 
 namespace {
-// Column x centres and a stacked y layout (kept simple; refined-icon layout is a later pass).
-constexpr int kColLeftX = 132;
-constexpr int kColRightX = 330;
-constexpr int kPillW = 118;
-constexpr int kPillH = 46;
-constexpr int kRow0 = 140;
-constexpr int kRowGap = 53;
+constexpr int kColLeftX = 118;
+constexpr int kColRightX = 332;
+constexpr int kPillW = 146;
+constexpr int kPillH = 44;
+constexpr int kRow0 = 142;
+constexpr int kRowGap = 51;
 }  // namespace
 
 MeldenScreen::MeldenScreen(lv_obj_t* parent) {
@@ -67,7 +68,13 @@ MeldenScreen::MeldenScreen(lv_obj_t* parent) {
         const int cx = left ? kColLeftX : kColRightX;
         int& row = left ? rowL : rowR;
 
-        auto* pill = new PillButton(root_, i18n::category_label(c->type), kPillW, kPillH);
+        auto* pill = new PillButton(root_, i18n::category_label(c->type), kPillW, kPillH, true);
+        const CategoryVisual vis = category_visual(c->type);
+        if (vis.sign_code && assets::sign(vis.sign_code)) {
+            pill->set_sign(assets::sign(vis.sign_code), 26);
+        } else {
+            pill->set_icon(assets::icon(vis.icon), 20);
+        }
         place_center(pill->root(), cx, kRow0 + row * kRowGap);
         const core::HazardType t = c->type;
         pill->on_press([this, t]() { select(t); });

@@ -2,6 +2,7 @@
 
 #include <cstdio>
 
+#include "ui/assets/icons/icons.h"
 #include "ui/i18n/i18n.h"
 #include "ui/theme/fonts.h"
 #include "ui/theme/tokens.h"
@@ -11,7 +12,7 @@
 namespace ui {
 
 namespace {
-constexpr int kBtn = 96;
+constexpr int kBtn = 104;
 }
 
 SettingsScreen::SettingsScreen(lv_obj_t* parent) {
@@ -25,13 +26,19 @@ SettingsScreen::SettingsScreen(lv_obj_t* parent) {
     lv_obj_set_style_text_color(title, tok::col(tok::kTextPrimary), 0);
     place_center(title, 233, 64);
 
-    connect_btn_ = new PillButton(root_, i18n::t(i18n::Str::SettingConnect), kBtn, kBtn, true);
-    sound_btn_ = new PillButton(root_, i18n::t(i18n::Str::SettingSound), kBtn, kBtn, true);
-    units_btn_ = new PillButton(root_, i18n::t(i18n::Str::SettingUnits), kBtn, kBtn, true);
+    connect_btn_ = new PillButton(root_, i18n::t(i18n::Str::SettingConnect), kBtn, kBtn, true,
+                                  PillButton::Layout::Column);
+    sound_btn_ = new PillButton(root_, i18n::t(i18n::Str::SettingSound), kBtn, kBtn, true,
+                                PillButton::Layout::Column);
+    units_btn_ = new PillButton(root_, i18n::t(i18n::Str::SettingUnits), kBtn, kBtn, true,
+                                PillButton::Layout::Column);
+    connect_btn_->set_icon(assets::icon(assets::Icon::Smartphone), 26);
+    sound_btn_->set_icon(assets::icon(assets::Icon::Volume2), 26);
+    units_btn_->set_icon(assets::icon(assets::Icon::Gauge), 26);
 
-    place_center(connect_btn_->root(), 166, 190);
-    place_center(sound_btn_->root(), 300, 190);
-    place_center(units_btn_->root(), 233, 300);
+    place_center(connect_btn_->root(), 162, 194);
+    place_center(sound_btn_->root(), 304, 194);
+    place_center(units_btn_->root(), 233, 306);
 
     connect_btn_->on_press([this]() { if (connect_) connect_(); });
     sound_btn_->on_press([this]() { set_sound(!sound_on_); if (sound_) sound_(sound_on_); });
@@ -53,6 +60,7 @@ SettingsScreen::~SettingsScreen() {
 
 void SettingsScreen::set_sound(bool on) {
     sound_on_ = on;
+    sound_btn_->set_icon(assets::icon(on ? assets::Icon::Volume2 : assets::Icon::VolumeX), 26);
     sound_btn_->set_selected(on);
 }
 

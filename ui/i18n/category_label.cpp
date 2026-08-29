@@ -1,5 +1,6 @@
 #include "ui/i18n/category_label.h"
 
+#include "core/catalog/category_registry.h"
 #include "ui/i18n/i18n.h"
 
 namespace ui::i18n {
@@ -27,3 +28,25 @@ const char* column_title(core::HazardGroup g) {
 }
 
 }  // namespace ui::i18n
+
+namespace ui {
+
+CategoryVisual category_visual(core::HazardType type) {
+    using core::HazardType;
+    using assets::Icon;
+
+    // Prefer the real StVO sign the registry assigned (0 = none).
+    if (const core::Category* c = core::CategoryRegistry::find(type); c && c->sign_code) {
+        return {c->sign_code, Icon::TriangleAlert};
+    }
+    switch (type) {
+        case HazardType::FixedSpeedCamera:  return {0, Icon::Camera};
+        case HazardType::MobileSpeedCamera: return {0, Icon::Radar};
+        case HazardType::TrailerCamera:     return {0, Icon::Caravan};
+        case HazardType::DistanceControl:   return {0, Icon::ArrowLeftRight};
+        case HazardType::Breakdown:         return {0, Icon::Wrench};
+        default:                            return {0, Icon::TriangleAlert};
+    }
+}
+
+}  // namespace ui

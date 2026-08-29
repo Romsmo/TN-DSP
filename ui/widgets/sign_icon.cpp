@@ -10,8 +10,9 @@ constexpr int kAssetPx = 64;   // matches tools/gen_assets.sh SIGN_SIZE
 
 SignIcon::SignIcon(lv_obj_t* parent, int size_px) : size_(size_px) {
     img_ = lv_image_create(parent);
-    // Auto-sizes to source*scale; a 64px asset at scale 200 -> a 50px box.
+    lv_image_set_inner_align(img_, LV_IMAGE_ALIGN_CENTER);
     lv_image_set_scale(img_, static_cast<uint16_t>(size_ * 256 / kAssetPx));
+    lv_obj_set_size(img_, size_, size_);
     lv_obj_add_flag(img_, LV_OBJ_FLAG_HIDDEN);
 }
 
