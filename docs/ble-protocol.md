@@ -109,8 +109,11 @@ bit3 hasSD · bit4 speedcamCompiled) · `3` width · `4` height.
         re-advertises; auto-reconnects to a bonded central.
 ```
 
-Bonding is used (LE Secure Connections). A bonded central auto-reconnects; the "Handy verbinden"
-screen is only shown before the first bond or on explicit request.
+Bonding is used (LE Secure Connections, "just works"). Bonds are persisted to NVS
+(`CONFIG_BT_NIMBLE_NVS_PERSIST`) so a bonded central re-encrypts silently after a device reboot
+(ignition cycle). The "Handy verbinden" screen is only shown before the first successful
+connection or on explicit request. Pairing is the central's choice — an unbonded connection is
+still accepted.
 
 ## Version compatibility
 

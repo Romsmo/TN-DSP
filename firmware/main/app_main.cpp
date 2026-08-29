@@ -194,9 +194,9 @@ extern "C" void app_main(void) {
             hal::esp::lvgl_lock();
             mgr->set_state(s);
             mgr->set_view(vm);
-            hal::esp::lvgl_unlock();
 
             // nightMode dims the panel only — the theme stays dark either way.
+            // Under the LVGL lock: the DCS write shares the panel IO with the flush.
             static int8_t night_applied = -1;
             const int8_t night = s.nightMode ? 1 : 0;
             if (display && night != night_applied) {
@@ -204,6 +204,7 @@ extern "C" void app_main(void) {
                 display->set_brightness(night ? BSP_LCD_BRIGHTNESS_NIGHT
                                               : BSP_LCD_BRIGHTNESS_DAY);
             }
+            hal::esp::lvgl_unlock();
         });
         ++ticks;
         const uint64_t now = clk->now_ms();

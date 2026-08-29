@@ -27,6 +27,11 @@ name + UUID together overflow the 31-byte ADV PDU → `adv_set_fields rc=4`).
 Wall-clock: seeded from the PCF85063 on boot (`utc_epoch()` — newlib has no `timegm`), then
 overwritten by the Time characteristic when the app sends it (which also writes the RTC back).
 
+Bonding: NimBLE security is on (SM legacy + SC, "just works"). `CONFIG_BT_NIMBLE_NVS_PERSIST=y`
+keeps bonds across reboots (the store callbacks are registered by sysinit), so the phone
+re-encrypts silently on the next ignition cycle instead of re-pairing. An unbonded connection
+still works — pairing is the phone's choice. `ble_gap_adv` restarts on disconnect.
+
 `nightMode` (DisplayState bit 4) only dims the AMOLED — DCS `0x51` with `BSP_LCD_BRIGHTNESS_NIGHT`
 (0x50) / `_DAY` (0xFF), applied on the edge in the render callback. The theme stays dark.
 Exercise it with `python tools/fake_app.py --name --scenario night`.

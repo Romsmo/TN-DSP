@@ -13,8 +13,6 @@ CONFIG_FREERTOS_HZ=1000
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
 CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 
-CONFIG_SPIRAM=n
-
 # ── BlitzerdeDsp ────────────────────────────────────────────────────────────
 CONFIG_BDSP_ENABLE_DISPLAY=y
 CONFIG_BDSP_ENABLE_BLE=y
@@ -28,7 +26,9 @@ CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
 CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
 CONFIG_BT_NIMBLE_ROLE_BROADCASTER=y
 CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
-CONFIG_BT_NIMBLE_DEVICE_NAME="BlitzerdeDsp"
+CONFIG_BT_NIMBLE_SVC_GAP_DEVICE_NAME="BlitzerdeDsp"
+# Persist bonds to NVS so the phone auto-reconnects after an ignition cycle.
+CONFIG_BT_NIMBLE_NVS_PERSIST=y
 
 # ── LVGL 9 (firmware uses Kconfig; host uses ui/lv_conf.h) ──────────────────
 CONFIG_LV_COLOR_DEPTH_16=y
