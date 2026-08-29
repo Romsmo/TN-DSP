@@ -21,21 +21,22 @@ HomeScreen::HomeScreen(lv_obj_t* parent) {
     set_bg(root_, tok::kBg);
 
     badge_ = std::make_unique<StatusBadge>(root_);
-    chevrons_ = std::make_unique<Chevrons>(root_, 122, 84);
+    chevrons_ = std::make_unique<Chevrons>(root_, 116, 60, 3);
     sign_ = std::make_unique<SpeedSign>(root_, 196);
     left_ = std::make_unique<SignColumn>(root_, SignColumn::Side::Left, kSideSign, 3);
     right_ = std::make_unique<SignColumn>(root_, SignColumn::Side::Right, kSideSign, 3);
     plus_ = std::make_unique<PlusButton>(root_);
 
-    gear_ = lv_image_create(root_);
-    lv_image_set_src(gear_, ui::assets::icon(ui::assets::Icon::Settings));
-    lv_image_set_scale(gear_, 32 * 256 / 40);
-    lv_obj_set_style_image_recolor(gear_, tok::col(tok::kTextMuted), 0);
-    lv_obj_set_style_image_recolor_opa(gear_, LV_OPA_COVER, 0);
-    // Tap the gear to open Settings. It is the only way in (Settings is not a
-    // swipe tile), so a stray vertical swipe can't land there by accident.
+    // Tap the gear to open Settings — the only way in (Settings is not a swipe
+    // tile). A real clickable container, not a bare image, so the tap registers.
+    gear_ = lv_obj_create(root_);
+    lv_obj_remove_style_all(gear_);
+    lv_obj_set_size(gear_, 60, 60);
+    lv_obj_set_style_radius(gear_, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(gear_, tok::col(tok::kSurfaceHi), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(gear_, LV_OPA_50, LV_STATE_PRESSED);
     lv_obj_add_flag(gear_, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_set_ext_click_area(gear_, 26);
+    lv_obj_clear_flag(gear_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(
         gear_,
         [](lv_event_t* e) {
@@ -43,12 +44,18 @@ HomeScreen::HomeScreen(lv_obj_t* parent) {
             if (self->settings_cb_) self->settings_cb_();
         },
         LV_EVENT_CLICKED, this);
+    lv_obj_t* gimg = lv_image_create(gear_);
+    lv_image_set_src(gimg, ui::assets::icon(ui::assets::Icon::Settings));
+    lv_image_set_scale(gimg, 32 * 256 / 40);
+    lv_obj_set_style_image_recolor(gimg, tok::col(tok::kTextMuted), 0);
+    lv_obj_set_style_image_recolor_opa(gimg, LV_OPA_COVER, 0);
+    lv_obj_center(gimg);
 
     place_center(badge_->root(), 112, 92);
-    place_center(chevrons_->root(), 233, 162);
+    place_center(chevrons_->root(), 233, 168);
     place_center(sign_->root(), 233, 310);
     plus_->set_center(435, 233);
-    place_center(gear_, 233, 432);
+    place_center(gear_, 233, 438);
 
     set_state(state_);
 }
@@ -81,7 +88,7 @@ void HomeScreen::set_state(const core::DisplayState& s) {
     right_->set(s.rightSigns);
 
     place_center(sign_->root(), 233, 310);
-    place_center(chevrons_->root(), 233, shown ? 162 : 240);
+    place_center(chevrons_->root(), 233, shown ? 168 : 240);
     // Columns flank the sign, vertically centred on it and pulled well inside the
     // round bezel.
     place_center(left_->root(), 100, 306);

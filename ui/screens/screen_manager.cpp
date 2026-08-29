@@ -24,6 +24,9 @@ ScreenManager::ScreenManager(lv_obj_t* parent) {
     lv_obj_set_style_border_width(tv_, 0, 0);
     lv_obj_set_style_pad_all(tv_, 0, 0);
     lv_obj_set_scrollbar_mode(tv_, LV_SCROLLBAR_MODE_OFF);
+    // Horizontal only: a vertical touch (e.g. tapping the gear near the bottom
+    // edge) must NOT start a vertical rubber-band that swallows the click.
+    lv_obj_set_scroll_dir(tv_, LV_DIR_HOR);
 
     // Only Home <-> Melden are swipe tiles. Settings is a gated layer (below).
     tile_home_   = lv_tileview_add_tile(tv_, 0, 0, LV_DIR_RIGHT);

@@ -38,8 +38,11 @@ void i2c_check() {
 
 #if defined(CONFIG_BDSP_ENABLE_DISPLAY)
 
+#include <atomic>
+
 #include "core/app/app_runner.h"
 #include "transport/mock/mock_transport.h"
+#include "ui/screens/boot_screen.h"
 #include "ui/screens/screen_manager.h"
 #include "ui/theme/theme.h"
 
@@ -68,9 +71,10 @@ extern "C" void app_main(void) {
     mgr = new ui::ScreenManager(lv_screen_active());
     {
         ui::ScreenManager::Callbacks cb;
-        cb.report_pressed    = []() { runner.sm().open_melden(); };
-        cb.settings_pressed  = []() { runner.sm().open_settings(); };
+        cb.report_pressed    = []() { ESP_LOGI(TAG, "ui: report_pressed"); runner.sm().open_melden(); };
+        cb.settings_pressed  = []() { ESP_LOGI(TAG, "ui: settings_pressed"); runner.sm().open_settings(); };
         cb.report_submitted  = [](core::HazardType t, std::optional<int> s) {
+            ESP_LOGI(TAG, "ui: report_submitted %d", (int)t);
             runner.sm().submit_report(t, s);
         };
         cb.confirm_response  = [](bool seen) { runner.sm().answer_confirm(seen); };
@@ -78,6 +82,7 @@ extern "C" void app_main(void) {
         cb.units_changed     = [](bool mph) { runner.sm().set_units(mph); };
         cb.phone_connect     = []() { runner.sm().request_connect(); };
         cb.nav_changed       = [](ui::Tile t) {
+            ESP_LOGI(TAG, "ui: nav_changed %d", (int)t);
             if (t == ui::Tile::Melden) runner.sm().open_melden();
             else if (t == ui::Tile::Settings) runner.sm().open_settings();
             else runner.sm().go_home();
@@ -85,12 +90,21 @@ extern "C" void app_main(void) {
         cb.melden_activity   = []() { runner.sm().melden_activity(); };
         mgr->set_callbacks(std::move(cb));
     }
+    static std::atomic<bool> boot_done{false};
+    static ui::BootScreen* boot = new ui::BootScreen(lv_screen_active(),
+                                                     []() { boot_done.store(true); });
     hal::esp::lvgl_unlock();
 
     hal::Buttons* btn = hal::esp::buttons_instance();
     uint32_t ticks = 0;
     uint64_t last_beat = 0;
     while (true) {
+        if (boot && boot_done.load()) {
+            hal::esp::lvgl_lock();
+            delete boot;
+            boot = nullptr;
+            hal::esp::lvgl_unlock();
+        }
         if (btn->poll_boot() == hal::ButtonEvent::LongPress) {
             runner.sm().toggle_demo();
             ESP_LOGI(TAG, "demo toggled");

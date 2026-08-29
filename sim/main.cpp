@@ -20,6 +20,7 @@
 #include "sim/screenshot.h"
 #include "sim/sim_audio.h"
 #include "transport/mock/mock_transport.h"
+#include "ui/screens/boot_screen.h"
 #include "ui/screens/screen_manager.h"
 #include "ui/theme/theme.h"
 
@@ -197,10 +198,19 @@ int main(int argc, char** argv) {
     if (demo_start) toggle_demo();
     else load_static(sim::scenario_at(0));
 
+    // Boot splash (skip in --shot).
+    std::atomic<bool> boot_done{false};
+    auto* boot = new ui::BootScreen(lv_screen_active(), [&]() { boot_done = true; });
+
     uint32_t frames = 0, fps_t0 = SDL_GetTicks();
     while (!g_quit) {
         step(SDL_GetTicks());
         uint32_t idle = lv_timer_handler();
+
+        if (boot && boot_done) {
+            delete boot;
+            boot = nullptr;
+        }
 
         if (fps_mode && ++frames && SDL_GetTicks() - fps_t0 >= 1000) {
             std::printf("fps: %u\n", frames * 1000 / (SDL_GetTicks() - fps_t0));
