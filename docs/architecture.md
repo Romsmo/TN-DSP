@@ -119,7 +119,12 @@ range, icons and report column entirely, for builds intended to comply with §23
 | BOOT long-press (1.5 s) | Toggle forced **demo mode**: `MockTransport` plays scripted scenarios so every screen can be walked on the bench |
 | No `DisplayState` for N s while "connected" | Connection watchdog → treat as disconnected |
 
-## Night mode precedence
+## Theme
 
-`nightMode` from the app payload  →  manual toggle (Settings, persisted)  →  RTC fixed-hours
-fallback (default 20:00–06:00, NVS-configurable). No ambient-light sensor on this board.
+**Single dark theme, always.** The AMOLED runs black (`#000000`) with high-contrast content.
+There is no day/night switching, no "Tag/Nacht" button in Settings, and no RTC-based theme
+fallback. The sketch's light background is intentionally overridden.
+
+`nightMode` in `DisplayState` is kept for protocol stability; the board uses it only as an
+optional cue to reduce panel brightness. `Settings::theme` / `SettingsThemeChanged` are retained
+in the wire format but currently ignored by the firmware.
