@@ -1,13 +1,16 @@
-// sim/scenarios.h — canned DisplayStates for driving the UI from the keyboard.
+// sim/scenarios.h — canned DisplayStates + a nav target for driving the UI.
 #pragma once
 
 #include "core/model/display_state.h"
 
 namespace sim {
 
+enum class Nav { Home, Melden, Settings, ConnectOverlay };
+
 struct Scenario {
     const char*        key;    // single keyboard key, e.g. "1"
     const char*        name;   // screenshot filename / log label
+    Nav                nav;
     core::DisplayState state;
 };
 

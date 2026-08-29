@@ -55,7 +55,11 @@ Layer over the current page (not a tile).
 Nothing blinks faster than 2 Hz. If the hazard's `hazardType` is disabled in `WarningFilter`, the
 overlay is suppressed entirely.
 
-## 5.4 Melden (swipe left, or "+") — M3
+> **Polish pending (user request):** the Melden category pills and the Settings buttons should get
+> fitting per-category icons and a refined layout in a later pass. M3 ships them functional with
+> text labels.
+
+## 5.4 Melden (swipe left, or "+") — M3 ✅
 
 - Title "Melden" italic, (233, 60), 22 px.
 - Vertical divider at x = 233, y 88–400, 1 px, ~40 % opacity.

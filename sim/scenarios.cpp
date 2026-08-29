@@ -81,13 +81,13 @@ DisplayState connect() {
 }
 
 const std::array<Scenario, 7> kScenarios{{
-    {"1", "home", home()},
-    {"2", "no-internet", no_internet()},
-    {"3", "hazard", hazard()},
-    {"4", "melden", reporting()},
-    {"5", "confirm", confirm()},
-    {"6", "settings", settings_scr()},
-    {"7", "connect", connect()},
+    {"1", "home", Nav::Home, home()},
+    {"2", "no-internet", Nav::Home, no_internet()},
+    {"3", "hazard", Nav::Home, hazard()},
+    {"4", "melden", Nav::Melden, reporting()},
+    {"5", "confirm", Nav::Home, confirm()},
+    {"6", "settings", Nav::Settings, settings_scr()},
+    {"7", "connect", Nav::ConnectOverlay, connect()},
 }};
 
 }  // namespace

@@ -2,6 +2,7 @@
 // left/right context-sign columns, "+" button, settings gear. Layout: docs/ui-spec.md 5.1.
 #pragma once
 
+#include <functional>
 #include <memory>
 
 #include "core/model/display_state.h"
@@ -24,6 +25,8 @@ public:
     HomeScreen& operator=(const HomeScreen&) = delete;
 
     void set_state(const core::DisplayState& s);
+    void on_plus(std::function<void()> cb);   // "+" tapped
+    void show_swipe_hint();
     lv_obj_t* root() { return root_; }
 
 private:

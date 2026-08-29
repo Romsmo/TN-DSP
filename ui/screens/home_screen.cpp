@@ -44,6 +44,9 @@ HomeScreen::HomeScreen(lv_obj_t* parent) {
 
 HomeScreen::~HomeScreen() = default;
 
+void HomeScreen::on_plus(std::function<void()> cb) { plus_->on_press(std::move(cb)); }
+void HomeScreen::show_swipe_hint() { plus_->show_hint(); }
+
 void HomeScreen::set_state(const core::DisplayState& s) {
     state_ = s;
 

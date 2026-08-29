@@ -12,7 +12,7 @@
 #include "lvgl.h"
 #include "sim/scenarios.h"
 #include "sim/screenshot.h"
-#include "ui/screens/home_screen.h"
+#include "ui/screens/screen_manager.h"
 #include "ui/theme/theme.h"
 
 namespace {
@@ -37,12 +37,23 @@ int event_watch(void*, SDL_Event* e) {
     return 0;
 }
 
-ui::HomeScreen* g_home = nullptr;
+ui::ScreenManager* g_mgr = nullptr;
 const sim::Scenario* g_current = nullptr;
+
+void apply(const sim::Scenario& sc, bool animate) {
+    g_mgr->show_overlay(sc.nav == sim::Nav::ConnectOverlay ? ui::Overlay::Connect
+                                                           : ui::Overlay::None);
+    g_mgr->set_state(sc.state);
+    switch (sc.nav) {
+        case sim::Nav::Melden:   g_mgr->go_to(ui::Tile::Melden, animate); break;
+        case sim::Nav::Settings: g_mgr->go_to(ui::Tile::Settings, animate); break;
+        default:                 g_mgr->go_to(ui::Tile::Home, animate); break;
+    }
+}
 
 void show(const sim::Scenario& sc) {
     g_current = &sc;
-    g_home->set_state(sc.state);
+    apply(sc, /*animate=*/true);
     std::printf("scenario: %s\n", sc.name);
 }
 
@@ -57,19 +68,21 @@ void settle(int frames) {
 void dump_all() {
     for (int i = 0; i < sim::scenario_count(); ++i) {
         const auto& sc = sim::scenario_at(i);
-        g_home->set_state(sc.state);
-        settle(20);                 // let transitions / animations reach rest
+        apply(sc, /*animate=*/false);
+        settle(25);
         sim::save_screenshot(sc.name);
     }
-    if (g_current) g_home->set_state(g_current->state);
+    if (g_current) apply(*g_current, false);
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
     bool shot_mode = false;
+    bool fps_mode = false;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--shot") == 0) shot_mode = true;
+        if (std::strcmp(argv[i], "--fps") == 0) fps_mode = true;
     }
 
     SDL_SetMainReady();
@@ -82,8 +95,19 @@ int main(int argc, char** argv) {
 
     ui::apply_theme(disp);
 
-    ui::HomeScreen home(lv_screen_active());
-    g_home = &home;
+    ui::ScreenManager mgr(lv_screen_active());
+    g_mgr = &mgr;
+    ui::ScreenManager::Callbacks cbs;
+    cbs.report_pressed = []() { std::printf("event: ReportPressed\n"); };
+    cbs.report_submitted = [](core::HazardType t, std::optional<int> s) {
+        std::printf("event: ReportSubmitted type=%d speed=%d\n", static_cast<int>(t),
+                    s.value_or(-1));
+    };
+    cbs.sound_toggled = [](bool on) { std::printf("event: SoundToggle %d\n", on); };
+    cbs.units_changed = [](bool mph) { std::printf("event: UnitChanged mph=%d\n", mph); };
+    cbs.phone_connect = []() { std::printf("event: PhoneConnect\n"); };
+    mgr.set_callbacks(std::move(cbs));
+    mgr.set_link_status("nicht verbunden");
 
     if (shot_mode) {
         dump_all();
@@ -95,8 +119,19 @@ int main(int argc, char** argv) {
     SDL_AddEventWatch(event_watch, nullptr);
     show(sim::scenario_at(0));
 
+    uint32_t frames = 0, fps_t0 = SDL_GetTicks();
     while (!g_quit) {
         uint32_t idle = lv_timer_handler();
+
+        if (fps_mode) {
+            ++frames;
+            const uint32_t now = SDL_GetTicks();
+            if (now - fps_t0 >= 1000) {
+                std::printf("fps: %u\n", frames * 1000 / (now - fps_t0));
+                frames = 0;
+                fps_t0 = now;
+            }
+        }
 
         if (g_key) {
             const char k = g_key;

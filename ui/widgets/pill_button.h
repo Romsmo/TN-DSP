@@ -10,7 +10,8 @@ namespace ui {
 
 class PillButton {
 public:
-    PillButton(lv_obj_t* parent, const char* text, int w, int h);
+    // compact = smaller font, for tight round buttons with two-word labels.
+    PillButton(lv_obj_t* parent, const char* text, int w, int h, bool compact = false);
 
     void on_press(std::function<void()> cb) { cb_ = std::move(cb); }
     void set_selected(bool on);          // toggle / active look

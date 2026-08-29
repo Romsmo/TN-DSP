@@ -5,6 +5,7 @@ set(BDSP_TEST_SOURCES
   model_test.cpp
   interface_compile_test.cpp
   ble_uuids_test.cpp
+  category_registry_test.cpp
 )
 
 # ui/ tests need LVGL; only add them when the ui library is in the build.

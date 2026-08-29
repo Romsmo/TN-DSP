@@ -5,7 +5,7 @@
 
 namespace ui {
 
-PillButton::PillButton(lv_obj_t* parent, const char* text, int w, int h) {
+PillButton::PillButton(lv_obj_t* parent, const char* text, int w, int h, bool compact) {
     btn_ = lv_obj_create(parent);
     lv_obj_remove_style_all(btn_);
     lv_obj_set_size(btn_, w, h);
@@ -20,8 +20,11 @@ PillButton::PillButton(lv_obj_t* parent, const char* text, int w, int h) {
 
     label_ = lv_label_create(btn_);
     lv_label_set_text(label_, text);
-    lv_obj_set_style_text_font(label_, font::label(), 0);
+    lv_obj_set_style_text_font(label_, compact ? font::small() : font::label(), 0);
     lv_obj_set_style_text_color(label_, tok::col(tok::kTextPrimary), 0);
+    lv_obj_set_style_text_align(label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_width(label_, w - 14);
+    lv_label_set_long_mode(label_, LV_LABEL_LONG_WRAP);
     lv_obj_center(label_);
 
     lv_obj_add_event_cb(

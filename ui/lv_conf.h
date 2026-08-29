@@ -41,7 +41,8 @@
 #define LV_LABEL_TEXT_SELECTION 0
 #define LV_USE_FLEX 1
 #define LV_USE_GRID 1
-#define LV_USE_SNAPSHOT 1               // sim screenshot export
+#define LV_USE_TILEVIEW 1              // Home / Melden / Settings swipe navigation
+#define LV_USE_SNAPSHOT 1             // sim screenshot export
 
 // ─── Fonts ───────────────────────────────────────────────────────────────────
 #define LV_FONT_MONTSERRAT_14 1           // fallback + LVGL symbol glyphs (small)
