@@ -11,6 +11,16 @@
 
 namespace ui {
 
+namespace {
+Tile tile_of(core::Screen s) {
+    switch (s) {
+        case core::Screen::Melden:   return Tile::Melden;
+        case core::Screen::Settings: return Tile::Settings;
+        default:                     return Tile::Home;
+    }
+}
+}  // namespace
+
 ScreenManager::ScreenManager(lv_obj_t* parent) {
     tv_ = lv_tileview_create(parent);
     lv_obj_set_size(tv_, 466, 466);
@@ -35,32 +45,22 @@ ScreenManager::ScreenManager(lv_obj_t* parent) {
     lv_obj_update_layout(tv_);
     lv_tileview_set_tile_by_index(tv_, 0, 0, LV_ANIM_OFF);
 
-    home_->on_plus([this]() {
-        if (cb_.report_pressed) cb_.report_pressed();
-        go_to(Tile::Melden);
-    });
+    home_->on_plus([this]() { if (cb_.report_pressed) cb_.report_pressed(); });
     melden_->on_submit([this](core::HazardType t, std::optional<int> spd) {
         if (cb_.report_submitted) cb_.report_submitted(t, spd);
-        go_to(Tile::Home);
     });
-    melden_->on_dismiss([this]() { go_to(Tile::Home); });
-    settings_->on_connect([this]() {
-        if (cb_.phone_connect) cb_.phone_connect();
-        show_overlay(Overlay::Connect);
-    });
+    melden_->on_dismiss([this]() { if (cb_.nav_changed) cb_.nav_changed(Tile::Home); });
+    settings_->on_connect([this]() { if (cb_.phone_connect) cb_.phone_connect(); });
     settings_->on_sound([this](bool on) { if (cb_.sound_toggled) cb_.sound_toggled(on); });
-    settings_->on_units([this](bool mph) {
-        use_mph_ = mph;
-        if (cb_.units_changed) cb_.units_changed(mph);
-    });
+    settings_->on_units([this](bool mph) { if (cb_.units_changed) cb_.units_changed(mph); });
 
     lv_obj_add_event_cb(
         tv_,
-        [](lv_event_t* e) { static_cast<ScreenManager*>(lv_event_get_user_data(e))->on_tile_changed(); },
+        [](lv_event_t* e) {
+            static_cast<ScreenManager*>(lv_event_get_user_data(e))->on_tile_changed();
+        },
         LV_EVENT_VALUE_CHANGED, this);
 
-    // Layers above the tileview, painted in priority order (last = topmost):
-    //   hazard (non-modal)  <  connect  <  confirm (modal)
     hazard_ = std::make_unique<HazardOverlay>(parent);
 
     overlay_layer_ = make_layer(parent);
@@ -72,14 +72,6 @@ ScreenManager::ScreenManager(lv_obj_t* parent) {
     confirm_ = std::make_unique<ConfirmOverlay>(parent);
     confirm_->on_response([this](bool seen) {
         if (cb_.confirm_response) cb_.confirm_response(seen);
-        lv_obj_add_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);   // unlock navigation
-        overlay_ = (hazard_ && !lv_obj_has_flag(hazard_->root(), LV_OBJ_FLAG_HIDDEN))
-                       ? Overlay::Hazard : Overlay::None;
-    });
-    confirm_->on_timeout([this]() {
-        lv_obj_add_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
-        overlay_ = (hazard_ && !lv_obj_has_flag(hazard_->root(), LV_OBJ_FLAG_HIDDEN))
-                       ? Overlay::Hazard : Overlay::None;
     });
 
     home_->show_swipe_hint();
@@ -89,17 +81,17 @@ ScreenManager::~ScreenManager() = default;
 
 void ScreenManager::on_tile_changed() {
     lv_obj_t* act = lv_tileview_get_tile_active(tv_);
-    if (act == tile_melden_) {
-        current_ = Tile::Melden;
-        melden_->reset(last_speed_kmh_, use_mph_);
-    } else if (act == tile_settings_) {
-        current_ = Tile::Settings;
-    } else {
-        current_ = Tile::Home;
-    }
+    const Tile was = current_;
+    if (act == tile_melden_) current_ = Tile::Melden;
+    else if (act == tile_settings_) current_ = Tile::Settings;
+    else current_ = Tile::Home;
+
+    if (current_ != was && cb_.nav_changed) cb_.nav_changed(current_);
+    if (current_ == Tile::Melden) melden_->reset(last_speed_kmh_, use_mph_);
 }
 
 void ScreenManager::go_to(Tile t, bool animate) {
+    if (t == current_) return;
     const lv_anim_enable_t a = animate ? LV_ANIM_ON : LV_ANIM_OFF;
     switch (t) {
         case Tile::Melden:   lv_tileview_set_tile_by_index(tv_, 1, 0, a); break;
@@ -107,19 +99,6 @@ void ScreenManager::go_to(Tile t, bool animate) {
         case Tile::Home:     lv_tileview_set_tile_by_index(tv_, 0, 0, a); break;
     }
     current_ = t;
-}
-
-void ScreenManager::show_overlay(Overlay o) {
-    // Only the Connect layer is shown/hidden explicitly; Hazard and Confirm are
-    // driven by set_state().
-    if (o == Overlay::Connect) {
-        lv_obj_remove_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
-        connect_->set_status(ConnectScreen::Status::Idle);
-        overlay_ = Overlay::Connect;
-    } else if (o == Overlay::None) {
-        lv_obj_add_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
-        if (overlay_ == Overlay::Connect) overlay_ = Overlay::None;
-    }
 }
 
 void ScreenManager::set_link_status(const char* text) {
@@ -132,28 +111,37 @@ void ScreenManager::set_state(const core::DisplayState& s) {
     if (s.speedLimit) last_speed_kmh_ = *s.speedLimit;
     settings_->set_units_mph(s.useMph);
     home_->set_state(s);
-
     hazard_->update(s);
+}
 
-    const bool want_confirm = s.confirmPromptActive;
-    if (want_confirm && !confirm_->active()) {
-        confirm_->set_active(true, s.confirmPromptTimeoutS);
-        lv_obj_remove_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);   // lock navigation
-    } else if (!want_confirm && confirm_->active()) {
+void ScreenManager::set_view(const core::ViewModel& vm) {
+    // Connect screen (overlay layer).
+    const bool want_connect = vm.screen == core::Screen::Connect;
+    if (want_connect) {
+        lv_obj_remove_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    // Tiles.
+    if (!want_connect) go_to(tile_of(vm.screen), /*animate=*/true);
+
+    // Confirm overlay + nav lock.
+    if (vm.overlay == core::OverlayKind::Confirm && !confirm_->active()) {
+        confirm_->set_active(true, vm.confirmSecondsLeft ? vm.confirmSecondsLeft : 15);
+    } else if (vm.overlay != core::OverlayKind::Confirm && confirm_->active()) {
         confirm_->set_active(false);
+    }
+    if (vm.navLocked) {
+        lv_obj_remove_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
+    } else {
         lv_obj_add_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
     }
 
-    // Highest-priority active layer.
-    if (confirm_->active()) {
-        overlay_ = Overlay::Confirm;
-    } else if (overlay_ == Overlay::Connect) {
-        // left as-is; cleared by hide/connect flow
-    } else if (!lv_obj_has_flag(hazard_->root(), LV_OBJ_FLAG_HIDDEN)) {
-        overlay_ = Overlay::Hazard;
-    } else {
-        overlay_ = Overlay::None;
-    }
+    overlay_ = want_connect             ? Overlay::Connect
+               : vm.overlay == core::OverlayKind::Confirm ? Overlay::Confirm
+               : vm.overlay == core::OverlayKind::Hazard  ? Overlay::Hazard
+                                                          : Overlay::None;
 }
 
 }  // namespace ui

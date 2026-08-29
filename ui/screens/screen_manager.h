@@ -10,6 +10,7 @@
 #include "core/model/device_event.h"
 #include "core/model/display_state.h"
 #include "core/model/hazard_type.h"
+#include "core/state/view_model.h"
 #include "lvgl.h"
 
 namespace ui {
@@ -33,6 +34,8 @@ public:
         std::function<void(bool)>                                 units_changed;
         std::function<void()>                                     phone_connect;
         std::function<void(bool /*seen*/)>                        confirm_response;
+        std::function<void(Tile)>                                 nav_changed;   // user swiped
+        std::function<void()>                                     melden_activity;
     };
 
     explicit ScreenManager(lv_obj_t* parent);
@@ -43,21 +46,20 @@ public:
 
     void set_callbacks(Callbacks cb) { cb_ = std::move(cb); }
 
-    // Render inbound state (fans out to the relevant screens).
+    // Pure renderer: draw exactly this state + this view. The AppStateMachine owns
+    // all screen/overlay/timeout decisions.
     void set_state(const core::DisplayState& s);
+    void set_view(const core::ViewModel& vm);
     void set_link_status(const char* text);
 
-    // Programmatic navigation (from the "+" button, timeouts, the state machine).
-    void go_to(Tile t, bool animate = true);
-    Tile current() const { return current_; }
-
-    void show_overlay(Overlay o);
+    Tile    current() const { return current_; }
     Overlay overlay() const { return overlay_; }
 
     lv_obj_t* root() { return tv_; }
 
 private:
     void on_tile_changed();
+    void go_to(Tile t, bool animate);
 
     lv_obj_t* tv_ = nullptr;          // lv_tileview
     lv_obj_t* tile_home_ = nullptr;

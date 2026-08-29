@@ -6,6 +6,8 @@ set(BDSP_TEST_SOURCES
   interface_compile_test.cpp
   ble_uuids_test.cpp
   category_registry_test.cpp
+  core_logic_test.cpp
+  state_machine_test.cpp
 )
 
 # ui/ tests need LVGL; only add them when the ui library is in the build.
@@ -14,7 +16,7 @@ if(TARGET bdsp_ui)
 endif()
 
 add_executable(bdsp_tests ${BDSP_TEST_SOURCES})
-target_link_libraries(bdsp_tests PRIVATE bdsp_core doctest)
+target_link_libraries(bdsp_tests PRIVATE bdsp_core bdsp_transport doctest)
 if(TARGET bdsp_warnings)
   target_link_libraries(bdsp_tests PRIVATE bdsp_warnings)
 endif()

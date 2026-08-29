@@ -5,6 +5,8 @@
 set(BDSP_CORE_SOURCES
   model/version.cpp
   catalog/category_registry.cpp
+  settings/settings_store.cpp
+  state/app_state_machine.cpp
 )
 
 add_library(bdsp_core STATIC ${BDSP_CORE_SOURCES})

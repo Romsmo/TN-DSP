@@ -38,6 +38,7 @@ target_include_directories(doctest INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/third_p
 
 # bdsp_core: platform-independent logic. Defined in core/, links no platform libs.
 add_subdirectory(core)
+add_subdirectory(transport)
 
 set(BDSP_HAVE_SDL OFF)
 if(BDSP_BUILD_SIM)

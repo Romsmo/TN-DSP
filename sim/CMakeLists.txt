@@ -8,7 +8,7 @@ add_executable(bdsp_sim
 )
 target_compile_definitions(bdsp_sim PRIVATE BDSP_SIM=1)
 target_include_directories(bdsp_sim PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/third_party)
-target_link_libraries(bdsp_sim PRIVATE bdsp_ui bdsp_core lvgl bdsp_warnings_lite)
+target_link_libraries(bdsp_sim PRIVATE bdsp_ui bdsp_core bdsp_transport lvgl bdsp_warnings_lite)
 
 # main.cpp uses SDL_MAIN_HANDLED, so we deliberately do NOT link SDL2main.
 if(TARGET SDL2::SDL2)

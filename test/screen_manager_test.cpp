@@ -1,76 +1,68 @@
 #include "doctest/doctest.h"
 
 #include "core/model/display_state.h"
+#include "core/state/view_model.h"
 #include "test/lv_test_env.h"
 #include "ui/screens/screen_manager.h"
 #include "ui/theme/theme.h"
 
 using core::DisplayState;
-using core::HazardType;
+using core::OverlayKind;
+using core::Screen;
+using core::ViewModel;
 using ui::Overlay;
 using ui::Tile;
 
-namespace {
-DisplayState base() {
-    DisplayState s;
-    s.internetConnected = true;
-    s.speedLimit = 50;
-    s.stateSeq = 1;
-    return s;
-}
-}  // namespace
-
-TEST_CASE("ScreenManager overlay priority: confirm outranks hazard") {
+TEST_CASE("ScreenManager renders exactly the ViewModel it is given") {
     lv_display_t* d = testenv::lvgl();
     ui::apply_theme(d);
     ui::ScreenManager mgr(lv_screen_active());
     testenv::pump();
 
-    CHECK(mgr.overlay() == Overlay::None);
+    DisplayState s;
+    s.speedLimit = 50;
+
+    ViewModel vm;
+    mgr.set_state(s);
+    mgr.set_view(vm);
+    testenv::pump();
     CHECK(mgr.current() == Tile::Home);
+    CHECK(mgr.overlay() == Overlay::None);
 
-    DisplayState s = base();
-    s.hazardActive = true;
-    s.hazardType = HazardType::Traffic;
-    s.hazardDistanceM = 400;
-    mgr.set_state(s);
+    vm.screen = Screen::Melden;
+    mgr.set_view(vm);
     testenv::pump();
-    CHECK(mgr.overlay() == Overlay::Hazard);
+    CHECK(mgr.current() == Tile::Melden);
 
-    s.confirmPromptActive = true;
-    mgr.set_state(s);
+    vm.screen = Screen::Home;
+    vm.overlay = OverlayKind::Confirm;
+    vm.navLocked = true;
+    vm.confirmSecondsLeft = 12;
+    mgr.set_view(vm);
     testenv::pump();
-    CHECK(mgr.overlay() == Overlay::Confirm);   // confirm wins
+    CHECK(mgr.overlay() == Overlay::Confirm);
 
-    s.confirmPromptActive = false;
-    mgr.set_state(s);
-    testenv::pump();
-    CHECK(mgr.overlay() == Overlay::Hazard);    // falls back to hazard
-
-    s.hazardActive = false;
-    s.hazardType.reset();
-    mgr.set_state(s);
+    vm.overlay = OverlayKind::None;
+    vm.navLocked = false;
+    mgr.set_view(vm);
     testenv::pump();
     CHECK(mgr.overlay() == Overlay::None);
+
+    vm.screen = Screen::Connect;
+    mgr.set_view(vm);
+    testenv::pump();
+    CHECK(mgr.overlay() == Overlay::Connect);
 }
 
-TEST_CASE("ScreenManager reports user actions through callbacks") {
+TEST_CASE("ScreenManager forwards user actions via callbacks") {
     lv_display_t* d = testenv::lvgl();
     ui::apply_theme(d);
     ui::ScreenManager mgr(lv_screen_active());
 
     int submits = 0;
-    HazardType got{};
     ui::ScreenManager::Callbacks cb;
-    cb.report_submitted = [&](HazardType t, std::optional<int>) { ++submits; got = t; };
+    cb.report_submitted = [&](core::HazardType, std::optional<int>) { ++submits; };
     mgr.set_callbacks(std::move(cb));
-
-    mgr.set_state(base());
-    mgr.go_to(Tile::Melden, false);
     testenv::pump();
-    CHECK(mgr.current() == Tile::Melden);
-
-    mgr.go_to(Tile::Home, false);
-    testenv::pump();
-    CHECK(mgr.current() == Tile::Home);
+    CHECK(submits == 0);   // nothing tapped
 }
