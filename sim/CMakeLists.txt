@@ -5,8 +5,11 @@ add_executable(bdsp_sim
   main.cpp
   scenarios.cpp
   screenshot.cpp
+  sim_audio.cpp
 )
-target_compile_definitions(bdsp_sim PRIVATE BDSP_SIM=1)
+target_compile_definitions(bdsp_sim PRIVATE
+  BDSP_SIM=1
+  BDSP_SIM_AUDIO_DIR="${CMAKE_SOURCE_DIR}/tools")
 target_include_directories(bdsp_sim PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/third_party)
 target_link_libraries(bdsp_sim PRIVATE bdsp_ui bdsp_core bdsp_transport lvgl bdsp_warnings_lite)
 

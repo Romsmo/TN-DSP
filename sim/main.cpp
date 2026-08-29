@@ -12,14 +12,20 @@
 #include <cstring>
 #include <utility>
 
+#include "core/audio/audio_service.h"
 #include "core/state/app_state_machine.h"
 #include "hal/clock.h"
 #include "lvgl.h"
 #include "sim/scenarios.h"
 #include "sim/screenshot.h"
+#include "sim/sim_audio.h"
 #include "transport/mock/mock_transport.h"
 #include "ui/screens/screen_manager.h"
 #include "ui/theme/theme.h"
+
+#ifndef BDSP_SIM_AUDIO_DIR
+#define BDSP_SIM_AUDIO_DIR "tools"
+#endif
 
 namespace {
 
@@ -48,6 +54,9 @@ int event_watch(void*, SDL_Event* e) {
 SdlClock                       g_clock;
 transport::mock::MockTransport g_transport{g_clock};
 core::AppStateMachine          g_sm{g_transport};
+sim::SimAudio*                 g_audio_drv = nullptr;
+sim::SimStorage*               g_storage = nullptr;
+core::audio::AudioService*     g_audio = nullptr;
 ui::ScreenManager*             g_mgr = nullptr;
 bool                           g_demo = false;
 const sim::Scenario*           g_current = nullptr;
@@ -116,6 +125,10 @@ void step(uint32_t now_ms) {
     if (g_transport.poll(ds)) g_sm.on_state(ds);
     if (g_demo) g_sm.on_link(g_transport.link());
     g_sm.tick(now_ms, 1'700'000'000u + now_ms / 1000u);
+    if (g_audio) {
+        g_audio->on_state(g_sm.effective_state());
+        g_audio->pump();
+    }
     g_mgr->set_state(g_sm.effective_state());
     g_mgr->set_view(g_sm.view());
     g_mgr->set_link_status(g_sm.view().linkDown ? "nicht verbunden" : "verbunden");
@@ -142,10 +155,11 @@ void dump_all() {
 }  // namespace
 
 int main(int argc, char** argv) {
-    bool shot_mode = false, fps_mode = false;
+    bool shot_mode = false, fps_mode = false, demo_start = false;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--shot") == 0) shot_mode = true;
         if (std::strcmp(argv[i], "--fps") == 0) fps_mode = true;
+        if (std::strcmp(argv[i], "--demo") == 0) demo_start = true;
     }
 
     SDL_SetMainReady();
@@ -160,6 +174,16 @@ int main(int argc, char** argv) {
     g_mgr = &mgr;
     wire_callbacks();
 
+    sim::SimAudio audio_drv;
+    sim::SimStorage storage(BDSP_SIM_AUDIO_DIR);
+    core::audio::AudioService audio(&audio_drv, &storage);
+    core::Settings snd;
+    snd.soundEnabled = !shot_mode;   // keep screenshots silent
+    audio.apply_settings(snd);
+    g_audio_drv = &audio_drv;
+    g_storage = &storage;
+    g_audio = &audio;
+
     if (shot_mode) {
         dump_all();
         std::printf("screenshots written\n");
@@ -168,7 +192,8 @@ int main(int argc, char** argv) {
 
     lv_sdl_mouse_create();
     SDL_AddEventWatch(event_watch, nullptr);
-    load_static(sim::scenario_at(0));
+    if (demo_start) toggle_demo();
+    else load_static(sim::scenario_at(0));
 
     uint32_t frames = 0, fps_t0 = SDL_GetTicks();
     while (!g_quit) {

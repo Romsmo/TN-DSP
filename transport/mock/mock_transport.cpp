@@ -76,6 +76,7 @@ std::vector<Step> demo_script() {
 
     add(0, base());
 
+    uint32_t cue_seq = 1;
     for (int d = 800; d >= 100; d -= 100) {                 // hazard approaches
         DisplayState s = base();
         s.directionArrows = false;
@@ -83,6 +84,17 @@ std::vector<Step> demo_script() {
         s.hazardType = HazardType::MobileSpeedCamera;
         s.hazardDistanceM = d;
         s.hazardSpeedLimit = 50;
+        if (d == 800 || d == 300) {                          // announce twice
+            core::AudioCue c;
+            c.seq = cue_seq++;
+            c.mode = core::AudioMode::Voice;
+            c.event = d == 300 ? core::AudioEvent::HazardImminent
+                               : core::AudioEvent::HazardApproach;
+            c.hazardType = HazardType::MobileSpeedCamera;
+            c.distanceM = d;
+            c.speedValue = 50;
+            s.audioCue = c;
+        }
         add(static_cast<uint32_t>(4000 + (800 - d) * 6), s);
     }
 
@@ -91,6 +103,11 @@ std::vector<Step> demo_script() {
         s.hazardActive = false;
         s.confirmPromptActive = true;
         s.confirmPromptTimeoutS = 15;
+        core::AudioCue c;
+        c.seq = cue_seq++;
+        c.mode = core::AudioMode::Tones;
+        c.event = core::AudioEvent::ConfirmPrompt;
+        s.audioCue = c;
         add(9200, s);
     }
 

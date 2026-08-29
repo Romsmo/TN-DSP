@@ -6,8 +6,10 @@
 #include <vector>
 
 #include "core/model/device_event.h"
+#include "hal/audio_driver.h"
 #include "hal/clock.h"
 #include "hal/nvs.h"
+#include "hal/storage.h"
 #include "transport/transport.h"
 
 namespace fakes {
@@ -42,6 +44,57 @@ struct Nvs : hal::Nvs {
     bool commit(const std::string&) override {
         ++commits;
         return true;
+    }
+};
+
+struct AudioDriver : hal::AudioDriver {
+    bool   amp = false;
+    uint8_t volume = 0;
+    std::vector<int16_t> written;
+    int    stops = 0;
+
+    void set_amplifier(bool on) override { amp = on; }
+    void set_volume(uint8_t p) override { volume = p; }
+    size_t write_pcm(const int16_t* f, size_t n) override {
+        written.insert(written.end(), f, f + n);
+        return n;
+    }
+    void stop() override { ++stops; }
+    bool busy() const override { return false; }
+};
+
+struct Storage : hal::Storage {
+    bool is_mounted = true;
+    std::map<std::string, std::vector<uint8_t>> files;
+
+    bool mounted() const override { return is_mounted; }
+    bool read_file(const std::string& p, std::vector<uint8_t>& out) override {
+        auto it = files.find(p);
+        if (it == files.end()) return false;
+        out = it->second;
+        return true;
+    }
+    bool write_file(const std::string& p, const uint8_t* d, size_t n) override {
+        files[p] = std::vector<uint8_t>(d, d + n);
+        return true;
+    }
+    bool exists(const std::string& p) override { return files.count(p) > 0; }
+    bool list_dir(const std::string&, std::vector<std::string>&) override { return false; }
+    Reader* open_read(const std::string&) override { return nullptr; }
+
+    // helper: a valid 16 kHz mono 16-bit WAV with `samples` frames of silence-ish
+    void put_wav(const std::string& path, int samples) {
+        std::vector<uint8_t> b;
+        auto u8 = [&](uint32_t v) { b.push_back(static_cast<uint8_t>(v & 0xFF)); };
+        auto u32 = [&](uint32_t v) { for (int i = 0; i < 4; ++i) u8(v >> (8 * i)); };
+        auto u16 = [&](uint16_t v) { u8(v); u8(static_cast<uint32_t>(v) >> 8); };
+        const uint32_t data = static_cast<uint32_t>(samples) * 2;
+        b.insert(b.end(), {'R', 'I', 'F', 'F'}); u32(36 + data);
+        b.insert(b.end(), {'W', 'A', 'V', 'E', 'f', 'm', 't', ' '}); u32(16);
+        u16(1); u16(1); u32(16000); u32(32000); u16(2); u16(16);
+        b.insert(b.end(), {'d', 'a', 't', 'a'}); u32(data);
+        for (int i = 0; i < samples; ++i) u16(static_cast<uint16_t>(i & 0xFF));
+        files[path] = b;
     }
 };
 
