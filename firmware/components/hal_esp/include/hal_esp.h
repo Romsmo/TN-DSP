@@ -3,7 +3,9 @@
 
 #include "hal/hal.h"
 
-struct _lv_display_t;
+#if defined(CONFIG_BDSP_ENABLE_DISPLAY)
+#include "lvgl.h"
+#endif
 
 namespace hal::esp {
 
@@ -14,10 +16,10 @@ hal::Buttons* buttons_instance();
 
 #if defined(CONFIG_BDSP_ENABLE_DISPLAY)
 struct DisplayInit {
-    struct _lv_display_t* lv_display = nullptr;
-    hal::DisplayDriver*   driver = nullptr;
-    hal::TouchDriver*     touch = nullptr;
-    uint8_t               controller_id = 0;
+    lv_display_t*        lv_display = nullptr;
+    hal::DisplayDriver*  driver = nullptr;
+    hal::TouchDriver*    touch = nullptr;
+    uint8_t              controller_id = 0;
 };
 
 // Brings up the QSPI panel + LVGL display + touch indev. Call once.

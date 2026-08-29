@@ -5,9 +5,8 @@
 // Every TODO(verify) must be confirmed against the C6 schematic before relying on it.
 #pragma once
 
-#include <driver/gpio.h>
-#include <driver/spi_common.h>
-#include <hal/spi_types.h>
+#include "driver/gpio.h"
+#include "driver/spi_master.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Display — QSPI AMOLED 466x466 (CO5300 / SH8601, runtime-detected)   [S3, S4]

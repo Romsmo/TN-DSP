@@ -12,4 +12,9 @@ set(EXTRA_COMPONENT_DIRS
 )
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+
+# Shared core/ + ui/ code is the host build's -Werror responsibility; don't let
+# IDF's stricter component warnings (32-bit int format widths, etc.) fail it.
+idf_build_set_property(COMPILE_OPTIONS "-Wno-error=format" APPEND)
+
 project(blitzerdsp)

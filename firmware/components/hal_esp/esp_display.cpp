@@ -4,6 +4,7 @@
 
 #include "board_config.h"
 #include "driver/spi_master.h"
+#include "esp_attr.h"
 #include "esp_heap_caps.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
@@ -89,7 +90,6 @@ lv_display_t* display_init(hal::DisplayDriver** out_driver) {
     bus.data2_io_num = BSP_LCD_PIN_DATA2;
     bus.data3_io_num = BSP_LCD_PIN_DATA3;
     bus.max_transfer_sz = BSP_LCD_H_RES * BSP_LCD_V_RES * 2;
-    bus.isr_cpu_id = ESP_INTR_CPU_AFFINITY_0;
     ESP_ERROR_CHECK(spi_bus_initialize(BSP_LCD_SPI_HOST, &bus, SPI_DMA_CH_AUTO));
 
     esp_lcd_panel_io_spi_config_t io = {};
@@ -103,7 +103,7 @@ lv_display_t* display_init(hal::DisplayDriver** out_driver) {
     io.lcd_param_bits = BSP_LCD_PARAM_BITS;
     io.flags.quad_mode = true;
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi(
-        reinterpret_cast<esp_lcd_spi_bus_handle_t>(BSP_LCD_SPI_HOST), &io, &g_io));
+        static_cast<esp_lcd_spi_bus_handle_t>(BSP_LCD_SPI_HOST), &io, &g_io));
 
     sh8601_vendor_config_t vc = {};
     vc.flags.use_qspi_interface = 1;

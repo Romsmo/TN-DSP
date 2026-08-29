@@ -3,6 +3,8 @@
 #include "board_config.h"
 #include "esp_i2c.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "hal/touch_driver.h"
 #include "lvgl.h"
 

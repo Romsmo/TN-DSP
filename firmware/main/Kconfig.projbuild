@@ -2,10 +2,17 @@ menu "BlitzerdeDsp"
 
     config BDSP_ENABLE_DISPLAY
         bool "Bring up the display + LVGL UI"
+        default y
+        help
+            Phase B+. When off, the firmware is a board smoke test only
+            (I2C scan, heap report, BOOT button).
+
+    config BDSP_ENABLE_BLE
+        bool "Build the NimBLE transport"
         default n
         help
-            Phase B. When off, the firmware is a board smoke test only
-            (I2C scan, heap report, BOOT button) - no LVGL, no esp_lcd deps.
+            Phase D. Pulls in the Bluetooth stack. Until then the UI runs from the
+            MockTransport demo timeline.
 
     config BDSP_FEATURE_SPEEDCAM
         bool "Compile speed-camera (Blitzer) support"

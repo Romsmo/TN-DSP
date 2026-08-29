@@ -18,9 +18,9 @@ void abbrev(uint32_t n, char* out, size_t cap) {
     if (n >= 1000000) {
         std::snprintf(out, cap, "%.1fM", static_cast<double>(n) / 1000000.0);
     } else if (n >= 1000) {
-        std::snprintf(out, cap, "%uK", n / 1000);
+        std::snprintf(out, cap, "%luK", static_cast<unsigned long>(n / 1000));
     } else {
-        std::snprintf(out, cap, "%u", n);
+        std::snprintf(out, cap, "%lu", static_cast<unsigned long>(n));
     }
 }
 
