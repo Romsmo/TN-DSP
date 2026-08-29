@@ -10,9 +10,10 @@
 namespace hal::esp {
 
 // Individual driver singletons (always available, no display deps).
-hal::Clock*   clock_instance();
-hal::Nvs*     nvs_instance();
-hal::Buttons* buttons_instance();
+hal::Clock*      clock_instance();
+hal::Nvs*        nvs_instance();
+hal::Buttons*    buttons_instance();
+hal::RtcDriver*  rtc_instance();
 
 #if defined(CONFIG_BDSP_ENABLE_DISPLAY)
 struct DisplayInit {

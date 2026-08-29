@@ -12,6 +12,7 @@ set(BDSP_TEST_SOURCES
   codec_test.cpp
   codec_interop_test.cpp
   app_runner_test.cpp
+  mux_transport_test.cpp
 )
 
 # ui/ tests need LVGL; only add them when the ui library is in the build.

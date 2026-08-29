@@ -34,7 +34,14 @@ public:
     void step(const Renderer& render) {
         DisplayState ds;
         if (transport_.poll(ds)) sm_.on_state(ds);
-        sm_.on_link(transport_.link());
+
+        // A connected link that has gone quiet counts as "the app went away":
+        // fall back to the cache + the no-app badge until packets resume.
+        transport::LinkStatus link = transport_.link();
+        if (link == transport::LinkStatus::Connected && transport_.state_stale()) {
+            link = transport::LinkStatus::Advertising;
+        }
+        sm_.on_link(link);
 
         const uint64_t now = clock_.now_ms();
         sm_.tick(now, epoch_base_ + static_cast<uint32_t>(now / 1000));

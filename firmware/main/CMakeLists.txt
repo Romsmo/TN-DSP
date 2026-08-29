@@ -3,7 +3,7 @@
 idf_component_register(
   SRCS app_main.cpp
   INCLUDE_DIRS "." "${CMAKE_CURRENT_LIST_DIR}/../.."
-  REQUIRES bdsp hal_esp nvs_flash esp_timer
+  REQUIRES bdsp hal_esp transport_ble nvs_flash esp_timer
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_17)

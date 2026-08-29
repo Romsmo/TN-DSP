@@ -9,10 +9,10 @@ menu "BlitzerdeDsp"
 
     config BDSP_ENABLE_BLE
         bool "Build the NimBLE transport"
-        default n
+        default y
         help
-            Phase D. Pulls in the Bluetooth stack. Until then the UI runs from the
-            MockTransport demo timeline.
+            Phase D. Pulls in the Bluetooth stack. When off, the UI runs purely
+            from the MockTransport demo timeline.
 
     config BDSP_FEATURE_SPEEDCAM
         bool "Compile speed-camera (Blitzer) support"

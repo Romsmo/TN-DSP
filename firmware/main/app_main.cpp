@@ -39,12 +39,19 @@ void i2c_check() {
 #if defined(CONFIG_BDSP_ENABLE_DISPLAY)
 
 #include <atomic>
+#include <ctime>
 
 #include "core/app/app_runner.h"
 #include "transport/mock/mock_transport.h"
+#include "transport/mux/mux_transport.h"
 #include "ui/screens/boot_screen.h"
 #include "ui/screens/screen_manager.h"
 #include "ui/theme/theme.h"
+
+#if defined(CONFIG_BDSP_ENABLE_BLE)
+#include "firmware/components/transport_ble/ble_transport.h"
+#include "firmware/components/transport_ble/ble_uuids.h"
+#endif
 
 extern "C" void app_main(void) {
     std::printf("\nBlitzerdeDsp %s  proto v%d  esp32c6  [display]\n", BSP_FW_VERSION,
@@ -61,9 +68,39 @@ extern "C" void app_main(void) {
     static hal::Clock* clk = hal::esp::clock_instance();
     static transport::mock::MockTransport mock(*clk);
     mock.load(transport::mock::demo_script());
-    mock.start();
 
+#if defined(CONFIG_BDSP_ENABLE_BLE)
+    static transport::ble::BleTransport ble;
+    ble.set_fw_version(BSP_FW_VERSION);
+    {
+        uint32_t caps = BDSP_CAP_HAS_RTC;
+#if defined(CONFIG_BDSP_FEATURE_SPEEDCAM)
+        caps |= BDSP_CAP_SPEEDCAM_BUILD;
+#endif
+        ble.set_caps(caps);
+    }
+    ble.on_time_set([](uint32_t epochS, int16_t tzOffsetMin) {
+        std::time_t t = static_cast<std::time_t>(epochS) + tzOffsetMin * 60;
+        std::tm tm{};
+        gmtime_r(&t, &tm);
+        hal::RtcTime rt;
+        rt.year = static_cast<uint16_t>(tm.tm_year + 1900);
+        rt.month = static_cast<uint8_t>(tm.tm_mon + 1);
+        rt.day = static_cast<uint8_t>(tm.tm_mday);
+        rt.hour = static_cast<uint8_t>(tm.tm_hour);
+        rt.minute = static_cast<uint8_t>(tm.tm_min);
+        rt.second = static_cast<uint8_t>(tm.tm_sec);
+        hal::esp::rtc_instance()->set(rt);
+        ESP_LOGI(TAG, "RTC set from BLE: %04u-%02u-%02u %02u:%02u", rt.year, rt.month, rt.day,
+                 rt.hour, rt.minute);
+    });
+    static transport::mux::MuxTransport mux(ble, mock);
+    static core::AppRunner runner(mux, *clk);
+    mux.start();
+#else
+    mock.start();
     static core::AppRunner runner(mock, *clk);
+#endif
     static ui::ScreenManager* mgr = nullptr;
 
     hal::esp::lvgl_lock();
@@ -106,8 +143,15 @@ extern "C" void app_main(void) {
             hal::esp::lvgl_unlock();
         }
         if (btn->poll_boot() == hal::ButtonEvent::LongPress) {
+#if defined(CONFIG_BDSP_ENABLE_BLE)
+            const bool want_demo = !mux.demo_active();
+            mux.use_demo(want_demo);
+            if (runner.sm().demo() != want_demo) runner.sm().toggle_demo();
+            ESP_LOGI(TAG, "demo %s", want_demo ? "ON (mock)" : "OFF (BLE)");
+#else
             runner.sm().toggle_demo();
             ESP_LOGI(TAG, "demo toggled");
+#endif
         }
         runner.step([](const core::DisplayState& s, const core::ViewModel& vm) {
             hal::esp::lvgl_lock();

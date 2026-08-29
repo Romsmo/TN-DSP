@@ -17,8 +17,18 @@ CONFIG_SPIRAM=n
 
 # ── BlitzerdeDsp ────────────────────────────────────────────────────────────
 CONFIG_BDSP_ENABLE_DISPLAY=y
-CONFIG_BDSP_ENABLE_BLE=n
+CONFIG_BDSP_ENABLE_BLE=y
 CONFIG_BDSP_FEATURE_SPEEDCAM=y
+
+# ── BLE — NimBLE peripheral only (see firmware/components/transport_ble) ─────
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_ROLE_PERIPHERAL=y
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
+CONFIG_BT_NIMBLE_ROLE_BROADCASTER=y
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
+CONFIG_BT_NIMBLE_DEVICE_NAME="BlitzerdeDsp"
 
 # ── LVGL 9 (firmware uses Kconfig; host uses ui/lv_conf.h) ──────────────────
 CONFIG_LV_COLOR_DEPTH_16=y
