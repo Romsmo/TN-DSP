@@ -1,33 +1,21 @@
-# Reproducible defaults. Target-specific overrides go in sdkconfig.defaults.esp32c6.
+# Reproducible defaults.
 CONFIG_IDF_TARGET="esp32c6"
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 
-# Partitions
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 
-# C++
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
 CONFIG_COMPILER_CXX_EXCEPTIONS=n
 CONFIG_COMPILER_CXX_RTTI=n
-CONFIG_COMPILER_OPTIMIZATION_SIZE=y
 
-# FreeRTOS
 CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
 
-# BLE — NimBLE only (C6 has no Bluetooth Classic)
-CONFIG_BT_ENABLED=y
-CONFIG_BT_NIMBLE_ENABLED=y
-CONFIG_BT_NIMBLE_ROLE_PERIPHERAL=y
-CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
-CONFIG_BT_NIMBLE_ROLE_BROADCASTER=y
-CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
-CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
-CONFIG_BT_NIMBLE_NVS_PERSIST=y
-
-# No PSRAM on the C6.
-# LVGL draw buffers are allocated from internal DMA-capable RAM (see hal_esp).
-
-# Logging
 CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 
-# Feature flags (Kconfig, see firmware/main/Kconfig.projbuild)
-CONFIG_BDSP_FEATURE_SPEEDCAM=y
+# Phase A: no display, no BLE. Enable in menuconfig as phases land.
+# CONFIG_BDSP_ENABLE_DISPLAY=y
+
+# LVGL (used when the display is enabled) — config from this repo's ui/lv_conf.h.
+CONFIG_LV_CONF_SKIP=n

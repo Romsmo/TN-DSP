@@ -2,19 +2,6 @@
 dependencies:
   idf: ">=5.3,<6.0"
 
-  lvgl/lvgl: "~9.2.0"
-  espressif/esp_lvgl_port: "~2.4"
-
-  # QSPI AMOLED panel (Waveshare example uses esp_lcd_sh8601 for this board's CO5300/SH8601).
+  # Display + UI (only needed when CONFIG_BDSP_ENABLE_DISPLAY=y).
+  lvgl/lvgl: "~9.2.2"
   espressif/esp_lcd_sh8601: "~2.0"
-  # Alternate driver, selected if the 0xDA id-read reports CO5300.
-  espressif/esp_lcd_co5300: "~2.1"
-
-  # I2C IO-expander (audio PA enable, resets).
-  espressif/esp_io_expander_tca9554: "^1.0"
-
-  # CBOR — same library the host build vendors.
-  espressif/tinycbor: "^0.6"
-
-  # Audio codec (milestone M6).
-  espressif/esp_codec_dev: "^1.3"

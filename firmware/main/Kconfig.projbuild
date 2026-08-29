@@ -1,17 +1,22 @@
 menu "BlitzerdeDsp"
 
+    config BDSP_ENABLE_DISPLAY
+        bool "Bring up the display + LVGL UI"
+        default n
+        help
+            Phase B. When off, the firmware is a board smoke test only
+            (I2C scan, heap report, BOOT button) - no LVGL, no esp_lcd deps.
+
     config BDSP_FEATURE_SPEEDCAM
         bool "Compile speed-camera (Blitzer) support"
         default y
         help
             When disabled, the speed-camera HazardType range, its icons and the
-            "Blitzer" column of the report screen are removed from the build
-            entirely, and incoming speed-camera hazards are suppressed. Intended
-            for builds meant to comply with German road-traffic law (§23 (1b) StVO).
-            The DeviceInfo capability bitmask advertises this setting to the app.
+            "Blitzer" column of the report screen are removed from the build, and
+            incoming speed-camera hazards are suppressed. For §23 (1b) StVO builds.
 
     config BDSP_DEMO_LONGPRESS_MS
-        int "BOOT long-press duration to toggle demo mode (ms)"
+        int "BOOT long-press (ms) to toggle demo mode"
         default 1500
 
     config BDSP_STATE_WATCHDOG_S
