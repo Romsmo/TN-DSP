@@ -43,14 +43,32 @@ public:
 };
 
 void lv_read_cb(lv_indev_t*, lv_indev_data_t* d) {
+    // Debounce: the unmounted panel picks up EMI spikes — a single stray sample
+    // must not register as a tap/swipe. Require two consecutive nearby reads to
+    // latch a press; once latched, hold it as long as reads keep succeeding so a
+    // fast drag isn't broken.
+    static int      latched = 0;   // 0 none, 1 candidate, 2+ confirmed
+    static uint16_t px = 0, py = 0;
+
     uint16_t x, y;
     if (read_point(x, y)) {
-        d->point.x = x;
-        d->point.y = y;
-        d->state = LV_INDEV_STATE_PRESSED;
+        if (latched < 2) {
+            const int dx = static_cast<int>(x) - px;
+            const int dy = static_cast<int>(y) - py;
+            latched = (latched == 1 && dx * dx + dy * dy < 60 * 60) ? 2 : 1;
+        }
+        px = x;
+        py = y;
+        if (latched >= 2) {
+            d->point.x = x;
+            d->point.y = y;
+            d->state = LV_INDEV_STATE_PRESSED;
+            return;
+        }
     } else {
-        d->state = LV_INDEV_STATE_RELEASED;
+        latched = 0;
     }
+    d->state = LV_INDEV_STATE_RELEASED;
 }
 
 }  // namespace

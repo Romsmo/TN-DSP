@@ -17,9 +17,9 @@ namespace ui {
 namespace {
 constexpr int   kCx = 233;
 constexpr int   kCy = 233;
-constexpr int   kRingR = 154;     // rim radius the icons ride on
-constexpr int   kItemBox = 46;
-constexpr int   kHubDia = 188;
+constexpr int   kRingR = 160;     // rim radius the icons ride on
+constexpr int   kItemBox = 58;
+constexpr int   kHubDia = 210;
 constexpr float kPi = 3.14159265358979f;
 constexpr float kThrow = 4.5f;    // how far a flick carries
 
@@ -42,7 +42,7 @@ MeldenScreen::MeldenScreen(lv_obj_t* parent) {
     // Selection lens at 12 o'clock (drawn behind the items).
     lens_ = lv_obj_create(root_);
     lv_obj_remove_style_all(lens_);
-    lv_obj_set_size(lens_, kItemBox + 14, kItemBox + 14);
+    lv_obj_set_size(lens_, kItemBox + 16, kItemBox + 16);
     lv_obj_set_style_radius(lens_, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_border_color(lens_, tok::col(tok::kClearGreen), 0);
     lv_obj_set_style_border_width(lens_, 3, 0);
@@ -71,12 +71,12 @@ MeldenScreen::MeldenScreen(lv_obj_t* parent) {
         const CategoryVisual vis = category_visual(c->type);
         if (vis.sign_code && assets::sign(vis.sign_code)) {
             lv_image_set_src(img, assets::sign(vis.sign_code));
-            lv_image_set_scale(img, static_cast<uint16_t>(40 * 256 / 64));
-            lv_obj_set_size(img, 40, 40);
+            lv_image_set_scale(img, static_cast<uint16_t>(50 * 256 / 64));
+            lv_obj_set_size(img, 50, 50);
         } else {
             lv_image_set_src(img, assets::icon(vis.icon));
-            lv_image_set_scale(img, static_cast<uint16_t>(32 * 256 / 40));
-            lv_obj_set_size(img, 32, 32);
+            lv_image_set_scale(img, static_cast<uint16_t>(40 * 256 / 40));
+            lv_obj_set_size(img, 40, 40);
             lv_obj_set_style_image_recolor(img, tok::col(tok::kTextPrimary), 0);
             lv_obj_set_style_image_recolor_opa(img, LV_OPA_COVER, 0);
         }
@@ -118,21 +118,21 @@ MeldenScreen::MeldenScreen(lv_obj_t* parent) {
 
     lv_obj_t* title = lv_label_create(hub_);
     lv_label_set_text_fmt(title, "%s:", i18n::t(i18n::Str::ReportTitle));
-    lv_obj_set_style_text_font(title, font::small(), 0);
+    lv_obj_set_style_text_font(title, font::label(), 0);
     lv_obj_set_style_text_color(title, tok::col(tok::kTextMuted), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 24);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 26);
 
     center_icon_ = lv_image_create(hub_);
     lv_image_set_inner_align(center_icon_, LV_IMAGE_ALIGN_CENTER);
-    lv_obj_align(center_icon_, LV_ALIGN_CENTER, 0, -2);
+    lv_obj_align(center_icon_, LV_ALIGN_CENTER, 0, -4);
 
     center_name_ = lv_label_create(hub_);
-    lv_obj_set_style_text_font(center_name_, font::label(), 0);
+    lv_obj_set_style_text_font(center_name_, font::title(), 0);
     lv_obj_set_style_text_color(center_name_, tok::col(tok::kTextPrimary), 0);
     lv_obj_set_style_text_align(center_name_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_width(center_name_, kHubDia - 24);
+    lv_obj_set_width(center_name_, kHubDia - 20);
     lv_label_set_long_mode(center_name_, LV_LABEL_LONG_WRAP);
-    lv_obj_align(center_name_, LV_ALIGN_BOTTOM_MID, 0, -20);
+    lv_obj_align(center_name_, LV_ALIGN_BOTTOM_MID, 0, -22);
 
     snap_to(0, /*anim=*/false);
 }
@@ -171,17 +171,17 @@ void MeldenScreen::refresh_selection() {
     const CategoryVisual vis = category_visual(t);
     if (vis.sign_code && assets::sign(vis.sign_code)) {
         lv_image_set_src(center_icon_, assets::sign(vis.sign_code));
-        lv_image_set_scale(center_icon_, static_cast<uint16_t>(58 * 256 / 64));
-        lv_obj_set_size(center_icon_, 58, 58);
+        lv_image_set_scale(center_icon_, static_cast<uint16_t>(72 * 256 / 64));
+        lv_obj_set_size(center_icon_, 72, 72);
         lv_obj_set_style_image_recolor_opa(center_icon_, LV_OPA_TRANSP, 0);
     } else {
         lv_image_set_src(center_icon_, assets::icon(vis.icon));
-        lv_image_set_scale(center_icon_, static_cast<uint16_t>(46 * 256 / 40));
-        lv_obj_set_size(center_icon_, 46, 46);
+        lv_image_set_scale(center_icon_, static_cast<uint16_t>(56 * 256 / 40));
+        lv_obj_set_size(center_icon_, 56, 56);
         lv_obj_set_style_image_recolor(center_icon_, tok::col(tok::kTextPrimary), 0);
         lv_obj_set_style_image_recolor_opa(center_icon_, LV_OPA_COVER, 0);
     }
-    lv_obj_align(center_icon_, LV_ALIGN_CENTER, 0, -2);
+    lv_obj_align(center_icon_, LV_ALIGN_CENTER, 0, -4);
     lv_label_set_text(center_name_, i18n::category_label(t));
     lv_obj_align(center_name_, LV_ALIGN_BOTTOM_MID, 0, -18);
 }
