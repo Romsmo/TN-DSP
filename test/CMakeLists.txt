@@ -10,7 +10,7 @@ set(BDSP_TEST_SOURCES
 
 # ui/ tests need LVGL; only add them when the ui library is in the build.
 if(TARGET bdsp_ui)
-  list(APPEND BDSP_TEST_SOURCES i18n_test.cpp sign_catalog_test.cpp)
+  list(APPEND BDSP_TEST_SOURCES i18n_test.cpp sign_catalog_test.cpp screen_manager_test.cpp)
 endif()
 
 add_executable(bdsp_tests ${BDSP_TEST_SOURCES})

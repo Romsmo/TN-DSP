@@ -106,6 +106,7 @@ int main(int argc, char** argv) {
     cbs.sound_toggled = [](bool on) { std::printf("event: SoundToggle %d\n", on); };
     cbs.units_changed = [](bool mph) { std::printf("event: UnitChanged mph=%d\n", mph); };
     cbs.phone_connect = []() { std::printf("event: PhoneConnect\n"); };
+    cbs.confirm_response = [](bool seen) { std::printf("event: ConfirmResponse seen=%d\n", seen); };
     mgr.set_callbacks(std::move(cbs));
     mgr.set_link_status("nicht verbunden");
 

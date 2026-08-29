@@ -1,5 +1,7 @@
 #include "ui/screens/screen_manager.h"
 
+#include "ui/overlays/confirm_overlay.h"
+#include "ui/overlays/hazard_overlay.h"
 #include "ui/screens/connect_screen.h"
 #include "ui/screens/home_screen.h"
 #include "ui/screens/melden_screen.h"
@@ -57,12 +59,28 @@ ScreenManager::ScreenManager(lv_obj_t* parent) {
         [](lv_event_t* e) { static_cast<ScreenManager*>(lv_event_get_user_data(e))->on_tile_changed(); },
         LV_EVENT_VALUE_CHANGED, this);
 
-    // Overlay slot, above the tileview.
+    // Layers above the tileview, painted in priority order (last = topmost):
+    //   hazard (non-modal)  <  connect  <  confirm (modal)
+    hazard_ = std::make_unique<HazardOverlay>(parent);
+
     overlay_layer_ = make_layer(parent);
     lv_obj_set_size(overlay_layer_, 466, 466);
     lv_obj_add_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
     connect_ = std::make_unique<ConnectScreen>(overlay_layer_);
     connect_->on_connect([this]() { if (cb_.phone_connect) cb_.phone_connect(); });
+
+    confirm_ = std::make_unique<ConfirmOverlay>(parent);
+    confirm_->on_response([this](bool seen) {
+        if (cb_.confirm_response) cb_.confirm_response(seen);
+        lv_obj_add_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);   // unlock navigation
+        overlay_ = (hazard_ && !lv_obj_has_flag(hazard_->root(), LV_OBJ_FLAG_HIDDEN))
+                       ? Overlay::Hazard : Overlay::None;
+    });
+    confirm_->on_timeout([this]() {
+        lv_obj_add_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
+        overlay_ = (hazard_ && !lv_obj_has_flag(hazard_->root(), LV_OBJ_FLAG_HIDDEN))
+                       ? Overlay::Hazard : Overlay::None;
+    });
 
     home_->show_swipe_hint();
 }
@@ -92,11 +110,15 @@ void ScreenManager::go_to(Tile t, bool animate) {
 }
 
 void ScreenManager::show_overlay(Overlay o) {
-    overlay_ = o;
-    if (o == Overlay::None) {
-        lv_obj_add_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
-    } else {
+    // Only the Connect layer is shown/hidden explicitly; Hazard and Confirm are
+    // driven by set_state().
+    if (o == Overlay::Connect) {
         lv_obj_remove_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
+        connect_->set_status(ConnectScreen::Status::Idle);
+        overlay_ = Overlay::Connect;
+    } else if (o == Overlay::None) {
+        lv_obj_add_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
+        if (overlay_ == Overlay::Connect) overlay_ = Overlay::None;
     }
 }
 
@@ -110,6 +132,28 @@ void ScreenManager::set_state(const core::DisplayState& s) {
     if (s.speedLimit) last_speed_kmh_ = *s.speedLimit;
     settings_->set_units_mph(s.useMph);
     home_->set_state(s);
+
+    hazard_->update(s);
+
+    const bool want_confirm = s.confirmPromptActive;
+    if (want_confirm && !confirm_->active()) {
+        confirm_->set_active(true, s.confirmPromptTimeoutS);
+        lv_obj_remove_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);   // lock navigation
+    } else if (!want_confirm && confirm_->active()) {
+        confirm_->set_active(false);
+        lv_obj_add_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
+    }
+
+    // Highest-priority active layer.
+    if (confirm_->active()) {
+        overlay_ = Overlay::Confirm;
+    } else if (overlay_ == Overlay::Connect) {
+        // left as-is; cleared by hide/connect flow
+    } else if (!lv_obj_has_flag(hazard_->root(), LV_OBJ_FLAG_HIDDEN)) {
+        overlay_ = Overlay::Hazard;
+    } else {
+        overlay_ = Overlay::None;
+    }
 }
 
 }  // namespace ui

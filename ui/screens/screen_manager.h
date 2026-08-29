@@ -18,9 +18,11 @@ class HomeScreen;
 class MeldenScreen;
 class SettingsScreen;
 class ConnectScreen;
+class HazardOverlay;
+class ConfirmOverlay;
 
 enum class Tile { Home, Melden, Settings };
-enum class Overlay { None, Connect };   // Hazard, Confirm added in M4
+enum class Overlay { None, Connect, Hazard, Confirm };
 
 class ScreenManager {
 public:
@@ -30,6 +32,7 @@ public:
         std::function<void(bool)>                                 sound_toggled;
         std::function<void(bool)>                                 units_changed;
         std::function<void()>                                     phone_connect;
+        std::function<void(bool /*seen*/)>                        confirm_response;
     };
 
     explicit ScreenManager(lv_obj_t* parent);
@@ -66,6 +69,8 @@ private:
     std::unique_ptr<MeldenScreen>   melden_;
     std::unique_ptr<SettingsScreen> settings_;
     std::unique_ptr<ConnectScreen>  connect_;
+    std::unique_ptr<HazardOverlay>  hazard_;
+    std::unique_ptr<ConfirmOverlay> confirm_;
 
     Callbacks cb_;
     Tile      current_ = Tile::Home;
