@@ -158,6 +158,12 @@ void dump_all() {
         load_static(sim::scenario_at(i));
         settle(25);
         sim::save_screenshot(sim::scenario_at(i).name);
+        if (sim::scenario_at(i).nav == sim::Nav::ConnectOverlay) {
+            g_mgr->show_connect_qr(true);
+            settle(25);
+            sim::save_screenshot("connect-qr");
+            g_mgr->show_connect_qr(false);
+        }
     }
     if (g_current) load_static(*g_current);
 }

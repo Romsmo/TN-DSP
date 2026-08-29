@@ -127,6 +127,7 @@ extern "C" void app_main(void) {
         cb.melden_activity   = []() { runner.sm().melden_activity(); };
         mgr->set_callbacks(std::move(cb));
     }
+    mgr->set_connect_qr(BSP_PAIR_URL);
     static std::atomic<bool> boot_done{false};
     static ui::BootScreen* boot = new ui::BootScreen(lv_screen_active(),
                                                      []() { boot_done.store(true); });
@@ -135,9 +136,6 @@ extern "C" void app_main(void) {
     hal::Buttons* btn = hal::esp::buttons_instance();
     uint32_t ticks = 0;
     uint64_t last_beat = 0;
-#if defined(CONFIG_BDSP_ENABLE_BLE)
-    bool qr_set = false;
-#endif
     while (true) {
         if (boot && boot_done.load()) {
             hal::esp::lvgl_lock();
@@ -145,20 +143,6 @@ extern "C" void app_main(void) {
             boot = nullptr;
             hal::esp::lvgl_unlock();
         }
-#if defined(CONFIG_BDSP_ENABLE_BLE)
-        if (!qr_set && ble.address_string()[0]) {
-            // TODO(verify): the exact pairing URI is the companion app's call
-            // (App Link / custom scheme). This carries the BLE address so the
-            // app connects to *this* display.
-            char uri[64];
-            std::snprintf(uri, sizeof(uri), "blitzerdedsp://pair?mac=%s", ble.address_string());
-            hal::esp::lvgl_lock();
-            mgr->set_connect_qr(uri);
-            hal::esp::lvgl_unlock();
-            qr_set = true;
-            ESP_LOGI(TAG, "pairing QR: %s", uri);
-        }
-#endif
         if (btn->poll_boot() == hal::ButtonEvent::LongPress) {
 #if defined(CONFIG_BDSP_ENABLE_BLE)
             const bool want_demo = !mux.demo_active();

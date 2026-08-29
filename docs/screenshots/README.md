@@ -13,6 +13,7 @@ artifact on every run.
 | `confirm.png` | `confirmPromptActive` | ~96 % scrim over Home, "Gesehen?", Ja/Nein split, countdown ring inside the bezel. |
 | `settings.png` | settings tile | 3 round buttons (no "Tag/Nacht" — single dark theme), version/proto/link footer. |
 | `connect.png` | unbonded | "Verbinde dein Mobilgerät" + button; shown until first bond. |
+| `connect-qr.png` | unbonded, button tapped | Store QR + 3-step guide (Bluetooth an · verbinden · App öffnen). |
 
 ## Known deltas from the sketch
 

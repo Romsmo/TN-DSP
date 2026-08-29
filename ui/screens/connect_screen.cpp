@@ -13,7 +13,8 @@ namespace ui {
 namespace {
 constexpr int kQrSize = 168;
 constexpr int kQrPad = 12;
-const char* kInitialPayload = "blitzerdedsp://pair";
+// Placeholder until the composition root supplies the real link.
+const char* kInitialPayload = "https://blitzer.de/dsp";
 }  // namespace
 
 ConnectScreen::ConnectScreen(lv_obj_t* parent) {

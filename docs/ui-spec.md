@@ -113,13 +113,12 @@ return to Home.
 ## 5.7 Handy verbinden
 
 - **Prompt view:** "Verbinde dein Mobilgerät" + a "Handy verbinden" button.
-- **Tapping the button** → the button + prompt are replaced by a **pairing QR code** (white,
-  ~168 px, centred at (233, 160)) with a 3-line quick guide below it: *Bluetooth an · Kamera auf
-  den Code · nach dem Verbinden die App öffnen*. A status line ("Advertising …" / "Verbunden")
-  sits under that. Tap the QR to go back to the prompt.
-- The QR encodes a pairing deep link `blitzerdedsp://pair?mac=<BLE address>` (**scheme is
-  provisional** — the companion app owns it). `ScreenManager::set_connect_qr()` fills it in once
-  the BLE host has synced.
+- **Tapping the button** → the button + prompt are replaced by a **QR code** (white, ~168 px,
+  centred at (233, 160)) with a 3-step guide below it: *1 Bluetooth einschalten · 2 Mit
+  "BlitzerdeDsp" verbinden · 3 App öffnen*. A status line ("Advertising …" / "Verbunden") sits
+  under that. Tap the QR to go back to the prompt.
+- The QR encodes a link to the companion app **in the store** (`BSP_PAIR_URL`, board_config.h —
+  **provisional**, needs the real store / smart link). `ScreenManager::set_connect_qr()` sets it.
 - Shown on first boot and whenever the BLE link is missing; swipe-up to Settings still works.
 
 ## 5.8 Navigation & gestures — M3

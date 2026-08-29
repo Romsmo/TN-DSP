@@ -115,6 +115,8 @@ void ScreenManager::set_connect_qr(const char* payload) {
     connect_->set_qr_payload(payload);
 }
 
+void ScreenManager::show_connect_qr(bool on) { connect_->show_qr(on); }
+
 void ScreenManager::set_state(const core::DisplayState& s) {
     state_ = s;
     use_mph_ = s.useMph;

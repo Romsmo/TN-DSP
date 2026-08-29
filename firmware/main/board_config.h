@@ -99,6 +99,11 @@
 #define BSP_FW_VERSION             "0.1.0-dev"
 #define BSP_PROTOCOL_VERSION       1
 
+// The pairing QR on the "Handy verbinden" screen points here — a link that
+// forwards to the companion app in the Play Store / App Store.
+// TODO(verify): replace with the real store / smart link once it exists.
+#define BSP_PAIR_URL               "https://blitzer.de/dsp"
+
 // NVS namespaces
 #define BSP_NVS_NS_SETTINGS        "settings"
 #define BSP_NVS_NS_CACHE           "cache"

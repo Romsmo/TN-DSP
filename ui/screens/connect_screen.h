@@ -23,15 +23,15 @@ public:
 
     void on_connect(std::function<void()> cb) { connect_ = std::move(cb); }
     void set_status(Status s);
-    // The string the pairing QR encodes (a deep link the companion app handles).
+    // The string the pairing QR encodes (points to the companion app in the store).
     void set_qr_payload(const char* s);
+    void show_qr(bool on);
     // Back to the prompt (e.g. when leaving the screen).
     void reset();
 
     lv_obj_t* root() { return root_; }
 
 private:
-    void show_qr(bool on);
 
     lv_obj_t*             root_ = nullptr;
     lv_obj_t*             prompt_ = nullptr;
