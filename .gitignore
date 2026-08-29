@@ -1,0 +1,43 @@
+# Build outputs
+/build/
+/build-*/
+build/
+cmake-build-*/
+*.o
+*.obj
+*.exe
+*.elf
+*.bin
+*.map
+
+# ESP-IDF
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/dependencies.lock
+firmware/managed_components/
+firmware/.cache/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+Testing/
+_deps/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Simulator artifacts
+sim/screenshots-out/
+*.png.tmp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

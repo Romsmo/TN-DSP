@@ -1,0 +1,21 @@
+menu "BlitzerdeDsp"
+
+    config BDSP_FEATURE_SPEEDCAM
+        bool "Compile speed-camera (Blitzer) support"
+        default y
+        help
+            When disabled, the speed-camera HazardType range, its icons and the
+            "Blitzer" column of the report screen are removed from the build
+            entirely, and incoming speed-camera hazards are suppressed. Intended
+            for builds meant to comply with German road-traffic law (§23 (1b) StVO).
+            The DeviceInfo capability bitmask advertises this setting to the app.
+
+    config BDSP_DEMO_LONGPRESS_MS
+        int "BOOT long-press duration to toggle demo mode (ms)"
+        default 1500
+
+    config BDSP_STATE_WATCHDOG_S
+        int "Seconds without a DisplayState before the link is treated as stale"
+        default 8
+
+endmenu

@@ -1,0 +1,11 @@
+#include "core/model/version.h"
+
+#ifndef BDSP_FW_VERSION
+#define BDSP_FW_VERSION "0.1.0-dev"
+#endif
+
+namespace core {
+
+const char* firmware_version() { return BDSP_FW_VERSION; }
+
+}  // namespace core
