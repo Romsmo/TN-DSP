@@ -1,9 +1,10 @@
 // ui/screens/melden_screen.h — the report screen. A rotary "crown" of category
-// icons around the rim; drag to spin, the one under the lens at 12 o'clock is
-// the current pick; the centre hub shows it large and is tapped to send.
-// Layout: docs/ui-spec.md 5.4.
+// icons around the rim; drag anywhere to spin it smoothly (with a bit of
+// momentum), the one under the lens at 12 o'clock is the current pick; the
+// centre hub shows it large and is tapped to send. Layout: docs/ui-spec.md 5.4.
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <vector>
@@ -26,8 +27,6 @@ public:
     }
     void on_dismiss(std::function<void()> cb) { dismiss_ = std::move(cb); }
 
-    // reset() re-centres on the first category; set_speed_context() keeps the
-    // (auto-attached) speed in sync with the live limit.
     void reset(int last_speed_kmh, bool use_mph);
     void set_speed_context(int last_speed_kmh, bool use_mph);
 
@@ -40,21 +39,23 @@ private:
         lv_obj_t*        obj;
     };
 
-    static void ring_evt(lv_event_t* e);
-    static void snap_exec(void* var, int32_t v);
+    static void drag_evt(lv_event_t* e);
+    static void spin_exec(void* var, int32_t v);
 
     void reposition();
     void refresh_selection();
     int  nearest_index() const;
+    int  index_for_deg(float deg) const;
+    void animate_to(float target_deg, uint32_t dur_ms);
     void snap_to(int index, bool anim);
     void confirm();
 
     lv_obj_t* root_ = nullptr;
     lv_obj_t* lens_ = nullptr;
+    lv_obj_t* drag_ = nullptr;
     lv_obj_t* hub_ = nullptr;
     lv_obj_t* center_icon_ = nullptr;
     lv_obj_t* center_name_ = nullptr;
-    lv_obj_t* back_ = nullptr;
     std::vector<Item> items_;
 
     float step_deg_ = 0.f;
@@ -63,8 +64,10 @@ private:
     int   seed_kmh_ = 50;
     bool  use_mph_ = false;
 
-    bool       drag_active_ = false;
-    float      drag_last_ang_ = 0.f;
+    bool     drag_active_ = false;
+    float    drag_last_ang_ = 0.f;
+    float    vel_ = 0.f;              // deg per ~frame, smoothed
+    uint32_t last_move_ms_ = 0;
     lv_point_t drag_start_pt_{};
 
     std::function<void(core::HazardType, std::optional<int>)> submit_;

@@ -1,5 +1,6 @@
 #include "ui/screens/melden_screen.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "core/catalog/category_registry.h"
@@ -20,6 +21,7 @@ constexpr int   kRingR = 154;     // rim radius the icons ride on
 constexpr int   kItemBox = 46;
 constexpr int   kHubDia = 188;
 constexpr float kPi = 3.14159265358979f;
+constexpr float kThrow = 4.5f;    // how far a flick carries
 
 float pt_angle(const lv_point_t& p) {
     return std::atan2(static_cast<float>(p.y - kCy), static_cast<float>(p.x - kCx)) *
@@ -37,7 +39,7 @@ MeldenScreen::MeldenScreen(lv_obj_t* parent) {
     lv_obj_set_size(root_, 466, 466);
     set_bg(root_, tok::kBg);
 
-    // Selection lens at 12 o'clock.
+    // Selection lens at 12 o'clock (drawn behind the items).
     lens_ = lv_obj_create(root_);
     lv_obj_remove_style_all(lens_);
     lv_obj_set_size(lens_, kItemBox + 14, kItemBox + 14);
@@ -48,7 +50,53 @@ MeldenScreen::MeldenScreen(lv_obj_t* parent) {
     lv_obj_set_style_bg_opa(lens_, LV_OPA_TRANSP, 0);
     place_center(lens_, kCx, kCy - kRingR);
 
-    // Centre hub — tap to send.
+    // Ring items — visual only; the drag layer below handles input.
+    int count = 0;
+    for (const core::Category* c = core::CategoryRegistry::begin();
+         c != core::CategoryRegistry::end(); ++c) {
+        ++count;
+    }
+    step_deg_ = count > 0 ? 360.0f / static_cast<float>(count) : 360.0f;
+
+    for (const core::Category* c = core::CategoryRegistry::begin();
+         c != core::CategoryRegistry::end(); ++c) {
+        lv_obj_t* o = lv_obj_create(root_);
+        lv_obj_remove_style_all(o);
+        lv_obj_set_size(o, kItemBox, kItemBox);
+        lv_obj_clear_flag(o, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
+
+        lv_obj_t* img = lv_image_create(o);
+        lv_image_set_inner_align(img, LV_IMAGE_ALIGN_CENTER);
+        const CategoryVisual vis = category_visual(c->type);
+        if (vis.sign_code && assets::sign(vis.sign_code)) {
+            lv_image_set_src(img, assets::sign(vis.sign_code));
+            lv_image_set_scale(img, static_cast<uint16_t>(40 * 256 / 64));
+            lv_obj_set_size(img, 40, 40);
+        } else {
+            lv_image_set_src(img, assets::icon(vis.icon));
+            lv_image_set_scale(img, static_cast<uint16_t>(32 * 256 / 40));
+            lv_obj_set_size(img, 32, 32);
+            lv_obj_set_style_image_recolor(img, tok::col(tok::kTextPrimary), 0);
+            lv_obj_set_style_image_recolor_opa(img, LV_OPA_COVER, 0);
+        }
+        lv_obj_center(img);
+        items_.push_back({c->type, c->needs_speed, o});
+    }
+
+    // Full-face drag layer — grab anywhere to spin the crown.
+    drag_ = lv_obj_create(root_);
+    lv_obj_remove_style_all(drag_);
+    lv_obj_set_size(drag_, 466, 466);
+    lv_obj_set_pos(drag_, 0, 0);
+    lv_obj_add_flag(drag_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(drag_, LV_OBJ_FLAG_SCROLLABLE);
+    for (lv_event_code_t code : {LV_EVENT_PRESSED, LV_EVENT_PRESSING,
+                                 LV_EVENT_RELEASED, LV_EVENT_PRESS_LOST}) {
+        lv_obj_add_event_cb(drag_, drag_evt, code, this);
+    }
+
+    // Centre hub — tap to send (on top of the drag layer).
     hub_ = lv_obj_create(root_);
     lv_obj_remove_style_all(hub_);
     lv_obj_set_size(hub_, kHubDia, kHubDia);
@@ -76,7 +124,7 @@ MeldenScreen::MeldenScreen(lv_obj_t* parent) {
 
     center_icon_ = lv_image_create(hub_);
     lv_image_set_inner_align(center_icon_, LV_IMAGE_ALIGN_CENTER);
-    lv_obj_align(center_icon_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(center_icon_, LV_ALIGN_CENTER, 0, -2);
 
     center_name_ = lv_label_create(hub_);
     lv_obj_set_style_text_font(center_name_, font::label(), 0);
@@ -86,73 +134,10 @@ MeldenScreen::MeldenScreen(lv_obj_t* parent) {
     lv_label_set_long_mode(center_name_, LV_LABEL_LONG_WRAP);
     lv_obj_align(center_name_, LV_ALIGN_BOTTOM_MID, 0, -20);
 
-    // Ring items.
-    int count = 0;
-    for (const core::Category* c = core::CategoryRegistry::begin();
-         c != core::CategoryRegistry::end(); ++c) {
-        ++count;
-    }
-    step_deg_ = count > 0 ? 360.0f / static_cast<float>(count) : 360.0f;
-
-    for (const core::Category* c = core::CategoryRegistry::begin();
-         c != core::CategoryRegistry::end(); ++c) {
-        lv_obj_t* o = lv_obj_create(root_);
-        lv_obj_remove_style_all(o);
-        lv_obj_set_size(o, kItemBox, kItemBox);
-        lv_obj_add_flag(o, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
-
-        lv_obj_t* img = lv_image_create(o);
-        lv_image_set_inner_align(img, LV_IMAGE_ALIGN_CENTER);
-        const CategoryVisual vis = category_visual(c->type);
-        if (vis.sign_code && assets::sign(vis.sign_code)) {
-            lv_image_set_src(img, assets::sign(vis.sign_code));
-            lv_image_set_scale(img, static_cast<uint16_t>(40 * 256 / 64));
-            lv_obj_set_size(img, 40, 40);
-        } else {
-            lv_image_set_src(img, assets::icon(vis.icon));
-            lv_image_set_scale(img, static_cast<uint16_t>(32 * 256 / 40));
-            lv_obj_set_size(img, 32, 32);
-            lv_obj_set_style_image_recolor(img, tok::col(tok::kTextPrimary), 0);
-            lv_obj_set_style_image_recolor_opa(img, LV_OPA_COVER, 0);
-        }
-        lv_obj_center(img);
-
-        for (lv_event_code_t code : {LV_EVENT_PRESSED, LV_EVENT_PRESSING,
-                                     LV_EVENT_RELEASED, LV_EVENT_PRESS_LOST}) {
-            lv_obj_add_event_cb(o, ring_evt, code, this);
-        }
-        items_.push_back({c->type, c->needs_speed, o});
-    }
-
-    // Back — a small chevron just below the rim at 6 o'clock.
-    back_ = lv_obj_create(root_);
-    lv_obj_remove_style_all(back_);
-    lv_obj_set_size(back_, 60, 34);
-    lv_obj_add_flag(back_, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_clear_flag(back_, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_ext_click_area(back_, 16);
-    lv_obj_add_event_cb(
-        back_,
-        [](lv_event_t* e) {
-            auto* self = static_cast<MeldenScreen*>(lv_event_get_user_data(e));
-            if (self->dismiss_) self->dismiss_();
-        },
-        LV_EVENT_CLICKED, this);
-    lv_obj_t* bchev = lv_image_create(back_);
-    lv_image_set_src(bchev, assets::icon(assets::Icon::ChevronUp));
-    lv_image_set_pivot(bchev, 20, 20);
-    lv_image_set_scale(bchev, static_cast<uint16_t>(22 * 256 / 40));
-    lv_image_set_rotation(bchev, 1800);
-    lv_obj_set_style_image_recolor(bchev, tok::col(tok::kTextFaint), 0);
-    lv_obj_set_style_image_recolor_opa(bchev, LV_OPA_COVER, 0);
-    lv_obj_center(bchev);
-    place_center(back_, kCx, kCy + kRingR + 44);
-
     snap_to(0, /*anim=*/false);
 }
 
-MeldenScreen::~MeldenScreen() { lv_anim_delete(this, snap_exec); }
+MeldenScreen::~MeldenScreen() { lv_anim_delete(this, spin_exec); }
 
 void MeldenScreen::reposition() {
     const int n = static_cast<int>(items_.size());
@@ -167,14 +152,16 @@ void MeldenScreen::reposition() {
     }
 }
 
-int MeldenScreen::nearest_index() const {
+int MeldenScreen::index_for_deg(float deg) const {
     const int n = static_cast<int>(items_.size());
     if (n == 0) return 0;
-    int k = static_cast<int>(std::lround(-ring_deg_ / step_deg_));
+    int k = static_cast<int>(std::lround(-deg / step_deg_));
     k %= n;
     if (k < 0) k += n;
     return k;
 }
+
+int MeldenScreen::nearest_index() const { return index_for_deg(ring_deg_); }
 
 void MeldenScreen::refresh_selection() {
     const int k = nearest_index();
@@ -199,11 +186,24 @@ void MeldenScreen::refresh_selection() {
     lv_obj_align(center_name_, LV_ALIGN_BOTTOM_MID, 0, -18);
 }
 
-void MeldenScreen::snap_exec(void* var, int32_t v) {
+void MeldenScreen::spin_exec(void* var, int32_t v) {
     auto* self = static_cast<MeldenScreen*>(var);
     self->ring_deg_ = static_cast<float>(v) / 16.0f;
     self->reposition();
     self->refresh_selection();
+}
+
+void MeldenScreen::animate_to(float target_deg, uint32_t dur_ms) {
+    lv_anim_delete(this, spin_exec);
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, this);
+    lv_anim_set_exec_cb(&a, spin_exec);
+    lv_anim_set_values(&a, static_cast<int32_t>(std::lround(ring_deg_ * 16.0f)),
+                       static_cast<int32_t>(std::lround(target_deg * 16.0f)));
+    lv_anim_set_duration(&a, dur_ms);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_start(&a);
 }
 
 void MeldenScreen::snap_to(int index, bool anim) {
@@ -213,60 +213,69 @@ void MeldenScreen::snap_to(int index, bool anim) {
     float target = -idx * step_deg_;
     while (target - ring_deg_ > 180.0f) target -= 360.0f;
     while (target - ring_deg_ < -180.0f) target += 360.0f;
-
-    lv_anim_delete(this, snap_exec);
     if (!anim) {
+        lv_anim_delete(this, spin_exec);
         ring_deg_ = target;
         reposition();
         refresh_selection();
         return;
     }
-    lv_anim_t a;
-    lv_anim_init(&a);
-    lv_anim_set_var(&a, this);
-    lv_anim_set_exec_cb(&a, snap_exec);
-    lv_anim_set_values(&a, static_cast<int32_t>(std::lround(ring_deg_ * 16.0f)),
-                       static_cast<int32_t>(std::lround(target * 16.0f)));
-    lv_anim_set_duration(&a, 220);
-    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
-    lv_anim_start(&a);
+    animate_to(target, 220);
 }
 
-void MeldenScreen::ring_evt(lv_event_t* e) {
+void MeldenScreen::drag_evt(lv_event_t* e) {
     auto* self = static_cast<MeldenScreen*>(lv_event_get_user_data(e));
     lv_indev_t* indev = lv_indev_active();
     if (!indev) return;
     lv_point_t p;
     lv_indev_get_point(indev, &p);
     const float ang = pt_angle(p);
+    const uint32_t now = lv_tick_get();
     const lv_event_code_t code = lv_event_get_code(e);
 
     if (code == LV_EVENT_PRESSED) {
-        lv_anim_delete(self, snap_exec);
+        lv_anim_delete(self, spin_exec);
         self->drag_active_ = true;
         self->drag_last_ang_ = ang;
         self->drag_start_pt_ = p;
+        self->vel_ = 0.0f;
+        self->last_move_ms_ = now;
     } else if (code == LV_EVENT_PRESSING) {
         if (!self->drag_active_) return;
-        self->ring_deg_ += wrap180(ang - self->drag_last_ang_);
+        const float d = wrap180(ang - self->drag_last_ang_);
         self->drag_last_ang_ = ang;
+        self->ring_deg_ += d;
+        const uint32_t dt = now - self->last_move_ms_ ? now - self->last_move_ms_ : 1;
+        self->last_move_ms_ = now;
+        const float inst = d / static_cast<float>(dt) * 16.0f;   // deg per ~frame
+        self->vel_ = self->vel_ * 0.55f + inst * 0.45f;
         self->reposition();
         self->refresh_selection();
     } else {  // RELEASED / PRESS_LOST
         if (!self->drag_active_) return;
         self->drag_active_ = false;
+
+        if (lv_indev_get_gesture_dir(indev) == LV_DIR_BOTTOM) {   // fling down -> leave
+            if (self->dismiss_) self->dismiss_();
+            return;
+        }
+
         const int dx = p.x - self->drag_start_pt_.x;
         const int dy = p.y - self->drag_start_pt_.y;
-        if (dx * dx + dy * dy < 100) {   // barely moved -> treat as a tap on this item
-            lv_obj_t* tgt = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-            for (int i = 0; i < static_cast<int>(self->items_.size()); ++i) {
-                if (self->items_[i].obj == tgt) {
-                    self->snap_to(i, true);
-                    return;
-                }
-            }
+        if (dx * dx + dy * dy < 100) {   // a tap -> bring the item nearest the tap to the lens
+            // item i sits at screen angle (-90 + i*step + ring_deg); invert for the tap.
+            const float want = (ang + 90.0f - self->ring_deg_) / self->step_deg_;
+            self->snap_to(static_cast<int>(std::lround(want)), true);
+            return;
         }
-        self->snap_to(self->nearest_index(), true);
+
+        // Momentum: let the flick carry, then land on a slot.
+        const float projected = self->ring_deg_ + self->vel_ * kThrow;
+        const int slot = static_cast<int>(std::lround(-projected / self->step_deg_));
+        const float target = -slot * self->step_deg_;
+        const uint32_t dur = static_cast<uint32_t>(std::clamp(
+            200.0f + std::fabs(target - self->ring_deg_) * 1.3f, 200.0f, 650.0f));
+        self->animate_to(target, dur);
     }
 }
 
@@ -296,6 +305,7 @@ void MeldenScreen::reset(int last_speed_kmh, bool use_mph) {
     use_mph_ = use_mph;
     selected_ = -1;
     ring_deg_ = 0.0f;
+    vel_ = 0.0f;
     snap_to(0, /*anim=*/false);
 }
 

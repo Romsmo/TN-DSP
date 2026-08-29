@@ -67,15 +67,16 @@ overlay is suppressed entirely.
 A **rotary selector** that uses the round face:
 
 - All categories (data-driven from `core::CategoryRegistry`) ride a **ring at the rim** (radius
-  ≈ 154), each a small icon / StVO sign. **Drag the ring to spin it** like a watch crown; a
-  **green lens at 12 o'clock** marks the current pick. Tapping an item spins it up to the lens.
-  On release it snaps to the nearest slot. Off-pick items are dimmed.
+  ≈ 154), each a small icon / StVO sign. **Drag anywhere on the face to spin the crown** — it
+  follows the finger 1:1 and carries a little momentum on release, then snaps to the nearest
+  slot. A **green lens at 12 o'clock** marks the current pick. Tapping (near) an item brings it
+  to the lens. Off-pick items are dimmed.
 - **Centre hub** — a soft translucent circle: "Melden:" heading, then the current pick **large
   with its title**. **Tap the hub to send** → green flash → `ReportSubmitted` → back to Home.
 - **No speed slider.** Speed categories (Mobil / Anhänger / Abstand) send with the current speed
   limit attached automatically; the app can refine it.
-- A small down-chevron just below the rim at 6 o'clock returns to Home; so does the 15 s idle
-  timeout. The tileview swipe is locked while the crown is up (it owns all drags).
+- Leave without sending: a **downward fling**, or the 15 s idle timeout. The tileview swipe is
+  locked while the crown is up (it owns all drags).
 - With `CONFIG_FEATURE_SPEEDCAM` off: the speed-camera categories are absent from the ring.
 
 ## 5.5 Gesehen? (modal overlay) — M4
