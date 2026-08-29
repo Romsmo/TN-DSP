@@ -1,0 +1,5 @@
+# Python tooling deps.  pip install -r tools/requirements.txt
+cbor2>=5.4          # fake_app.py protocol payloads
+bleak>=0.21         # fake_app.py BLE client
+Pillow>=10          # LVGLImage.py (asset generation)
+pypng>=0.20         # LVGLImage.py

@@ -11,6 +11,7 @@ set(BDSP_CORE_SOURCES
   audio/cue_composer.cpp
   audio/audio_service.cpp
   audio/fallback_tones.cpp
+  codec/protocol.cpp
 )
 
 add_library(bdsp_core STATIC ${BDSP_CORE_SOURCES})
