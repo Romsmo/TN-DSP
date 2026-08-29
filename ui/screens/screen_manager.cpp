@@ -68,9 +68,9 @@ ScreenManager::ScreenManager(lv_obj_t* parent) {
     lv_obj_add_flag(settings_layer_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(settings_layer_, LV_OBJ_FLAG_CLICKABLE);   // block the tileview behind
     settings_ = std::make_unique<SettingsScreen>(settings_layer_);
-    settings_->on_connect([this]() { if (cb_.phone_connect) cb_.phone_connect(); });
     settings_->on_sound([this](bool on) { if (cb_.sound_toggled) cb_.sound_toggled(on); });
     settings_->on_units([this](bool mph) { if (cb_.units_changed) cb_.units_changed(mph); });
+    settings_->on_system_reset([this]() { if (cb_.system_reset) cb_.system_reset(); });
     settings_->on_back([this]() { if (cb_.nav_changed) cb_.nav_changed(Tile::Home); });
 
     overlay_layer_ = make_layer(parent);
@@ -139,8 +139,12 @@ void ScreenManager::set_view(const core::ViewModel& vm) {
 
     // Settings layer.
     const bool want_settings = vm.screen == core::Screen::Settings;
-    if (want_settings) lv_obj_remove_flag(settings_layer_, LV_OBJ_FLAG_HIDDEN);
-    else lv_obj_add_flag(settings_layer_, LV_OBJ_FLAG_HIDDEN);
+    if (want_settings) {
+        lv_obj_remove_flag(settings_layer_, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(settings_layer_, LV_OBJ_FLAG_HIDDEN);
+        settings_->reset();   // next open starts on the buttons, not a sub-panel
+    }
 
     // Tiles (Home / Melden only).
     if (!want_connect && !want_settings) go_to(tile_of(vm.screen), /*animate=*/true);

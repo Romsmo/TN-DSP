@@ -15,6 +15,10 @@ hal::Nvs*        nvs_instance();
 hal::Buttons*    buttons_instance();
 hal::RtcDriver*  rtc_instance();
 
+// Wipe the whole NVS partition (settings + offline cache + BLE bonds) and reboot.
+// Does not return.
+[[noreturn]] void factory_reset();
+
 #if defined(CONFIG_BDSP_ENABLE_DISPLAY)
 struct DisplayInit {
     lv_display_t*        lv_display = nullptr;

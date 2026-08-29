@@ -33,7 +33,8 @@ public:
         std::function<void(core::HazardType, std::optional<int>)> report_submitted;
         std::function<void(bool)>                                 sound_toggled;
         std::function<void(bool)>                                 units_changed;
-        std::function<void()>                                     phone_connect;
+        std::function<void()>                                     phone_connect;   // Connect screen button
+        std::function<void()>                                     system_reset;    // Settings -> factory reset
         std::function<void(bool /*seen*/)>                        confirm_response;
         std::function<void(Tile)>                                 nav_changed;   // user swiped
         std::function<void()>                                     melden_activity;

@@ -96,7 +96,7 @@ On startup, an oversized stack of four "clear ahead" chevrons (wider than the sc
 past the left/right edges) sweeps up from below the display and off the top over ~1.3 s, then the
 Home UI appears. Plays once. Touches are swallowed while it runs.
 
-## 5.6 Settings — M3
+## 5.6 Settings — M3 (reworked M9)
 
 **Not a swipe tile** — so a stray vertical swipe in a moving car can't open it. Reached by a
 **tap on the Home gear** (bottom centre); that is the only way in. The **whole top ~92 px is a
@@ -104,11 +104,25 @@ back bar** — tap anywhere on it (down-chevron + "Settings" title), or **swipe 
 return to Home.
 
 - Header: down-chevron + "Settings" title, inside the back bar.
-- Round buttons Ø ~104 (no "Tag/Nacht" — single theme). "Handy verbinden" (162, 194),
-  "Ton An/Aus" (304, 194), "km/h · mph" (233, 306).
+- Four round buttons Ø ~100 in a 2×2 grid (no "Tag/Nacht" — single theme; no "Handy verbinden" —
+  the Connect screen owns first pairing, and after a factory reset it reappears on its own):
+  - **"Ton An/Aus"** (160, 200) — toggle; icon flips Volume2 ↔ VolumeX, fill when on.
+  - **"km/h · mph"** (306, 200) — toggle; fill when mph.
+  - **"Zurück / setzen"** (160, 312) — opens the factory-reset confirm panel.
+  - **"Updates"** (306, 312) — opens the update-info panel.
 - Toggle state readable without text (fill / accent). Labels two-line centred.
 - Small footer: firmware version, protocol version, link status.
-- Every change persists to NVS immediately **and** emits the matching `Settings*` event.
+- Toggle changes persist to NVS immediately **and** emit the matching `Settings*` event.
+
+**Factory-reset confirm panel** — full-screen, modal (no swipe-out). Heading "Werkseinstellung?",
+one line naming what is wiped (settings + offline cache + BLE bond), then **"Abbrechen"** (accented,
+safe default, top) and **"Zurücksetzen"** (plain, below). Confirm → `system_reset` callback →
+`hal::esp::factory_reset()` erases the whole NVS partition and reboots; the device comes back on
+the Connect screen like a first boot.
+
+**Update-info panel** — full-screen, tap anywhere (or the down-chevron) to close. Explains that
+firmware updates arrive automatically over Bluetooth through the BlitzerdeDsp app.
+`TODO(verify)`: OTA-over-BLE is not implemented yet — the panel is a promise for now.
 
 ## 5.7 Handy verbinden
 

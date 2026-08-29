@@ -74,6 +74,7 @@ void wire_callbacks() {
     cb.sound_toggled    = [](bool on) { g_sm.set_sound(on); };
     cb.units_changed    = [](bool mph) { g_sm.set_units(mph); };
     cb.phone_connect    = []() { g_sm.request_connect(); };
+    cb.system_reset     = []() { std::printf("event: SystemReset (sim: no-op)\n"); };
     cb.confirm_response = [](bool seen) {
         g_sm.answer_confirm(seen);
         std::printf("event: ConfirmResponse seen=%d\n", seen);

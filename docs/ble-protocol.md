@@ -124,3 +124,11 @@ still accepted.
 - The version is bumped only for a **breaking** change (a key's meaning or type changes, a field is
   removed). On a major mismatch the device keeps rendering the last good state and the app should
   surface an "update firmware / app" prompt (it can read the device's version from DeviceInfo).
+
+## Firmware update (OTA) — `TODO`, not implemented
+
+The device's Settings → "Updates" panel tells the user that firmware arrives over Bluetooth via
+the app. The transport for that does not exist yet: no OTA characteristic, and the partition table
+is still single-slot (`firmware/partitions.csv`). When built, add a chunked-upload characteristic
+(or its own service), dual OTA slots + `otadata`, and an apply/verify/`esp_restart` path. Until
+then, updates are a manual `idf.py flash` over USB. See the `blitzerdsp-ota-pending` note.

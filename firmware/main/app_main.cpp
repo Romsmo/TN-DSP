@@ -154,6 +154,7 @@ extern "C" void app_main(void) {
         cb.sound_toggled     = [](bool on) { runner.sm().set_sound(on); };
         cb.units_changed     = [](bool mph) { runner.sm().set_units(mph); };
         cb.phone_connect     = []() { runner.sm().request_connect(); };
+        cb.system_reset      = []() { ESP_LOGW(TAG, "ui: system_reset"); hal::esp::factory_reset(); };
         cb.nav_changed       = [](ui::Tile t) {
             ESP_LOGI(TAG, "ui: nav_changed %d", (int)t);
             if (t == ui::Tile::Melden) runner.sm().open_melden();

@@ -1,6 +1,9 @@
 #include <cstring>
 
+#include "esp_log.h"
+#include "esp_system.h"
 #include "hal/nvs.h"
+#include "hal_esp.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 
@@ -60,6 +63,13 @@ hal::Nvs* nvs_instance() {
     }
     static EspNvs n;
     return &n;
+}
+
+void factory_reset() {
+    ESP_LOGW("nvs", "factory reset: erasing NVS + rebooting");
+    nvs_flash_deinit();
+    nvs_flash_erase();     // settings + cache + nimble bond store all live here
+    esp_restart();
 }
 
 }  // namespace hal::esp

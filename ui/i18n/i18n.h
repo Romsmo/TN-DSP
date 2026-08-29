@@ -23,9 +23,16 @@ enum class Str {
     Yes,                // "Ja"
     No,                 // "Nein"
     SettingsTitle,      // "Settings"
-    SettingConnect,     // "Handy verbinden"
     SettingSound,       // "Ton An/Aus"
     SettingUnits,       // "km/h · mph"
+    SettingReset,       // "Zurücksetzen"
+    SettingUpdates,     // "Updates"
+    ResetTitle,         // "Werkseinstellung?"
+    ResetBody,          // what a reset wipes
+    ResetGo,            // "Zurücksetzen" (the confirm button)
+    Cancel,             // "Abbrechen"
+    UpdatesTitle,       // "Updates"
+    UpdatesBody,        // how updates are delivered
     ConnectPrompt,      // "Verbinde dein Mobilgerät"
     ConnectButton,      // "Handy verbinden"
     ConnectGuide,       // QR quick-guide, 3 short lines

@@ -23,9 +23,17 @@ constexpr const char* kDe[] = {
     "Ja",
     "Nein",
     "Settings",
-    "Handy verbinden",
     "Ton An/Aus",
     "km/h \xC2\xB7 mph",  // km/h · mph
+    "Zur\xC3\xBC" "ck\nsetzen",  // Zurücksetzen — split over two lines on the square button
+    "Updates",
+    "Werkseinstellung?",
+    "Einstellungen, Cache und Kopplung werden gel\xC3\xB6scht.",  // gelöscht
+    "Zur\xC3\xBC" "cksetzen",  // Zurücksetzen (split: \xBC + 'c' would be one escape)
+    "Abbrechen",
+    "Updates",
+    "Updates kommen automatisch \xC3\xBC" "ber die BlitzerdeDsp-App "
+    "per Bluetooth. Halte die App aktuell.",  // über
     "Verbinde dein Mobilger\xC3\xA4t",  // Mobilgerät
     "Handy verbinden",
     // ConnectGuide — 3 Schritte unter dem Store-QR
