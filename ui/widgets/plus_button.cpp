@@ -1,17 +1,18 @@
 #include "ui/widgets/plus_button.h"
 
-#include "ui/theme/fonts.h"
+#include "ui/assets/icons/icons.h"
 #include "ui/theme/tokens.h"
 #include "ui/widgets/widget_util.h"
 
 namespace ui {
 
 PlusButton::PlusButton(lv_obj_t* parent) {
-    // Swipe hint "←" sits to the left of the button.
-    hint_ = lv_label_create(parent);
-    lv_label_set_text(hint_, LV_SYMBOL_LEFT);
-    lv_obj_set_style_text_font(hint_, &lv_font_montserrat_28, 0);
-    lv_obj_set_style_text_color(hint_, tok::col(tok::kTextPrimary), 0);
+    // Swipe hint arrow sits to the left of the button.
+    hint_ = lv_image_create(parent);
+    lv_image_set_src(hint_, ui::assets::icon(ui::assets::Icon::ArrowLeft));
+    lv_image_set_scale(hint_, 26 * 256 / 40);
+    lv_obj_set_style_image_recolor(hint_, tok::col(tok::kTextPrimary), 0);
+    lv_obj_set_style_image_recolor_opa(hint_, LV_OPA_COVER, 0);
     lv_obj_set_style_opa(hint_, LV_OPA_TRANSP, 0);
 
     btn_ = lv_obj_create(parent);

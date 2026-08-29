@@ -1,5 +1,5 @@
 // ui/screens/home_screen.h — the base screen: status badge, chevrons, speed sign,
-// overtaking-ban, "+" button, settings gear. Layout per docs/ui-spec.md §5.1.
+// left/right context-sign columns, "+" button, settings gear. Layout: docs/ui-spec.md 5.1.
 #pragma once
 
 #include <memory>
@@ -12,7 +12,7 @@ namespace ui {
 class StatusBadge;
 class Chevrons;
 class SpeedSign;
-class OvertakingBan;
+class SignColumn;
 class PlusButton;
 
 class HomeScreen {
@@ -29,12 +29,13 @@ public:
 private:
     lv_obj_t* root_ = nullptr;
 
-    std::unique_ptr<StatusBadge>   badge_;
-    std::unique_ptr<Chevrons>      chevrons_;
-    std::unique_ptr<SpeedSign>     sign_;
-    std::unique_ptr<OvertakingBan> ban_;
-    std::unique_ptr<PlusButton>    plus_;
-    lv_obj_t*                      gear_ = nullptr;
+    std::unique_ptr<StatusBadge> badge_;
+    std::unique_ptr<Chevrons>    chevrons_;
+    std::unique_ptr<SpeedSign>   sign_;
+    std::unique_ptr<SignColumn>  left_;
+    std::unique_ptr<SignColumn>  right_;
+    std::unique_ptr<PlusButton>  plus_;
+    lv_obj_t*                    gear_ = nullptr;
 
     core::DisplayState state_{};
 };

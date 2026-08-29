@@ -6,6 +6,7 @@
 #include "core/model/device_event.h"
 #include "core/model/hazard_type.h"
 #include "core/model/settings.h"
+#include "core/model/sign_list.h"
 #include "core/model/units.h"
 #include "core/model/version.h"
 #include "core/model/warning_filter.h"
@@ -74,6 +75,28 @@ TEST_CASE("NightHours wraps past midnight") {
 
     NightHours never{8, 8};
     CHECK_FALSE(never.is_night(8));
+}
+
+TEST_CASE("SignList is a bounded, value-comparable list") {
+    SignList a;
+    CHECK(a.empty());
+    CHECK(a.add(sign_code(276)));
+    CHECK(a.add(sign_code(142, 10)));
+    CHECK(a.size() == 2);
+    CHECK(a[0] == 27600);
+    CHECK(a[1] == 14210);
+
+    for (int i = 0; i < 10; ++i) a.add(500 + static_cast<uint16_t>(i));
+    CHECK(a.size() == SignList::kMax);   // never overruns
+
+    SignList b;
+    b.add(sign_code(276));
+    CHECK(b != a);
+    b = SignList{};
+    b.add(27600);
+    b.add(14210);
+    for (int i = 0; i < 10; ++i) b.add(500 + static_cast<uint16_t>(i));
+    CHECK(b == a);
 }
 
 TEST_CASE("DisplayState defaults are the safe blank state") {

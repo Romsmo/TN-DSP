@@ -18,7 +18,9 @@ DisplayState home() {
     s.networkPeers = 480000;
     s.speedLimit = 60;
     s.directionArrows = true;
-    s.overtakingBan = true;
+    s.leftSigns.add(core::sign_code(276));      // Überholverbot
+    s.rightSigns.add(core::sign_code(142, 10)); // Wildwechsel
+    s.rightSigns.add(core::sign_code(110, 4));  // Steigung
     s.stateSeq = 1;
     return s;
 }

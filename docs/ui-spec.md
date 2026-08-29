@@ -13,9 +13,11 @@ defined. Fonts: Montserrat, compiled via `tools/gen_fonts.sh` (see [`ui/theme/fo
 speed-limit sign is a picture of a real sign — always white disc / red ring / black digits,
 regardless of theme.
 
-**Icon status (M2):** the speed sign and chevrons are drawn vector. The globe, gear, "+" and the
-overtaking-ban / hazard icons are primitive placeholders and are flagged for replacement with
-proper icon assets in a later pass.
+**Assets:** traffic signs are the official German StVO SVGs (Wikimedia Commons, public domain),
+rasterised at build time to LVGL image arrays — see `tools/signs/` + `tools/gen_assets.sh`, catalog
+in `ui/assets/signs/`. UI glyphs (globe, gear, arrow, check …) are Lucide icons (ISC), A8, recoloured
+at the call site. The speed-limit sign and the "clear" chevrons stay drawn (dynamic). The "+" plus
+mark is drawn.
 
 ---
 
@@ -26,7 +28,8 @@ proper icon assets in a later pass.
 | Status badge | globe at (96, 92); label to its right | globe 30 | globe + abbreviated `networkPeers` ("480K"). Label 20 px, muted. |
 | Direction chevrons | (233, 150) *(168 in the sketch; raised to clear the sign)* | block 130 × 100 | 3 stacked chevrons, bright green, only when `directionArrows` and no hazard. |
 | Speed-limit sign | (233, 300) | Ø 196 | white disc, ~22 px red ring, ~92 px bold digits. Drawn (border + label), not a bitmap. Fades out when `speedLimit` absent. |
-| Overtaking ban | (96, 372) | ~56 × 34 | two-cars symbol, red, only when `overtakingBan`. *(placeholder)* |
+| Left sign column | bottom-anchored at x ≈ 74, grows upward | signs ~50 px | `DisplayState.leftSigns` (VzNr codes), by convention prohibitions (276 = Überholverbot …). Up to 3 shown. |
+| Right sign column | bottom-anchored at x ≈ 392, grows upward | signs ~50 px, **same size as left** | `DisplayState.rightSigns`, by convention danger signs (142-10 Wildwechsel, 110-4 Steigung …). Up to 3 shown. |
 | "+" button | (424, 233) | Ø 46 | red circle, white plus. A ~45 %-opacity "←" swipe hint sits at (386, 233) and fades after a few seconds. |
 | Settings gear | (233, 428) | 30 | affordance for swipe-up; also tappable. |
 

@@ -41,3 +41,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Asset-pipeline caches (regenerable; manifest.json + generated ui/assets are committed)
+tools/signs/bildtafel.html
+tools/signs/bildtafel.json

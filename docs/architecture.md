@@ -97,6 +97,11 @@ Communication is **only** through thread-safe queues (`core/bus/`). LVGL is touc
 - **New protocol field** = new CBOR integer key. Old firmware ignores unknown keys; it never
   rejects the packet. `HazardType` values are frozen (0–10); new hazard types are appended and
   render as a generic icon on old firmware.
+- **Context signs** (`DisplayState.leftSigns` / `rightSigns`) are lists of packed VzNr codes
+  (`major*100 + minor`, e.g. 142-10 → 14210). The app decides which signs to show and on which
+  side; the board looks each code up in the generated catalog (`ui/assets/signs/`) and renders the
+  official StVO artwork, or nothing if the code is unknown. Adding a sign = drop its SVG in
+  `tools/signs/` and rerun `tools/gen_assets.sh`; no code change.
 
 ## Category filter (second-layer suppression)
 

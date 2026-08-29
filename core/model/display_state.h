@@ -9,6 +9,7 @@
 
 #include "core/model/audio_cue.h"
 #include "core/model/hazard_type.h"
+#include "core/model/sign_list.h"
 #include "core/model/units.h"
 
 namespace core {
@@ -21,8 +22,13 @@ struct DisplayState {
     // Speed-limit sign (a SIGN value, shown unchanged in speedLimitUnit)
     std::optional<int> speedLimit;       // absent => no sign
     SpeedUnit          speedLimitUnit = SpeedUnit::Kmh;
-    bool               overtakingBan  = false;
     bool               directionArrows = false;   // green "clear" chevrons
+
+    // Context signs the app wants painted beside the speed sign, as VzNr codes.
+    // Convention: left = prohibitions (e.g. 27600 overtaking ban), right = danger
+    // signs (e.g. 14210 Wildwechsel). The board just renders them.
+    SignList leftSigns;
+    SignList rightSigns;
 
     // Hazard / speed-camera nearby
     bool                      hazardActive = false;
@@ -48,7 +54,8 @@ struct DisplayState {
     bool operator==(const DisplayState& o) const {
         return internetConnected == o.internetConnected && networkPeers == o.networkPeers &&
                speedLimit == o.speedLimit && speedLimitUnit == o.speedLimitUnit &&
-               overtakingBan == o.overtakingBan && directionArrows == o.directionArrows &&
+               directionArrows == o.directionArrows && leftSigns == o.leftSigns &&
+               rightSigns == o.rightSigns &&
                hazardActive == o.hazardActive && hazardType == o.hazardType &&
                hazardDistanceM == o.hazardDistanceM && hazardSpeedLimit == o.hazardSpeedLimit &&
                confirmPromptActive == o.confirmPromptActive &&
