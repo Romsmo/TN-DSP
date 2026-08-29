@@ -48,6 +48,7 @@ ScreenManager::ScreenManager(lv_obj_t* parent) {
         if (cb_.report_submitted) cb_.report_submitted(t, spd);
     });
     melden_->on_dismiss([this]() { if (cb_.nav_changed) cb_.nav_changed(Tile::Home); });
+    melden_->on_activity([this]() { if (cb_.melden_activity) cb_.melden_activity(); });
 
     lv_obj_add_event_cb(
         tv_,

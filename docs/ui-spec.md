@@ -75,8 +75,10 @@ A **rotary selector** that uses the round face:
   with its title**. **Tap the hub to send** → green flash → `ReportSubmitted` → back to Home.
 - **No speed slider.** Speed categories (Mobil / Anhänger / Abstand) send with the current speed
   limit attached automatically; the app can refine it.
-- Leave without sending: a **downward fling**, or the 15 s idle timeout. The tileview swipe is
-  locked while the crown is up (it owns all drags).
+- The crown **remembers its position** — reopening Melden shows the last pick, not the first.
+- Leave without sending: a **downward fling**, or a **rightward "page back" swipe across the
+  middle band** (a flick along the rim just spins), or the 15 s idle timeout. Any crown
+  interaction resets that timeout. The tileview swipe is locked while the crown is up.
 - With `CONFIG_FEATURE_SPEEDCAM` off: the speed-camera categories are absent from the ring.
 
 ## 5.5 Gesehen? (modal overlay) — M4

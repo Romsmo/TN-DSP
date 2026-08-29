@@ -26,6 +26,7 @@ public:
         submit_ = std::move(cb);
     }
     void on_dismiss(std::function<void()> cb) { dismiss_ = std::move(cb); }
+    void on_activity(std::function<void()> cb) { activity_ = std::move(cb); }
 
     void reset(int last_speed_kmh, bool use_mph);
     void set_speed_context(int last_speed_kmh, bool use_mph);
@@ -66,12 +67,14 @@ private:
 
     bool     drag_active_ = false;
     float    drag_last_ang_ = 0.f;
+    float    drag_total_rot_ = 0.f;   // |accumulated rotation| this drag
     float    vel_ = 0.f;              // deg per ~frame, smoothed
     uint32_t last_move_ms_ = 0;
     lv_point_t drag_start_pt_{};
 
     std::function<void(core::HazardType, std::optional<int>)> submit_;
     std::function<void()>                                     dismiss_;
+    std::function<void()>                                     activity_;
 };
 
 }  // namespace ui

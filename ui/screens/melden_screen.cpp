@@ -238,13 +238,16 @@ void MeldenScreen::drag_evt(lv_event_t* e) {
         self->drag_active_ = true;
         self->drag_last_ang_ = ang;
         self->drag_start_pt_ = p;
+        self->drag_total_rot_ = 0.0f;
         self->vel_ = 0.0f;
         self->last_move_ms_ = now;
+        if (self->activity_) self->activity_();
     } else if (code == LV_EVENT_PRESSING) {
         if (!self->drag_active_) return;
         const float d = wrap180(ang - self->drag_last_ang_);
         self->drag_last_ang_ = ang;
         self->ring_deg_ += d;
+        self->drag_total_rot_ += std::fabs(d);
         const uint32_t dt = now - self->last_move_ms_ ? now - self->last_move_ms_ : 1;
         self->last_move_ms_ = now;
         const float inst = d / static_cast<float>(dt) * 16.0f;   // deg per ~frame
@@ -254,14 +257,29 @@ void MeldenScreen::drag_evt(lv_event_t* e) {
     } else {  // RELEASED / PRESS_LOST
         if (!self->drag_active_) return;
         self->drag_active_ = false;
+        if (self->activity_) self->activity_();
 
-        if (lv_indev_get_gesture_dir(indev) == LV_DIR_BOTTOM) {   // fling down -> leave
+        const int dx = p.x - self->drag_start_pt_.x;
+        const int dy = p.y - self->drag_start_pt_.y;
+
+        // Leave the page vs. spin the crown:
+        //  - a downward fling always leaves;
+        //  - a rightward swipe leaves only if it went across the middle band
+        //    (a "page back"), not a flick along the rim;
+        //  - if the crown clearly turned a lot, it was a spin — stay.
+        const lv_dir_t gdir = lv_indev_get_gesture_dir(indev);
+        const bool mid_band = std::abs(p.y - kCy) < 95 &&
+                              std::abs(self->drag_start_pt_.y - kCy) < 95;
+        const bool spun = self->drag_total_rot_ > 45.0f;
+        const bool back_swipe =
+            gdir == LV_DIR_BOTTOM ||
+            (gdir == LV_DIR_RIGHT && mid_band) ||
+            (dx > 150 && mid_band && dx > std::abs(dy) * 2);
+        if (!spun && back_swipe) {
             if (self->dismiss_) self->dismiss_();
             return;
         }
 
-        const int dx = p.x - self->drag_start_pt_.x;
-        const int dy = p.y - self->drag_start_pt_.y;
         if (dx * dx + dy * dy < 100) {   // a tap -> bring the item nearest the tap to the lens
             // item i sits at screen angle (-90 + i*step + ring_deg); invert for the tap.
             const float want = (ang + 90.0f - self->ring_deg_) / self->step_deg_;
@@ -303,10 +321,12 @@ void MeldenScreen::confirm() {
 void MeldenScreen::reset(int last_speed_kmh, bool use_mph) {
     seed_kmh_ = last_speed_kmh;
     use_mph_ = use_mph;
-    selected_ = -1;
-    ring_deg_ = 0.0f;
+    // Keep the crown where the user left it last time — just clean up any
+    // in-flight drag and settle exactly on the current slot.
+    drag_active_ = false;
     vel_ = 0.0f;
-    snap_to(0, /*anim=*/false);
+    lv_anim_delete(this, spin_exec);
+    snap_to(nearest_index(), /*anim=*/false);
 }
 
 void MeldenScreen::set_speed_context(int last_speed_kmh, bool use_mph) {
