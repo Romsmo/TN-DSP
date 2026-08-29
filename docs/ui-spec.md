@@ -28,12 +28,13 @@ mark is drawn.
 | Status badge | globe at (96, 92); label to its right | globe 30 | globe + abbreviated `networkPeers` ("480K"). Label 20 px, muted. |
 | Direction chevrons | (233, 150) *(168 in the sketch; raised to clear the sign)* | block 130 × 100 | 3 stacked chevrons, bright green, only when `directionArrows` and no hazard. |
 | Speed-limit sign | (233, 300) | Ø 196 | white disc, ~22 px red ring, ~92 px bold digits. Drawn (border + label), not a bitmap. Fades out when `speedLimit` absent. |
-| Left sign column | bottom-anchored at x ≈ 74, grows upward | signs ~50 px | `DisplayState.leftSigns` (VzNr codes), by convention prohibitions (276 = Überholverbot …). Up to 3 shown. |
-| Right sign column | bottom-anchored at x ≈ 392, grows upward | signs ~50 px, **same size as left** | `DisplayState.rightSigns`, by convention danger signs (142-10 Wildwechsel, 110-4 Steigung …). Up to 3 shown. |
-| "+" button | (424, 233) | Ø 46 | red circle, white plus. A ~45 %-opacity "←" swipe hint sits at (386, 233) and fades after a few seconds. |
-| Settings gear | (233, 428) | 30 | affordance for swipe-up; also tappable. |
+| Left sign column | centred on the speed sign at x ≈ 100 | signs ~48 px | `DisplayState.leftSigns` (VzNr codes), by convention prohibitions (276 = Überholverbot …). Up to 3; the box shrinks to the count so a single sign sits level with the speed sign, not slid into the round bezel. |
+| Right sign column | centred on the speed sign at x ≈ 366 | signs ~48 px, **same size as left** | `DisplayState.rightSigns`, by convention danger signs (142-10 Wildwechsel, 110-4 Steigung …). Up to 3. |
+| "+" button | (398, 233) | Ø 46 | red circle, white plus. Tap → Melden. A ~45 %-opacity "←" swipe hint fades after a few seconds. |
+| Settings gear | (233, 410) | 30 | **press-and-hold** (long-press) → Settings. A plain tap does nothing (avoids opening Settings by accident in a moving car). |
 
 When `speedLimit` is absent: the sign fades out and the chevrons move to the vertical centre (233).
+While a hazard overlay is up, both sign columns hide so the hazard icon / distance bar own the flanks.
 
 ## 5.2 No internet
 
@@ -43,12 +44,14 @@ face greys slightly (`tok::kSignStale`) — just enough to read "not live".
 
 ## 5.3 Hazard / speed-camera nearby (overlay — M4)
 
-Layer over the current page (not a tile).
+A layer **on the Home tile** (slides away with Home; never shows on Melden). It dims the page
+with a ~72 % black scrim so it clearly stands out, but stays non-modal — touches pass through and
+navigation still works.
 
 | Element | Position | Notes |
 |---|---|---|
-| Warn icon | (186, 214), ~72 px | icon per `hazardType`; **blinks** 100 % ↔ 35 % opacity at 1 Hz, ease-in-out. |
-| Distance bar | vertical at x ≈ 300, y 176–252, w 14 | fills from the bottom as the distance shrinks; "60m" label at 18 px beside it. |
+| Warn icon | top-centre (233, 128), ~88 px | the **per-category** visual from `category_visual()` — an StVO sign where one fits (Stau, Glätte, Rotlicht …), else a category glyph (camera, radar, caravan, wrench …), recoloured red. **Blinks** 100 % ↔ 35 % at 1 Hz, ease-in-out. Never a one-size-fits-all "!". |
+| Distance bar | vertical, left flank (x ≈ 52), level with the speed sign | fills from the bottom as the distance shrinks; "600m" label beside it. The sign columns hide while it is up. |
 | Speed sign | as Home | shows `hazardSpeedLimit` if set, else `speedLimit`; soft red glow ring on change; number crossfades ~180 ms. |
 | Chevrons | — | hidden while the hazard is active. |
 
@@ -68,9 +71,11 @@ overlay is suppressed entirely.
   Anhänger (92, 244), Rotlicht (170, 290), Abstand (100, 338).
 - **Gefahr** pills: Stau (300, 148), Glätte (382, 152), Unfall (340, 210), Baustelle (300, 272),
   Panne (384, 272), Hindernis (348, 336).
-- **Speed slider** (vertical, x = 196, y 300–400, knob Ø 22, label beside): visible only when the
-  selected category `needs_speed()` (Mobil / Anhänger / Abstand). Start = last known speed limit;
-  step 10, range 30–130 km/h (mph equivalent when `useMph`). Sent to the app rounded to 5 km/h.
+- **Speed slider** (horizontal, centred (233, 406), ~212 px wide, label above): parallel to the
+  pill rows and clear below them. Visible only when the selected category `needs_speed()`
+  (Mobil / Anhänger / Abstand). **Starts at the current speed limit every time** it appears — the
+  reporter only nudges it on deviation. Step 10, range 30–130 km/h (mph equivalent when `useMph`).
+  Sent to the app rounded to 5 km/h.
 - Flow: tap category → ~600 ms check animation → `ReportSubmitted` → back to Home. No input for
   15 s → back to Home. The "+" on Home also sends `ReportPressed`.
 - With `CONFIG_FEATURE_SPEEDCAM` off: the "Blitzer" column and its pills are absent; only "Gefahr".
@@ -85,11 +90,19 @@ overlay is suppressed entirely.
 - Answer or timeout → `ConfirmResponse` / silent cancel → back to Home. Navigation is locked while
   this overlay is up.
 
-## 5.6 Settings (swipe up) — M3
+## 5.6 Settings — M3
 
-- Header: gear + "Settings", (233, 66).
-- Round buttons Ø ~92 (no "Tag/Nacht" — single theme). Layout: "Handy verbinden" (166, 190),
-  "Ton An/Aus" (300, 190), "km/h · mph" (233, 300).
+**Not a swipe tile.** Settings is a full-screen layer reached only by a deliberate gesture, so a
+stray touch in a moving car can't open it:
+
+- **press-and-hold the Home gear** (long-press), or
+- a **strong upward fling** on Home (a light drag just rubber-bands back).
+
+Dismiss with the **down-chevron at the top** or a **downward swipe** → back to Home.
+
+- Header: down-chevron (42), "Settings" title (233, 72).
+- Round buttons Ø ~104 (no "Tag/Nacht" — single theme). "Handy verbinden" (162, 194),
+  "Ton An/Aus" (304, 194), "km/h · mph" (233, 306).
 - Toggle state readable without text (fill / accent). Labels two-line centred.
 - Small footer: firmware version, protocol version, link status.
 - Every change persists to NVS immediately **and** emits the matching `Settings*` event.
@@ -103,14 +116,16 @@ overlay is suppressed entirely.
 
 ## 5.8 Navigation & gestures — M3
 
-Pages are **dragged onto Home** — the incoming page follows the finger 1:1, not on release.
-
-- Home is tile (0, 0). Swipe left → Melden (tile to the right). Swipe up → Settings (tile below).
-  Tileview-style mechanics.
-- Drag follows the finger; rubber-band at edges (≤ ~15 % overscroll); snap on release past 35 %
-  displacement or sufficient flick velocity; snap animation ~220 ms ease-out.
-- Back to Home: opposite swipe, timeout, or a completed input.
-- Hazard and Confirm are **layers**, not tiles. Navigation is locked under the Confirm overlay.
+- The tileview holds **only Home ↔ Melden** (horizontal). Home is tile (0, 0); swipe left →
+  Melden. Tap the **"+"** on Home also opens Melden.
+- **Settings is not a tile** — see 5.6. Gear long-press or a strong up-fling; a light up-drag
+  rubber-bands back.
+- Drag follows the finger; rubber-band at edges; snap on release past ~35 % displacement or a
+  flick; snap animation ~220 ms ease-out.
+- Back to Home: opposite swipe / the Melden dismiss / the Settings down-chevron, a timeout, or a
+  completed input.
+- Hazard, Confirm, Connect and Settings are **layers**, not tiles. Navigation is locked under the
+  Confirm overlay.
 - Touch debounce: ignore contacts < 40 ms (the unit lives in a car).
 
 > **C6 performance note.** The full-screen finger-following page drag will be validated at M3; on

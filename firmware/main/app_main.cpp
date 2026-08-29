@@ -69,6 +69,7 @@ extern "C" void app_main(void) {
     {
         ui::ScreenManager::Callbacks cb;
         cb.report_pressed    = []() { runner.sm().open_melden(); };
+        cb.settings_pressed  = []() { runner.sm().open_settings(); };
         cb.report_submitted  = [](core::HazardType t, std::optional<int> s) {
             runner.sm().submit_report(t, s);
         };

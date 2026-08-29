@@ -28,7 +28,8 @@ enum class Overlay { None, Connect, Hazard, Confirm };
 class ScreenManager {
 public:
     struct Callbacks {
-        std::function<void()>                                     report_pressed;
+        std::function<void()>                                     report_pressed;   // "+" -> Melden
+        std::function<void()>                                     settings_pressed; // gear hold / fling -> Settings
         std::function<void(core::HazardType, std::optional<int>)> report_submitted;
         std::function<void(bool)>                                 sound_toggled;
         std::function<void(bool)>                                 units_changed;
@@ -61,11 +62,11 @@ private:
     void on_tile_changed();
     void go_to(Tile t, bool animate);
 
-    lv_obj_t* tv_ = nullptr;          // lv_tileview
+    lv_obj_t* tv_ = nullptr;          // lv_tileview: Home <-> Melden only
     lv_obj_t* tile_home_ = nullptr;
     lv_obj_t* tile_melden_ = nullptr;
-    lv_obj_t* tile_settings_ = nullptr;
-    lv_obj_t* overlay_layer_ = nullptr;
+    lv_obj_t* settings_layer_ = nullptr;   // Settings is a gated layer, not a tile
+    lv_obj_t* overlay_layer_ = nullptr;    // Connect
 
     std::unique_ptr<HomeScreen>     home_;
     std::unique_ptr<MeldenScreen>   melden_;

@@ -21,6 +21,7 @@ public:
     void on_connect(std::function<void()> cb) { connect_ = std::move(cb); }
     void on_sound(std::function<void(bool)> cb) { sound_ = std::move(cb); }
     void on_units(std::function<void(bool)> cb) { units_ = std::move(cb); }
+    void on_back(std::function<void()> cb) { back_ = std::move(cb); }
 
     void set_sound(bool on);
     void set_units_mph(bool mph);
@@ -30,6 +31,7 @@ public:
 
 private:
     lv_obj_t*   root_ = nullptr;
+    lv_obj_t*   back_hint_ = nullptr;
     PillButton* connect_btn_ = nullptr;
     PillButton* sound_btn_ = nullptr;
     PillButton* units_btn_ = nullptr;
@@ -40,6 +42,7 @@ private:
     std::function<void()>     connect_;
     std::function<void(bool)> sound_;
     std::function<void(bool)> units_;
+    std::function<void()>     back_;
 };
 
 }  // namespace ui

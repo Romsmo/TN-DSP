@@ -25,7 +25,8 @@ public:
     HomeScreen& operator=(const HomeScreen&) = delete;
 
     void set_state(const core::DisplayState& s);
-    void on_plus(std::function<void()> cb);   // "+" tapped
+    void on_plus(std::function<void()> cb);      // "+" tapped -> Melden
+    void on_settings(std::function<void()> cb);  // gear long-pressed / strong swipe-up -> Settings
     void show_swipe_hint();
     lv_obj_t* root() { return root_; }
 
@@ -39,6 +40,7 @@ private:
     std::unique_ptr<SignColumn>  right_;
     std::unique_ptr<PlusButton>  plus_;
     lv_obj_t*                    gear_ = nullptr;
+    std::function<void()>        settings_cb_;
 
     core::DisplayState state_{};
 };

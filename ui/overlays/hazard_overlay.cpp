@@ -1,8 +1,8 @@
 #include "ui/overlays/hazard_overlay.h"
 
-#include "core/catalog/category_registry.h"
 #include "ui/assets/icons/icons.h"
 #include "ui/assets/signs/sign_catalog.h"
+#include "ui/i18n/category_label.h"
 #include "ui/theme/tokens.h"
 #include "ui/widgets/distance_bar.h"
 #include "ui/widgets/widget_util.h"
@@ -12,10 +12,10 @@ namespace ui {
 namespace {
 constexpr int kIconAssetPx = 40;
 constexpr int kSignAssetPx = 64;
-constexpr int kIconBox = 76;
-// The icon sits where the chevrons are (hidden during a hazard), clear of the sign.
-constexpr int kIconCx = 176;
-constexpr int kIconCy = 176;
+constexpr int kIconBox = 88;
+// The icon sits above the speed sign, where the chevrons are (hidden during a hazard).
+constexpr int kIconCx = 233;
+constexpr int kIconCy = 128;
 
 void blink_opa_cb(void* obj, int32_t v) {
     lv_obj_set_style_opa(static_cast<lv_obj_t*>(obj), static_cast<lv_opa_t>(v), 0);
@@ -26,15 +26,19 @@ HazardOverlay::HazardOverlay(lv_obj_t* parent) {
     root_ = make_layer(parent);
     lv_obj_set_size(root_, 466, 466);
     lv_obj_add_flag(root_, LV_OBJ_FLAG_HIDDEN);
-    // Non-modal: let touches through to the tileview underneath.
+    // Non-modal: dims the page but lets touches through to the tileview underneath.
     lv_obj_clear_flag(root_, LV_OBJ_FLAG_CLICKABLE);
+    set_bg(root_, tok::kOverlayScrim,
+           static_cast<lv_opa_t>(tok::kHazardScrimOpaPct * 255 / 100));
 
     icon_ = lv_image_create(root_);
     lv_obj_set_style_image_recolor_opa(icon_, LV_OPA_COVER, 0);
     place_center(icon_, kIconCx, kIconCy);
 
-    bar_ = new DistanceBar(root_, 14, 76);
-    lv_obj_align(bar_->root(), LV_ALIGN_TOP_LEFT, 300, 168);
+    // Distance bar: left flank (the sign columns are hidden during a hazard),
+    // level with the speed sign, clear of the "+" button on the right.
+    bar_ = new DistanceBar(root_, 16, 128);
+    lv_obj_align(bar_->root(), LV_ALIGN_LEFT_MID, 52, -6);
 }
 
 HazardOverlay::~HazardOverlay() {
@@ -75,14 +79,16 @@ void HazardOverlay::update(const core::DisplayState& s) {
         return;
     }
 
-    // Icon: the category's StVO sign if it has one, else a generic warning triangle.
-    const core::Category* cat = core::CategoryRegistry::find(*s.hazardType);
-    if (cat && cat->sign_code && ui::assets::sign(cat->sign_code)) {
-        lv_image_set_src(icon_, ui::assets::sign(cat->sign_code));
+    // Icon: the per-category visual — an StVO sign where one fits (Stau, Glätte,
+    // Rotlicht …), else a category glyph (camera, radar, caravan …), not a
+    // one-size-fits-all "!".
+    const CategoryVisual vis = category_visual(*s.hazardType);
+    if (vis.sign_code && ui::assets::sign(vis.sign_code)) {
+        lv_image_set_src(icon_, ui::assets::sign(vis.sign_code));
         lv_image_set_scale(icon_, static_cast<uint16_t>(kIconBox * 256 / kSignAssetPx));
         lv_obj_set_style_image_recolor_opa(icon_, LV_OPA_TRANSP, 0);
     } else {
-        lv_image_set_src(icon_, ui::assets::icon(ui::assets::Icon::TriangleAlert));
+        lv_image_set_src(icon_, ui::assets::icon(vis.icon));
         lv_image_set_scale(icon_, static_cast<uint16_t>(kIconBox * 256 / kIconAssetPx));
         lv_obj_set_style_image_recolor(icon_, tok::col(tok::kWarnRed), 0);
         lv_obj_set_style_image_recolor_opa(icon_, LV_OPA_COVER, 0);

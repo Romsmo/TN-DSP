@@ -13,7 +13,7 @@
 namespace ui {
 
 class PillButton;
-class VSlider;
+class SpeedSlider;
 
 class MeldenScreen {
 public:
@@ -30,8 +30,10 @@ public:
     // Called when the user backs out with nothing selected (caller handles the 15 s timeout).
     void on_dismiss(std::function<void()> cb) { dismiss_ = std::move(cb); }
 
-    // Seed the slider start value (last known speed limit, km/h).
+    // Clear any selection and re-seed the slider from the current speed limit.
     void reset(int last_speed_kmh, bool use_mph);
+    // Keep the slider seed in sync with the live speed limit (called every frame).
+    void set_speed_context(int last_speed_kmh, bool use_mph);
 
     lv_obj_t* root() { return root_; }
 
@@ -40,12 +42,14 @@ private:
 
     void select(core::HazardType type);
     void submit_selected();
+    void seed_slider();
 
     lv_obj_t*                 root_ = nullptr;
-    VSlider*                  slider_ = nullptr;
+    SpeedSlider*              slider_ = nullptr;
     std::vector<Entry>        entries_;
     std::optional<core::HazardType> selected_;
     bool                      use_mph_ = false;
+    int                       seed_kmh_ = 50;
 
     std::function<void(core::HazardType, std::optional<int>)> submit_;
     std::function<void()>                                     dismiss_;

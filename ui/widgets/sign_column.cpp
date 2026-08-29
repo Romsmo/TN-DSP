@@ -14,13 +14,10 @@ constexpr int kGap = 8;
 SignColumn::SignColumn(lv_obj_t* parent, Side side, int sign_size, int max_visible)
     : side_(side), size_(sign_size), max_(std::min(max_visible, core::SignList::kMax)) {
     root_ = make_layer(parent);
-    lv_obj_set_size(root_, size_, max_ * size_ + (max_ - 1) * kGap);
-
-    // Stack bottom-up: slot 0 sits at the bottom (closest to eye level).
+    lv_obj_set_size(root_, size_, size_);
     for (int i = 0; i < max_; ++i) {
         slots_[i] = new SignIcon(root_, size_);
-        const int y = (max_ - 1 - i) * (size_ + kGap);
-        lv_obj_set_pos(slots_[i]->root(), 0, y);
+        lv_obj_set_pos(slots_[i]->root(), 0, i * (size_ + kGap));
     }
 }
 
@@ -29,9 +26,14 @@ SignColumn::~SignColumn() {
 }
 
 void SignColumn::set(const core::SignList& list) {
-    // Fill from the bottom slot upward.
+    const int n = std::min(static_cast<int>(list.size()), max_);
+    // Shrink the box to the signs actually shown so the caller can centre the
+    // block; a single sign then sits level with the speed sign, not slid to a
+    // corner of the round face.
+    const int shown = n > 0 ? n : 1;
+    lv_obj_set_height(root_, shown * size_ + (shown - 1) * kGap);
     for (int i = 0; i < max_; ++i) {
-        slots_[i]->set_code(i < list.size() ? list[i] : 0);
+        slots_[i]->set_code(i < n ? list[i] : 0);
     }
 }
 

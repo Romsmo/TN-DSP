@@ -29,8 +29,8 @@ ConfirmOverlay::ConfirmOverlay(lv_obj_t* parent) {
     lv_label_set_text(q, i18n::t(i18n::Str::ConfirmQuestion));
     lv_obj_set_style_text_font(q, font::title(), 0);
     lv_obj_set_style_text_color(q, tok::col(tok::kTextPrimary), 0);
-    place_center(q, 240, 60);
-    place_center(g, 240 - (lv_obj_get_width(q) / 2) - 18, 60);
+    place_center(q, 240, 76);
+    place_center(g, 240 - (lv_obj_get_width(q) / 2) - 18, 76);
 
     // Divider
     lv_obj_t* div = lv_obj_create(root_);
@@ -70,10 +70,10 @@ ConfirmOverlay::ConfirmOverlay(lv_obj_t* parent) {
         if (seen) lv_obj_add_flag(hit, LV_OBJ_FLAG_USER_1);
     }
 
-    // Countdown ring at the outer edge.
+    // Countdown ring, just inside the round bezel.
     ring_ = lv_arc_create(root_);
     lv_obj_remove_style_all(ring_);
-    lv_obj_set_size(ring_, 458, 458);
+    lv_obj_set_size(ring_, 438, 438);
     lv_obj_center(ring_);
     lv_arc_set_rotation(ring_, 270);
     lv_arc_set_bg_angles(ring_, 0, 360);

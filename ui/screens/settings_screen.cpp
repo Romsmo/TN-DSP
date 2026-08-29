@@ -19,12 +19,43 @@ SettingsScreen::SettingsScreen(lv_obj_t* parent) {
     root_ = make_layer(parent);
     lv_obj_set_size(root_, 466, 466);
     set_bg(root_, tok::kBg);
+    lv_obj_add_flag(root_, LV_OBJ_FLAG_CLICKABLE);   // catch swipe-down to dismiss
+    lv_obj_add_event_cb(
+        root_,
+        [](lv_event_t* e) {
+            auto* self = static_cast<SettingsScreen*>(lv_event_get_user_data(e));
+            if (lv_indev_get_gesture_dir(lv_indev_active()) == LV_DIR_BOTTOM &&
+                self->back_) {
+                self->back_();
+            }
+        },
+        LV_EVENT_GESTURE, this);
 
     lv_obj_t* title = lv_label_create(root_);
     lv_label_set_text(title, i18n::t(i18n::Str::SettingsTitle));
     lv_obj_set_style_text_font(title, font::title(), 0);
     lv_obj_set_style_text_color(title, tok::col(tok::kTextPrimary), 0);
-    place_center(title, 233, 64);
+    place_center(title, 233, 72);
+
+    // Back affordance: a down-chevron at the very top. Tap it, or swipe the page
+    // down, to return to Home.
+    back_hint_ = lv_image_create(root_);
+    lv_image_set_src(back_hint_, assets::icon(assets::Icon::ChevronUp));
+    lv_image_set_pivot(back_hint_, 20, 20);   // 40 px source -> centre
+    lv_image_set_scale(back_hint_, 26 * 256 / 40);
+    lv_image_set_rotation(back_hint_, 1800);   // point it down = "swipe down to close"
+    lv_obj_set_style_image_recolor(back_hint_, tok::col(tok::kTextMuted), 0);
+    lv_obj_set_style_image_recolor_opa(back_hint_, LV_OPA_COVER, 0);
+    lv_obj_add_flag(back_hint_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(back_hint_, 28);
+    lv_obj_add_event_cb(
+        back_hint_,
+        [](lv_event_t* e) {
+            auto* self = static_cast<SettingsScreen*>(lv_event_get_user_data(e));
+            if (self->back_) self->back_();
+        },
+        LV_EVENT_CLICKED, this);
+    place_center(back_hint_, 233, 42);
 
     connect_btn_ = new PillButton(root_, i18n::t(i18n::Str::SettingConnect), kBtn, kBtn, true,
                                   PillButton::Layout::Column);

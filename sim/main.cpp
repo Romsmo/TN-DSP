@@ -64,6 +64,7 @@ const sim::Scenario*           g_current = nullptr;
 void wire_callbacks() {
     ui::ScreenManager::Callbacks cb;
     cb.report_pressed   = []() { g_sm.open_melden(); };
+    cb.settings_pressed = []() { g_sm.open_settings(); };
     cb.report_submitted = [](core::HazardType t, std::optional<int> s) {
         g_sm.submit_report(t, s);
         std::printf("event: ReportSubmitted type=%d speed=%d\n", static_cast<int>(t),

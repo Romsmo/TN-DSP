@@ -106,7 +106,7 @@ std::vector<Step> demo_script() {
         DisplayState s = base();
         s.hazardActive = false;
         s.confirmPromptActive = true;
-        s.confirmPromptTimeoutS = 15;
+        s.confirmPromptTimeoutS = 10;
         core::AudioCue c;
         c.seq = cue_seq++;
         c.mode = core::AudioMode::Tones;
@@ -115,7 +115,7 @@ std::vector<Step> demo_script() {
         add(9200, s);
     }
 
-    add(13000, base());                                      // back to normal
+    add(20500, base());   // hold the prompt so the full countdown ring is visible
 
     return v;
 }
