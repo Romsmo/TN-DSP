@@ -1,26 +1,32 @@
 // hal_esp.h — concrete HAL for the Waveshare ESP32-C6-Touch-AMOLED-1.43.
-//
-// make_bundle() brings up the board (I2C bus, IO-expander, display + LVGL port,
-// touch, buttons, NVS, RTC, SD, audio) and returns the hal::Bundle the app wires
-// to core/ + ui/. Anything not yet implemented is left null.
 #pragma once
 
 #include "hal/hal.h"
 
+struct _lv_display_t;
+
 namespace hal::esp {
 
-struct InitResult {
-    hal::Bundle bundle;
-    uint8_t     lcd_controller_id = 0;   // 0xDA read: 0x86 SH8601, 0xFF CO5300
-    size_t      free_internal_after_init = 0;
-    bool        sd_mounted = false;
+// Individual driver singletons (always available, no display deps).
+hal::Clock*   clock_instance();
+hal::Nvs*     nvs_instance();
+hal::Buttons* buttons_instance();
+
+#if defined(CONFIG_BDSP_ENABLE_DISPLAY)
+struct DisplayInit {
+    struct _lv_display_t* lv_display = nullptr;
+    hal::DisplayDriver*   driver = nullptr;
+    hal::TouchDriver*     touch = nullptr;
+    uint8_t               controller_id = 0;
 };
 
-// Brings the board up. Call once from app_main before starting tasks.
-InitResult make_bundle();
+// Brings up the QSPI panel + LVGL display + touch indev. Call once.
+DisplayInit display_bringup();
 
-// The LVGL port owns its own task; core/ + ui/ run under lvgl_port_lock().
+// Starts the LVGL tick timer + handler task + provides the port lock.
+void lvgl_runtime_start();
 void lvgl_lock();
 void lvgl_unlock();
+#endif
 
 }  // namespace hal::esp

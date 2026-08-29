@@ -14,8 +14,11 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
 
 CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 
-# Phase A: no display, no BLE. Enable in menuconfig as phases land.
-# CONFIG_BDSP_ENABLE_DISPLAY=y
+# Phase B: display + LVGL UI.
+CONFIG_BDSP_ENABLE_DISPLAY=y
 
-# LVGL (used when the display is enabled) — config from this repo's ui/lv_conf.h.
+# LVGL config comes from this repo's ui/lv_conf.h (forwarded by firmware/lv_conf.h).
 CONFIG_LV_CONF_SKIP=n
+
+# SPI DMA-capable draw buffers live in internal RAM (no PSRAM on the C6).
+CONFIG_SPIRAM=n

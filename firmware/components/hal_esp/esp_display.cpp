@@ -13,9 +13,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "hal/display_driver.h"
+#include "hal/touch_driver.h"
+#include "hal_esp.h"
 #include "lvgl.h"
 
 namespace hal::esp {
+
+lv_indev_t* touch_init(hal::TouchDriver** out_driver);   // esp_touch.cpp
 
 namespace {
 const char* TAG = "disp";
@@ -136,6 +140,14 @@ lv_display_t* display_init(hal::DisplayDriver** out_driver) {
     static EspDisplay drv;
     if (out_driver) *out_driver = &drv;
     return disp;
+}
+
+DisplayInit display_bringup() {
+    DisplayInit r;
+    r.lv_display = display_init(&r.driver);
+    r.controller_id = g_controller_id;
+    touch_init(&r.touch);
+    return r;
 }
 
 }  // namespace hal::esp
