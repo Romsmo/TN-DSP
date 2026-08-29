@@ -111,6 +111,10 @@ void ScreenManager::set_link_status(const char* text) {
     settings_->set_footer("0.1.0-dev", 1, text);
 }
 
+void ScreenManager::set_connect_qr(const char* payload) {
+    connect_->set_qr_payload(payload);
+}
+
 void ScreenManager::set_state(const core::DisplayState& s) {
     state_ = s;
     use_mph_ = s.useMph;
@@ -124,8 +128,12 @@ void ScreenManager::set_state(const core::DisplayState& s) {
 void ScreenManager::set_view(const core::ViewModel& vm) {
     // Connect screen (its own layer, on top of everything).
     const bool want_connect = vm.screen == core::Screen::Connect;
-    if (want_connect) lv_obj_remove_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
-    else lv_obj_add_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
+    if (want_connect) {
+        lv_obj_remove_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(overlay_layer_, LV_OBJ_FLAG_HIDDEN);
+        connect_->reset();   // next open starts on the prompt, not the QR
+    }
 
     // Settings layer.
     const bool want_settings = vm.screen == core::Screen::Settings;

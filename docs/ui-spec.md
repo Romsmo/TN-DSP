@@ -110,11 +110,16 @@ return to Home.
 - Small footer: firmware version, protocol version, link status.
 - Every change persists to NVS immediately **and** emits the matching `Settings*` event.
 
-## 5.7 Handy verbinden — M3
+## 5.7 Handy verbinden
 
-- "Verbinde dein Mobilgerät", two lines centred in the upper third.
-- Button "Handy verbinden", centre (233, 320), Ø ~96 — starts advertising and shows progress
-  (Advertising … / Verbunden / Fehler) in place.
+- **Prompt view:** "Verbinde dein Mobilgerät" + a "Handy verbinden" button.
+- **Tapping the button** → the button + prompt are replaced by a **pairing QR code** (white,
+  ~168 px, centred at (233, 160)) with a 3-line quick guide below it: *Bluetooth an · Kamera auf
+  den Code · nach dem Verbinden die App öffnen*. A status line ("Advertising …" / "Verbunden")
+  sits under that. Tap the QR to go back to the prompt.
+- The QR encodes a pairing deep link `blitzerdedsp://pair?mac=<BLE address>` (**scheme is
+  provisional** — the companion app owns it). `ScreenManager::set_connect_qr()` fills it in once
+  the BLE host has synced.
 - Shown on first boot and whenever the BLE link is missing; swipe-up to Settings still works.
 
 ## 5.8 Navigation & gestures — M3

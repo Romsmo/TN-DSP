@@ -28,6 +28,10 @@ constexpr const char* kDe[] = {
     "km/h \xC2\xB7 mph",  // km/h · mph
     "Verbinde dein Mobilger\xC3\xA4t",  // Mobilgerät
     "Handy verbinden",
+    // ConnectGuide — Bluetooth an, Kamera auf den Code, nach dem Verbinden App öffnen
+    "1  Bluetooth einschalten\n"
+    "2  Kamera auf den Code halten\n"
+    "3  Nach dem Verbinden die App \xC3\xB6" "ffnen",
     "Advertising \xE2\x80\xA6",  // Advertising …
     "Verbunden",
     "Fehler",

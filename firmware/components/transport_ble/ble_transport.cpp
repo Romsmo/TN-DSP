@@ -11,6 +11,7 @@
 // run on the app loop. The small shared state is guarded by g_mtx.
 #include "firmware/components/transport_ble/ble_transport.h"
 
+#include <cstdio>
 #include <cstring>
 
 #include "esp_log.h"
@@ -61,6 +62,7 @@ uint16_t g_settings_h = 0;
 bool     g_event_sub = false;
 bool     g_settings_sub = false;
 uint8_t  g_own_addr_type = 0;
+char     g_addr_str[18] = {0};
 
 struct Lock {
     Lock() { if (g_mtx) xSemaphoreTake(g_mtx, portMAX_DELAY); }
@@ -280,8 +282,13 @@ void on_sync() {
         ESP_LOGE(TAG, "no BLE address");
         return;
     }
+    uint8_t a[6];
+    if (ble_hs_id_copy_addr(g_own_addr_type, a, nullptr) == 0) {
+        std::snprintf(g_addr_str, sizeof(g_addr_str), "%02X:%02X:%02X:%02X:%02X:%02X",
+                      a[5], a[4], a[3], a[2], a[1], a[0]);   // NimBLE stores it LE
+    }
     start_advertising();
-    ESP_LOGI(TAG, "advertising as BlitzerdeDsp");
+    ESP_LOGI(TAG, "advertising as BlitzerdeDsp (%s)", g_addr_str);
 }
 
 void on_reset(int reason) { ESP_LOGW(TAG, "nimble reset %d", reason); }
@@ -379,6 +386,7 @@ bool BleTransport::state_stale() const {
 
 void BleTransport::set_caps(uint32_t caps) { g_caps = caps; }
 void BleTransport::set_fw_version(const char* v) { g_fw = v; }
+const char* BleTransport::address_string() const { return g_addr_str; }
 void BleTransport::on_time_set(std::function<void(uint32_t, int16_t)> cb) {
     g_time_cb = std::move(cb);
 }

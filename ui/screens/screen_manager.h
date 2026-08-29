@@ -52,6 +52,7 @@ public:
     void set_state(const core::DisplayState& s);
     void set_view(const core::ViewModel& vm);
     void set_link_status(const char* text);
+    void set_connect_qr(const char* payload);   // deep link for the pairing QR
 
     Tile    current() const { return current_; }
     Overlay overlay() const { return overlay_; }

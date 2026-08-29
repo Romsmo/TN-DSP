@@ -28,6 +28,7 @@ enum class Str {
     SettingUnits,       // "km/h · mph"
     ConnectPrompt,      // "Verbinde dein Mobilgerät"
     ConnectButton,      // "Handy verbinden"
+    ConnectGuide,       // QR quick-guide, 3 short lines
     StatusAdvertising,  // "Advertising …"
     StatusConnected,    // "Verbunden"
     StatusError,        // "Fehler"

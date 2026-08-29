@@ -31,6 +31,9 @@ public:
     void set_fw_version(const char* v);
     // Fires (from the BLE task) when the app writes the Time characteristic.
     void on_time_set(std::function<void(uint32_t epochS, int16_t tzOffsetMin)> cb);
+
+    // "XX:XX:XX:XX:XX:XX", empty until the host has synced (~1 s after start()).
+    const char* address_string() const;
 };
 
 }  // namespace transport::ble
