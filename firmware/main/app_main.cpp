@@ -73,6 +73,7 @@ extern "C" void app_main(void) {
 
     hal::esp::DisplayInit di = hal::esp::display_bringup();
     ESP_LOGI(TAG, "panel controller id 0x%02X", di.controller_id);
+    static hal::DisplayDriver* display = di.driver;  // for nightMode -> brightness
     hal::esp::lvgl_runtime_start();
     heap_report("after LVGL");
 
@@ -194,6 +195,15 @@ extern "C" void app_main(void) {
             mgr->set_state(s);
             mgr->set_view(vm);
             hal::esp::lvgl_unlock();
+
+            // nightMode dims the panel only — the theme stays dark either way.
+            static int8_t night_applied = -1;
+            const int8_t night = s.nightMode ? 1 : 0;
+            if (display && night != night_applied) {
+                night_applied = night;
+                display->set_brightness(night ? BSP_LCD_BRIGHTNESS_NIGHT
+                                              : BSP_LCD_BRIGHTNESS_DAY);
+            }
         });
         ++ticks;
         const uint64_t now = clk->now_ms();

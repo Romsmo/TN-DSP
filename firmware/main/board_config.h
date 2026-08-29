@@ -35,6 +35,8 @@
 // AMOLED brightness: DCS write (no PWM backlight).
 #define BSP_LCD_CMD_BRIGHTNESS     0x51            // TODO(verify) against CO5300/SH8601 datasheet
 #define BSP_LCD_BRIGHTNESS_MAX     0xFF
+#define BSP_LCD_BRIGHTNESS_DAY     0xFF            // DisplayState.nightMode == false
+#define BSP_LCD_BRIGHTNESS_NIGHT   0x50            // nightMode == true — dim only, theme stays dark
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared I2C bus — touch, RTC, IMU, IO-expander                         [S3, S6]

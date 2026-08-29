@@ -9,7 +9,10 @@ writes DisplayState packets, subscribes to DeviceEvent notifications.
 
     python tools/fake_app.py --dry --scenario approach     # print packets, no BLE
     python tools/fake_app.py --scan                        # list nearby devices
+    python tools/fake_app.py --name --scenario approach    # find "BlitzerdeDsp" by name
     python tools/fake_app.py --address <MAC> --scenario approach
+
+Tested against bleak 3.0.2. The host machine's Bluetooth radio must be on.
 """
 import argparse
 import asyncio
@@ -18,6 +21,7 @@ import time
 import cbor2
 
 PROTO = 1
+ADV_NAME = "BlitzerdeDsp"   # CONFIG_BT_NIMBLE_DEVICE_NAME / ble_svc_gap_device_name_set
 
 # 128-bit UUID base 079aXXXX-d673-469c-98a0-12c0c5eb43b3 (PROVISIONAL, see ble_uuids.h)
 def _uuid(slot: int) -> str:
@@ -109,14 +113,20 @@ def scenario(name):
             (2.0, s(speed=100, internet=False)),
             (5.0, s(speed=100, arrows=True, peers=480000)),
         ]
+    if name == "night":
+        return [
+            (0.0, s(speed=50, arrows=True, peers=480000)),
+            (3.0, s(speed=50, arrows=True, night=True)),   # panel dims to 0x50
+            (8.0, s(speed=50, arrows=True, night=False)),  # panel back to 0xFF
+        ]
     raise SystemExit(f"unknown scenario {name!r}")
 
 
-async def run_ble(address, steps):
+async def run_ble(target, steps):
     from bleak import BleakClient
 
-    async with BleakClient(address) as client:
-        print(f"connected to {address}")
+    async with BleakClient(target) as client:
+        print(f"connected to {getattr(target, 'address', target)}")
 
         def on_event(_, data: bytearray):
             print(f"  << event: {describe_event(bytes(data))}")
@@ -137,8 +147,10 @@ async def run_ble(address, steps):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--address", help="device BLE address")
+    ap.add_argument("--name", nargs="?", const=ADV_NAME, metavar="ADV_NAME",
+                    help=f"find the device by advertised name (default {ADV_NAME!r})")
     ap.add_argument("--scenario", default="approach",
-                    choices=["approach", "confirm", "offline"])
+                    choices=["approach", "confirm", "offline", "night"])
     ap.add_argument("--dry", action="store_true", help="print packets, no BLE")
     ap.add_argument("--scan", action="store_true")
     args = ap.parse_args()
@@ -154,15 +166,24 @@ def main():
         return
 
     steps = scenario(args.scenario)
-    if args.dry or not args.address:
+    if args.dry or (not args.address and not args.name):
         for at, packet in steps:
             print(f"t+{at:>4.1f}s  {len(packet):>3} B  {packet.hex()}")
             print(f"          {cbor2.loads(packet)}")
-        if not args.address and not args.dry:
-            print("\n(no --address given; ran dry. use --scan to find the device.)")
+        if not args.dry:
+            print("\n(no --address/--name given; ran dry. use --scan to find the device.)")
         return
 
-    asyncio.run(run_ble(args.address, steps))
+    if args.name:
+        from bleak import BleakScanner
+
+        dev = asyncio.run(BleakScanner.find_device_by_name(args.name, timeout=10))
+        if dev is None:
+            raise SystemExit(f"no device advertising as {args.name!r} found")
+        print(f"found {args.name!r} at {dev.address}")
+        asyncio.run(run_ble(dev, steps))
+    else:
+        asyncio.run(run_ble(args.address, steps))
 
 
 if __name__ == "__main__":

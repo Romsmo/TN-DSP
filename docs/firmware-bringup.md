@@ -6,7 +6,7 @@ The firmware is brought up in phases so each step is flashable and observable.
 |---|---|---|---|---|
 | **A** | display off | board smoke: NVS init, targeted I2C probe (touch / TCA9554 / RTC / IMU / codec), heap report, BOOT button click + long-press | `driver`, `esp_driver_i2c`, `nvs_flash` | ✅ runs |
 | **B** | display on | + CO5300 QSPI display (`esp_lcd_sh8601` driver), LVGL, polled touch, the real UI | + `esp_lcd_sh8601`, `lvgl` | ✅ runs on hardware |
-| **D** | + BLE on | + NimBLE GATT peripheral (`BleTransport`): one service, five chars (State / Event / DeviceInfo / Settings / Time), CBOR. Advertises "BlitzerdeDsp". BOOT long-press flips `MuxTransport` between the live link and the mock demo. Time write → PCF85063. | + `bt`, `esp_timer` | ⏳ built, on-hardware verify |
+| **D** | + BLE on | + NimBLE GATT peripheral (`BleTransport`): one service, five chars (State / Event / DeviceInfo / Settings / Time), CBOR. Advertises "BlitzerdeDsp". BOOT long-press flips `MuxTransport` between the live link and the mock demo. Time write → PCF85063. Settings sync both ways + NVS persist. `nightMode` → panel dim. | + `bt`, `esp_timer` | ✅ advertises on hardware; ⏳ client end-to-end (needs a BLE host) |
 | **C** | later | + SD card (FATFS) — **blocked on the SD pin map** (`board_config.h` `TODO(verify)`). | + `fatfs`, `sdmmc` | blocked |
 | **D+** | later | + ES8311 audio | + `esp_codec_dev` | next |
 
@@ -23,6 +23,13 @@ Phase-D notes (2026-08-29): BLE adds ~35 KB at boot (controller) + ~30 KB (host)
 LVGL drops 175 → ~109 KB free, still comfortable. Binary 1.4 → 1.8 MB. The 128-bit service UUID
 fills the ADV packet, so the device **name is in the scan response** (ADV = flags + UUID only;
 name + UUID together overflow the 31-byte ADV PDU → `adv_set_fields rc=4`).
+
+Wall-clock: seeded from the PCF85063 on boot (`utc_epoch()` — newlib has no `timegm`), then
+overwritten by the Time characteristic when the app sends it (which also writes the RTC back).
+
+`nightMode` (DisplayState bit 4) only dims the AMOLED — DCS `0x51` with `BSP_LCD_BRIGHTNESS_NIGHT`
+(0x50) / `_DAY` (0xFF), applied on the edge in the render callback. The theme stays dark.
+Exercise it with `python tools/fake_app.py --name --scenario night`.
 
 Phase-B notes (2026-08-29): `lv_init()` must run before `lv_display_create()` (the driver does
 it). LVGL heap is 160 KB (`CONFIG_LV_MEM_SIZE_KILOBYTES`) — the full screen/overlay tree does not

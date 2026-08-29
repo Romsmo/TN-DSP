@@ -144,3 +144,10 @@ return to Home.
 - Animations short (150–250 ms). The only continuously moving element is the hazard blink.
 - Target ≥ 30 fps for the small animated regions; partial refresh; draw buffers in internal RAM
   (no PSRAM on the C6).
+
+## 5.10 Night mode
+
+- The theme is **always dark** — there is no day/night colour switch and no Settings button for it.
+- `DisplayState.nightMode` (set by the app) only **dims the AMOLED**: the composition root writes
+  DCS `0x51` with `BSP_LCD_BRIGHTNESS_NIGHT` (0x50) when the bit is set and `BSP_LCD_BRIGHTNESS_DAY`
+  (0xFF) when it clears, on the edge only. No effect in the simulator (no physical panel).
