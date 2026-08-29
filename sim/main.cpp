@@ -146,6 +146,14 @@ void settle(int frames) {
 }
 
 void dump_all() {
+    {   // boot splash, captured mid-sweep
+        std::atomic<bool> done{false};
+        auto* b = new ui::BootScreen(lv_screen_active(), [&]() { done = true; });
+        settle(28);
+        sim::save_screenshot("boot");
+        for (int k = 0; k < 200 && !done; ++k) settle(1);
+        delete b;
+    }
     for (int i = 0; i < sim::scenario_count(); ++i) {
         load_static(sim::scenario_at(i));
         settle(25);

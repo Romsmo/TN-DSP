@@ -5,6 +5,7 @@ artifact on every run.
 
 | File | Scenario | vs `docs/sketch.jpg` |
 |---|---|---|
+| `boot.png` | startup splash, mid-sweep | Oversized chevron stack sweeping up and off the top; plays once before Home. |
 | `home.png` | speed 60, chevrons, overtaking-ban (left), Wildwechsel + Steigung (right) | Layout matches: globe with peer count stacked under it (top-left), chevrons, centred sign, "+" hard right, gear bottom. Left/right sign columns are the agreed extension of the sketch (prohibitions left, danger signs right, same size). |
 | `no-internet.png` | link up, app offline | Globe → "no signal" glyph, peer count hidden. Values from `OfflineCache`. |
 | `hazard.png` | mobile camera, 600 m, limit 50 | Per-category blinking icon left of centre + distance bar right next to it, ~74 % scrim, sign shows `hazardSpeedLimit`. |

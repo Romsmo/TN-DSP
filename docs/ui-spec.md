@@ -88,13 +88,20 @@ overlay is suppressed entirely.
 - Answer or timeout → `ConfirmResponse` / silent cancel → back to Home. Navigation is locked while
   this overlay is up.
 
+## 5.0 Boot splash
+
+On startup, an oversized stack of four "clear ahead" chevrons (wider than the screen — it spills
+past the left/right edges) sweeps up from below the display and off the top over ~1.3 s, then the
+Home UI appears. Plays once. Touches are swallowed while it runs.
+
 ## 5.6 Settings — M3
 
 **Not a swipe tile** — so a stray vertical swipe in a moving car can't open it. Reached by a
-**tap on the Home gear** (bottom centre); that is the only way in. Dismiss with the **down-chevron
-at the top** or a **downward swipe** → back to Home.
+**tap on the Home gear** (bottom centre); that is the only way in. The **whole top ~92 px is a
+back bar** — tap anywhere on it (down-chevron + "Settings" title), or **swipe the page down**, to
+return to Home.
 
-- Header: down-chevron (42), "Settings" title (233, 72).
+- Header: down-chevron + "Settings" title, inside the back bar.
 - Round buttons Ø ~104 (no "Tag/Nacht" — single theme). "Handy verbinden" (162, 194),
   "Ton An/Aus" (304, 194), "km/h · mph" (233, 306).
 - Toggle state readable without text (fill / accent). Labels two-line centred.
