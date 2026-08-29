@@ -93,13 +93,17 @@ void PillButton::set_enabled(bool on) {
 }
 
 void PillButton::flash_check() {
-    lv_obj_add_flag(img_, LV_OBJ_FLAG_HIDDEN);
-    lv_label_set_text(label_, LV_SYMBOL_OK);
-    lv_obj_set_style_text_font(label_, &lv_font_montserrat_28, 0);
+    // Brief green confirmation flash, then back to the resting look. (Don't swap
+    // in LV_SYMBOL_OK — the Montserrat faces have no FontAwesome glyph, so it
+    // renders as a tofu box and never gets restored.)
+    lv_obj_set_style_bg_color(btn_, tok::col(tok::kClearGreen), 0);
+    lv_obj_set_style_border_opa(btn_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_text_color(label_, tok::col(tok::kBg), 0);
+    if (icon_recolor_) lv_obj_set_style_image_recolor(img_, tok::col(tok::kBg), 0);
     lv_timer_t* t = lv_timer_create(
         [](lv_timer_t* tm) {
             auto* self = static_cast<PillButton*>(lv_timer_get_user_data(tm));
-            lv_obj_set_style_text_font(self->label_, font::label(), 0);
+            self->set_selected(false);
             lv_timer_delete(tm);
         },
         600, this);

@@ -42,8 +42,8 @@ inline constexpr int  kRadiusMd    = 20;
 inline constexpr int  kPillRadius  = 999;   // stadium
 
 // ── Opacity ─────────────────────────────────────────────────────────────────
-inline constexpr int  kScrimOpaPct       = 55;   // confirm prompt (modal)
-inline constexpr int  kHazardScrimOpaPct = 72;   // hazard overlay (non-modal, but must stand out)
+inline constexpr int  kScrimOpaPct       = 96;   // confirm prompt (modal) — all but opaque
+inline constexpr int  kHazardScrimOpaPct = 74;   // hazard overlay (non-modal, but must stand out)
 inline constexpr int  kBlinkLowOpaPct    = 35;   // hazard icon blink floor
 inline constexpr int  kSwipeHintOpaPct   = 45;
 

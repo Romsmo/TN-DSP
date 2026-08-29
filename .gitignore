@@ -46,3 +46,4 @@ venv/
 tools/signs/bildtafel.html
 tools/signs/bildtafel.json
 tools/sd_root/
+docs/screenshots/*_round.png

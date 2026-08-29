@@ -21,7 +21,7 @@ TEST_CASE("known strings are what the sketch shows") {
     CHECK(std::string(t(Str::ReportTitle)) == "Melden");
     CHECK(std::string(t(Str::Yes)) == "Ja");
     CHECK(std::string(t(Str::No)) == "Nein");
-    CHECK(std::string(t(Str::ConfirmQuestion)) == "Gefahr gesehen?");
+    CHECK(std::string(t(Str::ConfirmQuestion)) == "Gesehen?");
     CHECK(std::string(t(Str::CatTraffic)) == "Stau");
     // umlauts survive as UTF-8
     CHECK(std::string(t(Str::CatTrailerCam)) == "Anh\xC3\xA4nger");

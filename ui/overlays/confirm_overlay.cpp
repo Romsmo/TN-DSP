@@ -1,6 +1,5 @@
 #include "ui/overlays/confirm_overlay.h"
 
-#include "ui/assets/icons/icons.h"
 #include "ui/i18n/i18n.h"
 #include "ui/theme/fonts.h"
 #include "ui/theme/tokens.h"
@@ -19,18 +18,12 @@ ConfirmOverlay::ConfirmOverlay(lv_obj_t* parent) {
     lv_obj_add_flag(root_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(root_, LV_OBJ_FLAG_CLICKABLE);   // modal: swallow taps outside the buttons
 
-    // Header: globe + "Gefahr gesehen?"
-    lv_obj_t* g = lv_image_create(root_);
-    lv_image_set_src(g, ui::assets::icon(ui::assets::Icon::Globe));
-    lv_image_set_scale(g, 22 * 256 / 40);
-    lv_obj_set_style_image_recolor(g, tok::col(tok::kTextPrimary), 0);
-    lv_obj_set_style_image_recolor_opa(g, LV_OPA_COVER, 0);
+    // Header — just the question, no icon.
     lv_obj_t* q = lv_label_create(root_);
     lv_label_set_text(q, i18n::t(i18n::Str::ConfirmQuestion));
     lv_obj_set_style_text_font(q, font::title(), 0);
     lv_obj_set_style_text_color(q, tok::col(tok::kTextPrimary), 0);
-    place_center(q, 240, 76);
-    place_center(g, 240 - (lv_obj_get_width(q) / 2) - 18, 76);
+    place_center(q, 233, 78);
 
     // Divider
     lv_obj_t* div = lv_obj_create(root_);

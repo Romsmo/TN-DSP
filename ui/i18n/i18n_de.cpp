@@ -19,7 +19,7 @@ constexpr const char* kDe[] = {
     "Baustelle",
     "Panne",
     "Hindernis",
-    "Gefahr gesehen?",
+    "Gesehen?",
     "Ja",
     "Nein",
     "Settings",

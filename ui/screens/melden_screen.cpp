@@ -21,12 +21,13 @@ struct MeldenScreen::Entry {
 };
 
 namespace {
-constexpr int kColLeftX = 120;
-constexpr int kColRightX = 330;
-constexpr int kPillW = 140;
-constexpr int kPillH = 42;
-constexpr int kRow0 = 118;
-constexpr int kRowGap = 44;
+constexpr int kColLeftX = 119;
+constexpr int kColRightX = 327;
+constexpr int kPillW = 134;
+constexpr int kPillH = 40;
+constexpr int kHeaderY = 76;
+constexpr int kRow0 = 130;   // extra breathing room under the column headers
+constexpr int kRowGap = 42;
 }  // namespace
 
 MeldenScreen::MeldenScreen(lv_obj_t* parent) {
@@ -38,28 +39,28 @@ MeldenScreen::MeldenScreen(lv_obj_t* parent) {
     lv_label_set_text(title, i18n::t(i18n::Str::ReportTitle));
     lv_obj_set_style_text_font(title, font::title(), 0);
     lv_obj_set_style_text_color(title, tok::col(tok::kTextPrimary), 0);
-    place_center(title, 233, 50);
+    place_center(title, 233, 46);
 
     // Divider
     lv_obj_t* div = lv_obj_create(root_);
     lv_obj_remove_style_all(div);
-    lv_obj_set_size(div, 1, 286);
+    lv_obj_set_size(div, 1, 292);
     set_bg(div, tok::kHairline);
     lv_obj_set_style_bg_opa(div, LV_OPA_40, 0);
-    lv_obj_align(div, LV_ALIGN_TOP_MID, 0, 78);
+    lv_obj_align(div, LV_ALIGN_TOP_MID, 0, 74);
 
     if (core::CategoryRegistry::speedcam_enabled()) {
         lv_obj_t* h1 = lv_label_create(root_);
         lv_label_set_text(h1, i18n::column_title(core::HazardGroup::SpeedCamera));
         lv_obj_set_style_text_font(h1, font::small(), 0);
         lv_obj_set_style_text_color(h1, tok::col(tok::kTextMuted), 0);
-        place_center(h1, kColLeftX, 88);
+        place_center(h1, kColLeftX, kHeaderY);
     }
     lv_obj_t* h2 = lv_label_create(root_);
     lv_label_set_text(h2, i18n::column_title(core::HazardGroup::GeneralHazard));
     lv_obj_set_style_text_font(h2, font::small(), 0);
     lv_obj_set_style_text_color(h2, tok::col(tok::kTextMuted), 0);
-    place_center(h2, kColRightX, 88);
+    place_center(h2, kColRightX, kHeaderY);
 
     int rowL = 0, rowR = 0;
     for (const core::Category* c = core::CategoryRegistry::begin();
@@ -122,23 +123,20 @@ void MeldenScreen::reset(int last_speed_kmh, bool use_mph) {
 }
 
 void MeldenScreen::select(core::HazardType type) {
-    const core::Category* c = core::CategoryRegistry::find(type);
-
-    // Second tap on an already-selected speed category = confirm with the slider value.
-    if (selected_ && *selected_ == type && c && c->needs_speed) {
+    // Second tap on the already-selected pill = confirm and send. Applies to
+    // every category, not just the speed ones — one tap arms, one tap sends.
+    if (selected_ && *selected_ == type) {
         submit_selected();
         return;
     }
 
+    const core::Category* c = core::CategoryRegistry::find(type);
     selected_ = type;
     for (auto& e : entries_) e.pill->set_selected(e.type == type);
 
     const bool needs_speed = c && c->needs_speed;
     if (needs_speed) seed_slider();   // start from the current limit every time
     slider_->set_visible(needs_speed);
-
-    // Categories without a speed submit immediately.
-    if (!needs_speed) submit_selected();
 }
 
 void MeldenScreen::submit_selected() {

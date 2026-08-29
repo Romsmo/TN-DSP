@@ -28,9 +28,10 @@ void abbrev(uint32_t n, char* out, size_t cap) {
 
 StatusBadge::StatusBadge(lv_obj_t* parent) {
     root_ = make_layer(parent);
-    lv_obj_set_flex_flow(root_, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(root_, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(root_, 8, 0);
+    // Globe on top, the peer count stacked underneath it.
+    lv_obj_set_flex_flow(root_, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(root_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(root_, 2, 0);
     lv_obj_set_size(root_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
 
     icon_ = lv_image_create(root_);

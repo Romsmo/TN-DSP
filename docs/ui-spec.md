@@ -25,13 +25,13 @@ mark is drawn.
 
 | Element | Centre | Size | Notes |
 |---|---|---|---|
-| Status badge | globe at (96, 92); label to its right | globe 30 | globe + abbreviated `networkPeers` ("480K"). Label 20 px, muted. |
+| Status badge | (112, 92) | globe 30 | globe on top, abbreviated `networkPeers` ("480K", 14 px muted) **stacked underneath** it. |
 | Direction chevrons | (233, 150) *(168 in the sketch; raised to clear the sign)* | block 130 × 100 | 3 stacked chevrons, bright green, only when `directionArrows` and no hazard. |
-| Speed-limit sign | (233, 300) | Ø 196 | white disc, ~22 px red ring, ~92 px bold digits. Drawn (border + label), not a bitmap. Fades out when `speedLimit` absent. |
+| Speed-limit sign | (233, 310) | Ø 196 | white disc, ~22 px red ring, ~92 px bold digits. Drawn (border + label), not a bitmap. Fades out when `speedLimit` absent. |
 | Left sign column | centred on the speed sign at x ≈ 100 | signs ~48 px | `DisplayState.leftSigns` (VzNr codes), by convention prohibitions (276 = Überholverbot …). Up to 3; the box shrinks to the count so a single sign sits level with the speed sign, not slid into the round bezel. |
 | Right sign column | centred on the speed sign at x ≈ 366 | signs ~48 px, **same size as left** | `DisplayState.rightSigns`, by convention danger signs (142-10 Wildwechsel, 110-4 Steigung …). Up to 3. |
-| "+" button | (398, 233) | Ø 46 | red circle, white plus. Tap → Melden. A ~45 %-opacity "←" swipe hint fades after a few seconds. |
-| Settings gear | (233, 410) | 30 | **press-and-hold** (long-press) → Settings. A plain tap does nothing (avoids opening Settings by accident in a moving car). |
+| "+" button | (435, 233) | Ø 46 | red circle, white plus, hard against the right bezel. Tap → Melden. A ~45 %-opacity "←" swipe hint fades after a few seconds. |
+| Settings gear | (233, 432) | 32 | **tap** → Settings. It is the only way in (Settings is not a swipe tile), so a stray vertical swipe can't land there. |
 
 When `speedLimit` is absent: the sign fades out and the chevrons move to the vertical centre (233).
 While a hazard overlay is up, both sign columns hide so the hazard icon / distance bar own the flanks.
@@ -45,13 +45,13 @@ face greys slightly (`tok::kSignStale`) — just enough to read "not live".
 ## 5.3 Hazard / speed-camera nearby (overlay — M4)
 
 A layer **on the Home tile** (slides away with Home; never shows on Melden). It dims the page
-with a ~72 % black scrim so it clearly stands out, but stays non-modal — touches pass through and
+with a ~74 % black scrim so it clearly stands out, but stays non-modal — touches pass through and
 navigation still works.
 
 | Element | Position | Notes |
 |---|---|---|
-| Warn icon | top-centre (233, 128), ~88 px | the **per-category** visual from `category_visual()` — an StVO sign where one fits (Stau, Glätte, Rotlicht …), else a category glyph (camera, radar, caravan, wrench …), recoloured red. **Blinks** 100 % ↔ 35 % at 1 Hz, ease-in-out. Never a one-size-fits-all "!". |
-| Distance bar | vertical, left flank (x ≈ 52), level with the speed sign | fills from the bottom as the distance shrinks; "600m" label beside it. The sign columns hide while it is up. |
+| Warn icon | left of centre, above the sign (180, 150), ~84 px | the **per-category** visual from `category_visual()` — an StVO sign where one fits (Stau, Glätte, Rotlicht …), else a category glyph (camera, radar, caravan, wrench …), recoloured red. **Blinks** 100 % ↔ 35 % at 1 Hz, ease-in-out. Never a one-size-fits-all "!". |
+| Distance bar | vertical, **just right of the icon** (x ≈ 244), above the sign | fills from the bottom as the distance shrinks; "600m" label beside it. The sign columns hide while it is up. |
 | Speed sign | as Home | shows `hazardSpeedLimit` if set, else `speedLimit`; soft red glow ring on change; number crossfades ~180 ms. |
 | Chevrons | — | hidden while the hazard is active. |
 
@@ -64,41 +64,35 @@ overlay is suppressed entirely.
 
 ## 5.4 Melden (swipe left, or "+") — M3 ✅
 
-- Title "Melden" italic, (233, 60), 22 px.
-- Vertical divider at x = 233, y 88–400, 1 px, ~40 % opacity.
-- Column headers underlined, 18 px: "Blitzer" (140, 104), "Gefahr" (326, 104).
-- **Blitzer** pills (Ø ~74, staggered along the circle): Fest (100, 152), Mobil (168, 196),
-  Anhänger (92, 244), Rotlicht (170, 290), Abstand (100, 338).
-- **Gefahr** pills: Stau (300, 148), Glätte (382, 152), Unfall (340, 210), Baustelle (300, 272),
-  Panne (384, 272), Hindernis (348, 336).
+- Title "Melden" italic, (233, 46), 22 px.
+- Two columns of category pills (~134 × 40), data-driven from `core::CategoryRegistry`:
+  "Blitzer" (x 119) and "Gefahr" (x 327). Column headers at y 76, first pill row at y 130
+  (clear gap under the headers), row pitch 42.
+- **Two taps to send, every category.** First tap arms the pill (highlighted); a second tap on
+  the same pill confirms → ~600 ms green flash → `ReportSubmitted` → back to Home. Tapping a
+  different pill just moves the selection.
 - **Speed slider** (horizontal, centred (233, 406), ~212 px wide, label above): parallel to the
-  pill rows and clear below them. Visible only when the selected category `needs_speed()`
+  pill rows and clear below them. Visible only when the armed category `needs_speed()`
   (Mobil / Anhänger / Abstand). **Starts at the current speed limit every time** it appears — the
   reporter only nudges it on deviation. Step 10, range 30–130 km/h (mph equivalent when `useMph`).
   Sent to the app rounded to 5 km/h.
-- Flow: tap category → ~600 ms check animation → `ReportSubmitted` → back to Home. No input for
-  15 s → back to Home. The "+" on Home also sends `ReportPressed`.
+- No input for 15 s → back to Home. The "+" on Home also sends `ReportPressed`.
 - With `CONFIG_FEATURE_SPEEDCAM` off: the "Blitzer" column and its pills are absent; only "Gefahr".
 
-## 5.5 Gefahr bestätigen (modal overlay) — M4
+## 5.5 Gesehen? (modal overlay) — M4
 
-- Home stays visible, dimmed by a ~55 % black scrim.
-- Header: small globe + "Gefahr gesehen?", (233, 60), 22 px.
-- Two large hit areas split by a vertical line at x = 233 (y 96–430): "Ja" (150, 236),
-  "Nein" (320, 236), ~44 px.
-- Thin countdown ring on the outer edge over 15 s.
+- Home is dimmed by a ~96 % black scrim — all but opaque.
+- Header: just "**Gesehen?**", (233, 78), 22 px. No icon.
+- Two large hit areas split by a vertical line at x = 233: "Ja" (150, 236), "Nein" (320, 236).
+- Thin countdown ring just inside the round bezel over the prompt timeout (default 15 s).
 - Answer or timeout → `ConfirmResponse` / silent cancel → back to Home. Navigation is locked while
   this overlay is up.
 
 ## 5.6 Settings — M3
 
-**Not a swipe tile.** Settings is a full-screen layer reached only by a deliberate gesture, so a
-stray touch in a moving car can't open it:
-
-- **press-and-hold the Home gear** (long-press), or
-- a **strong upward fling** on Home (a light drag just rubber-bands back).
-
-Dismiss with the **down-chevron at the top** or a **downward swipe** → back to Home.
+**Not a swipe tile** — so a stray vertical swipe in a moving car can't open it. Reached by a
+**tap on the Home gear** (bottom centre); that is the only way in. Dismiss with the **down-chevron
+at the top** or a **downward swipe** → back to Home.
 
 - Header: down-chevron (42), "Settings" title (233, 72).
 - Round buttons Ø ~104 (no "Tag/Nacht" — single theme). "Handy verbinden" (162, 194),

@@ -12,10 +12,10 @@ namespace ui {
 namespace {
 constexpr int kIconAssetPx = 40;
 constexpr int kSignAssetPx = 64;
-constexpr int kIconBox = 88;
-// The icon sits above the speed sign, where the chevrons are (hidden during a hazard).
-constexpr int kIconCx = 233;
-constexpr int kIconCy = 128;
+constexpr int kIconBox = 84;
+// Icon left-of-centre above the speed sign; the distance bar sits just right of it.
+constexpr int kIconCx = 198;
+constexpr int kIconCy = 150;
 
 void blink_opa_cb(void* obj, int32_t v) {
     lv_obj_set_style_opa(static_cast<lv_obj_t*>(obj), static_cast<lv_opa_t>(v), 0);
@@ -35,10 +35,9 @@ HazardOverlay::HazardOverlay(lv_obj_t* parent) {
     lv_obj_set_style_image_recolor_opa(icon_, LV_OPA_COVER, 0);
     place_center(icon_, kIconCx, kIconCy);
 
-    // Distance bar: left flank (the sign columns are hidden during a hazard),
-    // level with the speed sign, clear of the "+" button on the right.
-    bar_ = new DistanceBar(root_, 16, 128);
-    lv_obj_align(bar_->root(), LV_ALIGN_LEFT_MID, 52, -6);
+    // Distance bar: right next to the icon, above the speed sign.
+    bar_ = new DistanceBar(root_, 16, 104);
+    lv_obj_align(bar_->root(), LV_ALIGN_TOP_LEFT, 244, 98);
 }
 
 HazardOverlay::~HazardOverlay() {
