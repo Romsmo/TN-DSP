@@ -192,6 +192,7 @@ int main(int argc, char** argv) {
 
     lv_sdl_mouse_create();
     SDL_AddEventWatch(event_watch, nullptr);
+    std::printf("keys: 1-7 scenarios | d demo | s screenshot | S dump all | q quit\n");
     if (demo_start) toggle_demo();
     else load_static(sim::scenario_at(0));
 

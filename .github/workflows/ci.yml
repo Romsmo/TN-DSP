@@ -1,0 +1,65 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  host:
+    name: host build + tests + simulator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build libsdl2-dev
+
+      - name: configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBDSP_WERROR=ON
+
+      - name: build
+        run: cmake --build build
+
+      - name: test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: simulator screenshots (headless)
+        run: |
+          SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ./build/sim/bdsp_sim --shot
+          ls -la docs/screenshots/*.png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: docs/screenshots/*.png
+
+  protocol:
+    name: python protocol tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install cbor2
+      - run: python tools/fake_app.py --dry --scenario approach
+      - run: python tools/fake_app.py --dry --scenario confirm
+
+  firmware:
+    name: firmware build (esp32c6)
+    runs-on: ubuntu-latest
+    # The ESP HAL / BLE components are skeletons until an ESP-IDF environment +
+    # hardware are in the loop; this job is informational until then.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: idf.py build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.3.2
+          target: esp32c6
+          path: firmware
