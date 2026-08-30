@@ -7,6 +7,7 @@
 #include <functional>
 
 #include "core/audio/audio_service.h"
+#include "core/cache/cache_store.h"
 #include "core/model/display_state.h"
 #include "core/model/settings.h"
 #include "core/settings/settings_store.h"
@@ -30,6 +31,9 @@ public:
     }
     // When set, remote Settings writes and local Settings changes are persisted.
     void set_settings_store(SettingsStore* s) { store_ = s; }
+    // When set, the last rendered DisplayState is persisted every ~30 s so it
+    // survives an ignition cycle (see CacheStore).
+    void set_cache_store(CacheStore* c) { cache_store_ = c; }
 
     using Renderer = std::function<void(const DisplayState&, const ViewModel&)>;
 
@@ -66,17 +70,29 @@ public:
             audio_->on_state(sm_.effective_state());
             audio_->pump();
         }
+
+        // Persist the last rendered state periodically (bounded NVS wear).
+        if (cache_store_ && sm_.have_live_state() &&
+            now - last_cache_ms_ >= kCachePersistMs) {
+            last_cache_ms_ = now;
+            cache_store_->save(sm_.effective_state());
+        }
+
         render(sm_.effective_state(), sm_.view());
     }
 
     void set_epoch_base(uint32_t e) { epoch_base_ = e; }
 
 private:
+    static constexpr uint64_t kCachePersistMs = 30'000;
+
     transport::ITransport& transport_;
     hal::Clock&            clock_;
     AppStateMachine        sm_;
     audio::AudioService*   audio_ = nullptr;
     SettingsStore*         store_ = nullptr;
+    CacheStore*            cache_store_ = nullptr;
+    uint64_t              last_cache_ms_ = 0;
     uint32_t               epoch_base_ = 1'700'000'000;
 };
 

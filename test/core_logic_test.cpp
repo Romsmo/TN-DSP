@@ -1,8 +1,10 @@
 #include "doctest/doctest.h"
 
 #include "core/bus/spsc_queue.h"
+#include "core/cache/cache_store.h"
 #include "core/cache/offline_cache.h"
 #include "core/model/display_state.h"
+#include "core/model/hazard_type.h"
 #include "core/settings/settings_store.h"
 #include "core/state/warning_filter_apply.h"
 #include "test/fakes.h"
@@ -53,6 +55,33 @@ TEST_CASE("OfflineCache: keeps newest by seq, ages by epoch") {
     CHECK(c.age_s(1300) == 300);
     CHECK_FALSE(c.is_stale(1300, 10));   // 5 min < 10 min
     CHECK(c.is_stale(1000 + 11 * 60, 10));
+}
+
+TEST_CASE("CacheStore round-trips a DisplayState through a fake NVS") {
+    fakes::Nvs nvs;
+    CacheStore store(nvs);
+
+    DisplayState empty;
+    CHECK_FALSE(store.load(empty));              // nothing stored
+
+    DisplayState s;
+    s.stateSeq = 42;
+    s.speedLimit = 70;
+    s.epochS = 1'700'000'123;
+    s.hazardActive = true;
+    s.hazardType = HazardType::MobileSpeedCamera;
+    s.hazardDistanceM = 300;
+    CHECK(store.save(s));
+
+    DisplayState loaded;
+    REQUIRE(store.load(loaded));
+    CHECK(loaded.stateSeq == 42);
+    CHECK(loaded.speedLimit.value() == 70);
+    CHECK(loaded.hazardActive);
+    CHECK(loaded.hazardType.value() == HazardType::MobileSpeedCamera);
+
+    store.clear();
+    CHECK_FALSE(store.load(loaded));
 }
 
 TEST_CASE("SettingsStore round-trips through a fake NVS; bad blob -> defaults") {

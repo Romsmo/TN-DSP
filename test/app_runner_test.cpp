@@ -104,3 +104,39 @@ TEST_CASE("AppRunner: Settings sync both ways + persistence") {
     CHECK(store.load().soundEnabled);
     CHECK(mock.settings_pushes() == 1);   // adopting a remote change doesn't re-push
 }
+
+TEST_CASE("AppRunner: DisplayState is persisted and restored across a restart") {
+    fakes::Clock clk;
+    fakes::Nvs   nvs;
+    CacheStore   cache(nvs);
+
+    {   // session 1: the app streams a limit, then time passes
+        transport::mock::MockTransport mock(clk);
+        mock.load(transport::mock::demo_script());
+        mock.start();
+        AppRunner runner(mock, clk);
+        runner.sm().set_bonded(true);
+        runner.set_cache_store(&cache);
+
+        auto noop = [](const DisplayState&, const ViewModel&) {};
+        for (int i = 0; i < 400; ++i) { clk.advance(100); runner.step(noop); }  // > 30 s
+    }
+    DisplayState saved;
+    REQUIRE(cache.load(saved));
+    CHECK(saved.speedLimit.has_value());
+
+    {   // session 2 (a reboot): prime from NVS, no link yet -> Home shows the cache
+        transport::mock::MockTransport mock(clk);
+        mock.start();                              // no script loaded, nothing to poll
+        AppRunner runner(mock, clk);
+        DisplayState primed;
+        REQUIRE(cache.load(primed));
+        runner.sm().prime_cache(primed);
+
+        DisplayState seen;
+        ViewModel    vm;
+        runner.step([&](const DisplayState& s, const ViewModel& v) { seen = s; vm = v; });
+        CHECK(vm.screen == Screen::Home);          // not the pairing screen
+        CHECK(seen.speedLimit == saved.speedLimit);
+    }
+}

@@ -27,6 +27,10 @@ name + UUID together overflow the 31-byte ADV PDU → `adv_set_fields rc=4`).
 Wall-clock: seeded from the PCF85063 on boot (`utc_epoch()` — newlib has no `timegm`), then
 overwritten by the Time characteristic when the app sends it (which also writes the RTC back).
 
+Offline cache: `AppRunner` persists the last rendered `DisplayState` to NVS (`CacheStore`, the BLE
+CBOR blob, every ~30 s). On boot `app_main` calls `sm().prime_cache()` so Home shows the last-known
+limit (greyed once stale) instead of the Connect screen until the app reconnects.
+
 Bonding: NimBLE security is on (SM legacy + SC, "just works"). `CONFIG_BT_NIMBLE_NVS_PERSIST=y`
 keeps bonds across reboots (the store callbacks are registered by sysinit), so the phone
 re-encrypts silently on the next ignition cycle instead of re-pairing. An unbonded connection

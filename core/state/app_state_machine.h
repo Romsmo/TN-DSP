@@ -26,6 +26,23 @@ public:
     void set_settings(const Settings& s) { settings_ = s; }
     void set_bonded(bool b) { bonded_ = b; }
 
+    // Seed the offline cache from persistent storage on boot: the board shows
+    // the last *sign* context (greyed once stale) on Home instead of the pairing
+    // screen, until the app reconnects. Momentary alerts (hazard, confirm) are
+    // dropped — the app re-sends them if they still apply. Implies we were paired.
+    void prime_cache(DisplayState s) {
+        s.hazardActive = false;
+        s.hazardType.reset();
+        s.hazardDistanceM.reset();
+        s.hazardSpeedLimit.reset();
+        s.confirmPromptActive = false;
+        s.audioCue.reset();
+        cache_.put(s);
+        effective_ = s;
+        bonded_ = true;
+    }
+    bool have_live_state() const { return have_live_; }
+
     // ── inbound ────────────────────────────────────────────────────────────
     void on_state(const DisplayState& s);              // from the transport
     void on_link(transport::LinkStatus link);          // connection status

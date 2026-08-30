@@ -119,6 +119,19 @@ extern "C" void app_main(void) {
     runner.set_settings(settings_store.load());
     runner.set_settings_store(&settings_store);
 
+    // Restore the last DisplayState so Home shows the last-known limit (greyed
+    // once stale) instead of the pairing screen until the app reconnects.
+    static core::CacheStore cache_store(*hal::esp::nvs_instance(), BSP_NVS_NS_CACHE);
+    {
+        core::DisplayState cached;
+        if (cache_store.load(cached)) {
+            runner.sm().prime_cache(cached);
+            ESP_LOGI(TAG, "cache: restored (limit %d, seq %u)",
+                     cached.speedLimit.value_or(-1), (unsigned)cached.stateSeq);
+        }
+    }
+    runner.set_cache_store(&cache_store);
+
     // Seed wall-clock from the battery-backed RTC (until the app sends Time).
     {
         hal::RtcDriver* rtc = hal::esp::rtc_instance();

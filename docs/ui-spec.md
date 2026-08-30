@@ -42,6 +42,11 @@ As Home, but: globe drawn with a red diagonal slash, **no** peer number. Values 
 `OfflineCache`. When the cache is older than `Settings::cacheStaleMinutes` (default 10), the sign
 face greys slightly (`tok::kSignStale`) — just enough to read "not live".
 
+The last rendered `DisplayState` is also persisted to NVS (`CacheStore`, every ~30 s), so after an
+ignition cycle the board comes up straight onto Home showing that last-known limit (greyed as
+stale) rather than the pairing screen — until the app reconnects. A factory reset wipes it, so a
+truly fresh device still starts on Connect.
+
 ## 5.3 Hazard / speed-camera nearby (overlay — M4)
 
 A layer **on the Home tile** (slides away with Home; never shows on Melden). It dims the page
