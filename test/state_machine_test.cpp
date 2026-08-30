@@ -190,6 +190,27 @@ TEST_CASE("stale packets (seq not advancing) are dropped") {
     CHECK(r.sm.effective_state().speedLimit.value() == 80);
 }
 
+TEST_CASE("reconnect: peer restarts its stateSeq counter and packets still land") {
+    Rig r;
+    r.sm.set_bonded(true);
+    r.sm.on_link(LinkStatus::Connected);
+
+    DisplayState hi = r.live(9);
+    hi.speedLimit = 80;
+    r.sm.on_state(hi);
+    r.tick();
+    CHECK(r.sm.effective_state().speedLimit.value() == 80);
+
+    // Link drops, then a fresh session opens sending seq 1 again.
+    r.sm.on_link(LinkStatus::Advertising);
+    r.sm.on_link(LinkStatus::Connected);
+    DisplayState fresh = r.live(1);
+    fresh.speedLimit = 30;
+    r.sm.on_state(fresh);
+    r.tick();
+    CHECK(r.sm.effective_state().speedLimit.value() == 30);   // not dropped as stale
+}
+
 TEST_CASE("heartbeat every 10 s") {
     Rig r;
     r.sm.set_bonded(true);

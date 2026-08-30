@@ -215,6 +215,10 @@ int gap_event(struct ble_gap_event* event, void* /*arg*/) {
             if (event->connect.status == 0) {
                 g_conn = event->connect.conn_handle;
                 g_link = transport::LinkStatus::Connected;
+                {
+                    Lock lk;
+                    g_last_seq = 0;   // new session: accept the peer's seq from 1
+                }
                 ESP_LOGI(TAG, "connected");
             } else {
                 start_advertising();
@@ -226,6 +230,10 @@ int gap_event(struct ble_gap_event* event, void* /*arg*/) {
             g_conn = BLE_HS_CONN_HANDLE_NONE;
             g_event_sub = g_settings_sub = false;
             g_link = transport::LinkStatus::Advertising;
+            {
+                Lock lk;
+                g_last_seq = 0;
+            }
             start_advertising();
             return 0;
 

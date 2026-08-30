@@ -9,15 +9,26 @@ constexpr uint64_t kMs = 1;
 }
 
 void AppStateMachine::on_link(transport::LinkStatus link) {
+    const bool was_connected = link_ == transport::LinkStatus::Connected;
     link_ = link;
     if (link == transport::LinkStatus::Connected) {
         connect_requested_ = false;
         bonded_ = true;
+        if (!was_connected) {
+            // Fresh session. The peer (a reconnecting app, a relaunched app, the
+            // demo restarting) may reset its stateSeq counter — so forget the old
+            // high-water mark, or every packet up to it would look stale.
+            have_live_ = false;
+            cache_.clear();
+            confirm_showing_ = false;
+            confirm_handled_ = false;
+        }
     }
 }
 
 void AppStateMachine::on_state(const DisplayState& s) {
-    // Drop stale packets.
+    // Drop duplicate / out-of-order packets within a session (see on_link for the
+    // reconnect case that resets have_live_).
     if (have_live_ && s.stateSeq != 0 && s.stateSeq <= effective_.stateSeq &&
         effective_.stateSeq != 0) {
         return;
