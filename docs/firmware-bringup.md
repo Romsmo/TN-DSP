@@ -16,8 +16,8 @@ routes to BLE by default; a BOOT long-press starts the mock demo script and rout
 `CONFIG_BDSP_STATE_WATCHDOG_S` (cache + "no app" badge).
 
 BLE UUIDs (provisional) in `firmware/components/transport_ble/ble_uuids.h`; wire tables in
-`docs/ble-protocol.md`. Test without the phone app: `python tools/fake_app.py --scan` then a
-scenario.
+`docs/ble-protocol.md`. Test without the phone app with `tools/fake_app.py` (an interactive BLE
+console) — full walk-through in [`docs/testing.md`](testing.md).
 
 Phase-D notes (2026-08-29): BLE adds ~35 KB at boot (controller) + ~30 KB (host) — heap after
 LVGL drops 175 → ~109 KB free, still comfortable. Binary 1.4 → 1.8 MB. The 128-bit service UUID

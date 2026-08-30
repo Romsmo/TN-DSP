@@ -15,14 +15,16 @@ state it receives and emits raw interaction events.
 - **Target board:** Waveshare **ESP32-C6-Touch-AMOLED-1.43** (466×466 round AMOLED, no PSRAM). See
   [`docs/hardware.md`](docs/hardware.md).
 - **Stack:** ESP-IDF ≥ 5.3, LVGL 9, C++17, NimBLE, hand-rolled CBOR.
-- **Status:** M0–M8 complete (host-testable core + UI + simulator + protocol). Firmware **phase B**
-  runs on hardware: CO5300 QSPI panel + LVGL + polled touch + the full UI driven by the mock demo
-  timeline. Phase C (SD, RTC) and phase D (NimBLE, audio) are next — see
+- **Status:** M0–M8 complete (host-testable core + UI + simulator + protocol). Firmware **phases B
+  and D run on hardware**: CO5300 QSPI panel + LVGL + polled touch + the full UI, plus the NimBLE
+  GATT peripheral — `DisplayState` over BLE drives the screen, events flow back, Settings sync both
+  ways, Time sets the RTC. Phase C (SD) and on-target audio wait on the C6 pin map — see
   [`docs/firmware-bringup.md`](docs/firmware-bringup.md).
 
 > The companion **Flutter app is not in this repo**. This repo defines the BLE protocol
-> ([`docs/ble-protocol.md`](docs/ble-protocol.md)), a Python stand-in ([`tools/fake_app.py`](tools/fake_app.py)),
-> and a Dart reference ([`docs/app-reference/`](docs/app-reference/)).
+> ([`docs/ble-protocol.md`](docs/ble-protocol.md)), an interactive Python test console that
+> replaces the app for now ([`tools/fake_app.py`](tools/fake_app.py) — see
+> [`docs/testing.md`](docs/testing.md)), and a Dart reference ([`docs/app-reference/`](docs/app-reference/)).
 
 ## Repository layout
 
@@ -36,7 +38,7 @@ state it receives and emits raw interaction events.
 | `test/` | Host unit tests (CTest, doctest). |
 | `firmware/` | The ESP-IDF application + ESP-specific HAL / BLE transport. |
 | `tools/` | Asset pipelines (fonts, signs, icons, audio), `fake_app.py`. |
-| `docs/` | `plan.md`, `hardware.md`, `architecture.md`, `ui-spec.md`, `ble-protocol.md`, `audio-assets.md`. |
+| `docs/` | `plan.md`, `hardware.md`, `architecture.md`, `ui-spec.md`, `ble-protocol.md`, `firmware-bringup.md`, `testing.md`, `audio-assets.md`. |
 
 Read [`docs/architecture.md`](docs/architecture.md) first — the guiding rule is *the display
 renders, it never computes*.
@@ -75,6 +77,15 @@ idf.py build flash monitor
 Feature flags are Kconfig options under **BlitzerdeDsp** (`idf.py menuconfig`), notably
 `CONFIG_BDSP_FEATURE_SPEEDCAM` — turn it off for a build with no speed-camera code at all
 (§ 23 (1b) StVO).
+
+Drive the flashed board over BLE from a PC (no phone app needed):
+
+```bash
+pip install bleak cbor2
+python tools/fake_app.py --repl        # interactive console; --all for a scripted pass
+```
+
+Full checklist in [`docs/testing.md`](docs/testing.md).
 
 ## Assets
 
