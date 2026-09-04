@@ -80,7 +80,10 @@ Wildwechsel right.)
 `0` version · `1` soundEnabled (bool) · `2` soundMode (0 tones / 1 voice) · `3` theme (0 auto /
 1 day / 2 night — currently ignored, single dark theme) · `4` useMph (bool) · `5` filterBits
 (uint16, bit *n* = HazardType *n* enabled) · `6` nightStartHour · `7` nightEndHour ·
-`8` cacheStaleMinutes.
+`8` cacheStaleMinutes · `9` soundVolume (uint, 0–100; clamped; applied live to the codec).
+
+Key `9` was added after v1; a writer that omits it leaves the device at its stored volume
+(default 70). The NVS blob is format v2 — a v1 blob still loads, volume falls back to 70.
 
 The per-category warning filter lives in the app; the device also persists these bits to NVS and
 suppresses overlays of disabled categories as a second layer.

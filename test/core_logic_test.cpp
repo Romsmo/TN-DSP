@@ -112,6 +112,7 @@ TEST_CASE("SettingsStore round-trips through a fake NVS; bad blob -> defaults") 
     Settings s;
     s.soundEnabled = true;
     s.soundMode = SoundMode::Voice;
+    s.soundVolume = 55;
     s.useMph = true;
     s.filter.set(HazardType::Traffic, false);
     s.nightHours = {22, 5};
@@ -121,7 +122,14 @@ TEST_CASE("SettingsStore round-trips through a fake NVS; bad blob -> defaults") 
 
     Settings loaded = store.load();
     CHECK(loaded == s);
+    CHECK(loaded.soundVolume == 55);
     CHECK_FALSE(loaded.filter.enabled(HazardType::Traffic));
+
+    // A v1 blob (no volume byte) still loads, volume falls back to the default.
+    std::vector<uint8_t> v1 = nvs.store[fakes::Nvs::k("settings", "v")];
+    v1[0] = 1;
+    nvs.store[fakes::Nvs::k("settings", "v")] = v1;
+    CHECK(store.load().soundVolume == 70);
 
     // Corrupt the blob -> defaults, no crash.
     nvs.store[fakes::Nvs::k("settings", "v")] = {0xFF, 0x00};

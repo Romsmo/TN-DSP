@@ -15,7 +15,8 @@ uint8_t clamp_u8(int v) { return static_cast<uint8_t>(v < 0 ? 0 : v > 255 ? 255 
 
 Settings SettingsStore::load() const {
     std::vector<uint8_t> b;
-    if (!nvs_.get_blob(ns_, kKey, b) || b.size() < kBlobSize || b[0] != kFormatVersion) {
+    if (!nvs_.get_blob(ns_, kKey, b) || b.size() < kBlobSize || b[0] < 1 ||
+        b[0] > kFormatVersion) {
         return Settings{};
     }
 
@@ -28,7 +29,7 @@ Settings SettingsStore::load() const {
     s.nightHours.startHour = clamp_u8(b[7]);
     s.nightHours.endHour = clamp_u8(b[8]);
     s.cacheStaleMinutes = static_cast<uint16_t>(b[9] | (b[10] << 8));
-    // b[11] reserved
+    s.soundVolume = b[0] >= 2 ? clamp_u8(b[11]) : 70;   // absent in v1 -> default
     return s;
 }
 
@@ -45,6 +46,7 @@ bool SettingsStore::save(const Settings& s) {
     b[8] = s.nightHours.endHour;
     b[9] = static_cast<uint8_t>(s.cacheStaleMinutes & 0xFF);
     b[10] = static_cast<uint8_t>(s.cacheStaleMinutes >> 8);
+    b[11] = s.soundVolume;
 
     return nvs_.set_blob(ns_, kKey, b, kBlobSize) && nvs_.commit(ns_);
 }

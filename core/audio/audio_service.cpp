@@ -14,7 +14,7 @@ extern const int16_t* fallback_pcm(Clip c, size_t& n_samples);
 void AudioService::apply_settings(const Settings& s) {
     std::lock_guard<std::mutex> lk(mtx_);
     enabled_ = s.soundEnabled;
-    volume_ = 70;
+    volume_ = s.soundVolume > 100 ? 100 : s.soundVolume;
     if (drv_) drv_->set_volume(volume_);
     if (!enabled_) stop_locked();
 }

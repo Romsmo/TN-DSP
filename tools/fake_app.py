@@ -60,7 +60,7 @@ CK_SEQ, CK_MODE, CK_EVENT, CK_HTYPE, CK_DIST, CK_SPEED, CK_UNIT = range(7)
 
 # Settings keys
 (TK_VER, TK_SOUND, TK_SOUNDMODE, TK_THEME, TK_MPH, TK_FILTER,
- TK_NIGHT_START, TK_NIGHT_END, TK_CACHE_MIN) = range(9)
+ TK_NIGHT_START, TK_NIGHT_END, TK_CACHE_MIN, TK_VOLUME) = range(10)
 
 # DeviceEvent keys
 (EK_VER, EK_TAG, EK_HTYPE, EK_SPEED, EK_SEEN, EK_ON, EK_MODE, EK_MPH,
@@ -189,10 +189,11 @@ def audio_cue(*, seq, mode=1, event=0, hazard=None, dist=None, speed=None, unit=
     return c
 
 
-def encode_settings(*, sound=True, sound_mode=0, theme=0, mph=False, filter_bits=0xFFFF,
-                    night_start=22, night_end=6, cache_min=10):
+def encode_settings(*, sound=True, sound_mode=0, volume=70, theme=0, mph=False,
+                    filter_bits=0xFFFF, night_start=22, night_end=6, cache_min=10):
     return cbor2.dumps({
-        TK_VER: PROTO, TK_SOUND: sound, TK_SOUNDMODE: sound_mode, TK_THEME: theme,
+        TK_VER: PROTO, TK_SOUND: sound, TK_SOUNDMODE: sound_mode,
+        TK_VOLUME: max(0, min(100, int(volume))), TK_THEME: theme,
         TK_MPH: mph, TK_FILTER: filter_bits, TK_NIGHT_START: night_start,
         TK_NIGHT_END: night_end, TK_CACHE_MIN: cache_min,
     })
@@ -231,6 +232,7 @@ def describe_event(data: bytes) -> str:
 def parse_settings(data: bytes) -> dict:
     m = cbor2.loads(data)
     return dict(sound=m.get(TK_SOUND, True), sound_mode=m.get(TK_SOUNDMODE, 0),
+               volume=m.get(TK_VOLUME, 70),
                theme=m.get(TK_THEME, 0), mph=m.get(TK_MPH, False),
                filter_bits=m.get(TK_FILTER, 0xFFFF), night_start=m.get(TK_NIGHT_START, 22),
                night_end=m.get(TK_NIGHT_END, 6), cache_min=m.get(TK_CACHE_MIN, 10))
@@ -238,9 +240,9 @@ def parse_settings(data: bytes) -> dict:
 
 def describe_settings(data: bytes) -> str:
     s = parse_settings(data)
-    return (f"sound={s['sound']} mode={s['sound_mode']} theme={s['theme']} mph={s['mph']} "
-            f"filter={hex(s['filter_bits'])} night={s['night_start']}-{s['night_end']}h "
-            f"cacheStale={s['cache_min']}min")
+    return (f"sound={s['sound']} mode={s['sound_mode']} vol={s['volume']} theme={s['theme']} "
+            f"mph={s['mph']} filter={hex(s['filter_bits'])} "
+            f"night={s['night_start']}-{s['night_end']}h cacheStale={s['cache_min']}min")
 
 
 def describe_info(data: bytes) -> str:
@@ -313,8 +315,8 @@ SCENARIOS = ["approach", "confirm", "offline", "night", "signs", "hazards"]
 
 # ── async link, driven from a background event loop ─────────────────────────
 class Link:
-    DEFAULT_SETTINGS = dict(sound=True, sound_mode=0, theme=0, mph=False, filter_bits=0xFFFF,
-                            night_start=22, night_end=6, cache_min=10)
+    DEFAULT_SETTINGS = dict(sound=True, sound_mode=0, volume=70, theme=0, mph=False,
+                            filter_bits=0xFFFF, night_start=22, night_end=6, cache_min=10)
 
     def __init__(self, log=emit):
         self.client = None
@@ -621,11 +623,13 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
         haz=tk.StringVar(value="(keine)"), hazdist=tk.IntVar(value=400), hazspd=tk.IntVar(value=0),
         confto=tk.IntVar(value=15),
         s_sound=tk.BooleanVar(value=True), s_mph=tk.BooleanVar(), s_theme=tk.IntVar(value=0),
+        s_vol=tk.IntVar(value=70),
     )
     v["_conf"] = tk.BooleanVar()
     ui_vars = {n: tk.BooleanVar(value=True) for n in UI_BITS}
     filt_vars = [tk.BooleanVar(value=True) for _ in HAZ_LABELS]
     signs = {"left": [], "right": []}       # lists of VzNr strings, per column
+    vol_scales = []                          # (Scale, Label) pairs bound to v["s_vol"]
 
     def push_state(*_):
         if suspend_trace[0] or not link.connected():
@@ -649,6 +653,19 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
     def box(parent, title):
         f = ttk.LabelFrame(parent, text=title, padding=6)
         return f
+
+    def add_volume_row(parent, var, on_release):
+        r = ttk.Frame(parent); r.pack(fill="x", pady=1)
+        ttk.Label(r, text="Lautstärke").pack(side="left")
+        val = ttk.Label(r, text=f"{var.get()} %", width=6)
+        sc = ttk.Scale(r, from_=0, to=100, orient="horizontal",
+                       command=lambda s: (var.set(int(float(s))), val.config(text=f"{int(float(s))} %")))
+        sc.set(var.get())
+        sc.pack(side="left", fill="x", expand=True, padx=4)
+        val.pack(side="left")
+        sc.bind("<ButtonRelease-1>", lambda _e: on_release())
+        vol_scales.append((sc, val))     # so refresh_from_device can resync
+        return sc
 
     left_col = ttk.Frame(dev); left_col.pack(side="left", fill="both", expand=True)
     right_col = ttk.Frame(dev); right_col.pack(side="left", fill="both", expand=True, padx=(10, 0))
@@ -801,9 +818,10 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
                 bits |= (1 << i)
         threading.Thread(target=lambda: link.write_settings(
             sound=v["s_sound"].get(), mph=v["s_mph"].get(), theme=v["s_theme"].get(),
-            filter_bits=bits), daemon=True).start()
+            volume=v["s_vol"].get(), filter_bits=bits), daemon=True).start()
     ttk.Checkbutton(b, text="Ton an", variable=v["s_sound"], command=push_settings).pack(anchor="w")
     ttk.Checkbutton(b, text="Einheiten mph", variable=v["s_mph"], command=push_settings).pack(anchor="w")
+    add_volume_row(b, v["s_vol"], push_settings)
     r = ttk.Frame(b); r.pack(fill="x")
     ttk.Label(r, text="Theme (0 auto / 1 tag / 2 nacht — Gerät ignoriert es)").pack(side="left")
     theme_cb = ttk.Combobox(r, width=4, state="readonly", values=["0", "1", "2"])
@@ -849,6 +867,7 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
     sb2 = box(sim, "Ton / Einheiten"); sb2.pack(fill="x")
     ttk.Checkbutton(sb2, text="Warntöne an", variable=v["s_sound"], command=push_settings).pack(anchor="w")
     ttk.Checkbutton(sb2, text="mph statt km/h", variable=v["s_mph"], command=push_settings).pack(anchor="w")
+    add_volume_row(sb2, v["s_vol"], push_settings)
     sb3 = box(sim, "Simulierte Fahrt"); sb3.pack(fill="x", pady=6)
     for name in SCENARIOS:
         ttk.Button(sb3, text=name, command=lambda n=name: threading.Thread(
@@ -883,6 +902,11 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
         try:
             v["s_sound"].set(link.settings.get("sound", True))
             v["s_mph"].set(link.settings.get("mph", False))
+            vol = int(link.settings.get("volume", 70))
+            v["s_vol"].set(vol)
+            for sc, lab in vol_scales:
+                sc.set(vol)
+                lab.config(text=f"{vol} %")
             fb = link.settings.get("filter_bits", 0xFFFF)
             for i, fv in enumerate(filt_vars):
                 fv.set(bool(fb & (1 << i)))
@@ -922,7 +946,7 @@ commands (state is remembered; every change re-sends the DisplayState):
   send                       re-send the current state
   state                      print the current state dict
   settings                   read the Settings characteristic
-  set sound on|off | set units km|mph | set theme <0-2> | set filter <hex>
+  set sound on|off | set units km|mph | set vol <0-100> | set theme <0-2> | set filter <hex>
   uiconfig                   read the feature switches
   ui <name|all> on|off       flip a feature switch (names below)
   time [tzMinutes]           write the Time characteristic (now)
@@ -1016,7 +1040,8 @@ def repl(link: Link):
                 elif what == "units": link.write_settings(mph=(args[1] == "mph"))
                 elif what == "theme": link.write_settings(theme=int(args[1]))
                 elif what == "filter": link.write_settings(filter_bits=int(args[1], 0))
-                else: print("  ! set sound|units|theme|filter")
+                elif what in ("vol", "volume"): link.write_settings(volume=int(args[1]))
+                else: print("  ! set sound|units|theme|filter|vol")
             elif cmd == "uiconfig":
                 link.read_ui()
             elif cmd == "ui":

@@ -35,6 +35,7 @@ enum EK {
 enum TK {
     TK_VER = 0, TK_SOUND = 1, TK_SOUNDMODE = 2, TK_THEME = 3, TK_MPH = 4,
     TK_FILTER = 5, TK_NIGHT_START = 6, TK_NIGHT_END = 7, TK_CACHE_MIN = 8,
+    TK_VOLUME = 9,
 };
 
 // ── UiConfig keys ──────────────────────────────────────────────────────────
@@ -150,10 +151,11 @@ size_t encode_event(const DeviceEvent& e, uint8_t* out, size_t cap) {
 
 size_t encode_settings(const Settings& s, uint8_t* out, size_t cap) {
     Writer w(out, cap);
-    w.map(9);
+    w.map(10);
     w.kv(TK_VER, kVersion);
     w.kv_bool(TK_SOUND, s.soundEnabled);
     w.kv(TK_SOUNDMODE, static_cast<uint64_t>(s.soundMode));
+    w.kv(TK_VOLUME, s.soundVolume);
     w.kv(TK_THEME, static_cast<uint64_t>(s.theme));
     w.kv_bool(TK_MPH, s.useMph);
     w.kv(TK_FILTER, s.filter.bits());
@@ -329,6 +331,11 @@ bool decode_settings(const uint8_t* in, size_t len, Settings& out) {
             case TK_VER: r.read_uint(); break;
             case TK_SOUND: out.soundEnabled = r.read_bool(); break;
             case TK_SOUNDMODE: out.soundMode = static_cast<SoundMode>(r.read_uint()); break;
+            case TK_VOLUME: {
+                const uint64_t v = r.read_uint();
+                out.soundVolume = static_cast<uint8_t>(v > 100 ? 100 : v);
+                break;
+            }
             case TK_THEME: out.theme = static_cast<ThemeMode>(r.read_uint()); break;
             case TK_MPH: out.useMph = r.read_bool(); break;
             case TK_FILTER: out.filter.set_bits(static_cast<uint16_t>(r.read_uint())); break;

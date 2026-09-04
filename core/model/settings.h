@@ -27,6 +27,7 @@ struct NightHours {
 struct Settings {
     bool          soundEnabled = false;
     SoundMode     soundMode    = SoundMode::Tones;
+    uint8_t       soundVolume  = 70;    // 0..100, set from the app
     ThemeMode     theme        = ThemeMode::Auto;
     bool          useMph       = false;
     WarningFilter filter{};
@@ -34,7 +35,8 @@ struct Settings {
     uint16_t      cacheStaleMinutes = 10;
 
     bool operator==(const Settings& o) const {
-        return soundEnabled == o.soundEnabled && soundMode == o.soundMode && theme == o.theme &&
+        return soundEnabled == o.soundEnabled && soundMode == o.soundMode &&
+               soundVolume == o.soundVolume && theme == o.theme &&
                useMph == o.useMph && filter == o.filter && nightHours == o.nightHours &&
                cacheStaleMinutes == o.cacheStaleMinutes;
     }

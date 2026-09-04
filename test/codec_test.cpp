@@ -138,6 +138,7 @@ TEST_CASE("Settings and Time round-trip") {
     Settings s;
     s.soundEnabled = true;
     s.soundMode = SoundMode::Voice;
+    s.soundVolume = 40;
     s.useMph = true;
     s.filter.set(HazardType::Traffic, false);
     s.nightHours = {21, 6};
@@ -148,6 +149,13 @@ TEST_CASE("Settings and Time round-trip") {
     Settings out;
     REQUIRE(decode_settings(buf, n, out));
     CHECK(out == s);
+    CHECK(out.soundVolume == 40);
+
+    // out-of-range volume clamps to 100
+    s.soundVolume = 200;
+    const size_t n2 = encode_settings(s, buf, sizeof(buf));
+    REQUIRE(decode_settings(buf, n2, out));
+    CHECK(out.soundVolume == 100);
 
     TimeSync t{1'700'000'000, -120};
     const size_t tn = encode_time(t, buf, sizeof(buf));

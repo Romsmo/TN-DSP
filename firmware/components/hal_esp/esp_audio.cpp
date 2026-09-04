@@ -148,6 +148,8 @@ public:
             // shuts down — otherwise the tail crackles / thumps.
             static const int16_t quiet[256] = {0};
             for (int i = 0; i < 8; ++i) esp_codec_dev_write(dev_, (void*)quiet, sizeof(quiet));
+            // close() disables the I2S channel; the next open() disables it again
+            // defensively and logs a benign "channel has not been enabled yet".
             esp_codec_dev_close(dev_);
             open_ = false;
         }

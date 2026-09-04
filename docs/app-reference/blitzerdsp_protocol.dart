@@ -132,6 +132,7 @@ class DeviceEvent {
 class DeviceSettings {
   bool soundEnabled = false;
   AudioMode soundMode = AudioMode.tones;
+  int soundVolume = 70; // 0..100, applied live to the codec
   bool useMph = false;
   int filterBits = 0xFFFF; // bit n = HazardType n enabled
   int nightStartHour = 20, nightEndHour = 6;
@@ -147,6 +148,7 @@ class DeviceSettings {
         6: nightStartHour,
         7: nightEndHour,
         8: cacheStaleMinutes,
+        9: soundVolume.clamp(0, 100),
       }));
 
   static DeviceSettings decode(List<int> bytes) {
@@ -155,6 +157,7 @@ class DeviceSettings {
     return DeviceSettings()
       ..soundEnabled = m[1] == true
       ..soundMode = AudioMode.values[(m[2] as int?) ?? 0]
+      ..soundVolume = (m[9] as int?) ?? 70
       ..useMph = m[4] == true
       ..filterBits = (m[5] as int?) ?? 0xFFFF
       ..nightStartHour = (m[6] as int?) ?? 20

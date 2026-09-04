@@ -17,7 +17,7 @@ public:
     Settings load() const;
     bool     save(const Settings& s);
 
-    static constexpr uint8_t kFormatVersion = 1;
+    static constexpr uint8_t kFormatVersion = 2;   // v2 adds soundVolume at byte 11
     static constexpr char    kKey[] = "v";
 
 private:
