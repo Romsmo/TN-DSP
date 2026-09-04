@@ -21,7 +21,8 @@ stand-in), `docs/app-reference/blitzerdsp_protocol.dart` (Flutter sketch).
 | `0004` | `079a0004-…` | **Settings** | Read / Write / Notify | both |
 | `0005` | `079a0005-…` | **Time** | Write | app → device |
 | `0006` | `079a0006-…` | **UiConfig** | Read / Write / Notify | both |
-| `0007` | `079a0007-…` | **OTA** | Write / Notify | both (M9-D) |
+| `0007` | `079a0007-…` | **OTA** | Write / Notify | both |
+| `0008` | `079a0008-…` | **Asset** | Write / Notify | both |
 
 Payloads fit one ATT packet (`kMaxPayload = 244`, targeting a 247-byte MTU). A typical State
 packet is 25–50 bytes.
@@ -176,3 +177,18 @@ after ~3 s of running, so a broken update rolls back on the next reset
 (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`). A disconnect mid-transfer aborts cleanly.
 `tools/fake_app.py` pushes an image with `ota <path/to/blitzerdsp.bin>`. The `HAS_OTA` capability
 bit in DeviceInfo is set whenever the running firmware has the dual-slot layout.
+
+## Asset  (`0008`, write-without-response / notify — file → SD card)
+
+Same raw framing as OTA, for copying audio clips (and later images) onto the card.
+
+| Op | Bytes | Meaning |
+|---|---|---|
+| `0x01` begin | `[1]` path length · `[2..]` path, relative to `/sdcard` (parent dirs are created) |
+| `0x02` data | `[1..]` file bytes, in order |
+| `0x03` end | close the file |
+| `0x04` abort | discard |
+
+Device notifies `0x11` ok / `0x12` error. `tools/fake_app.py`: `upload <dir> [prefix]` or
+`upload <file> <remote>`; `tools/gen_voice.py --upload` regenerates the voice clips and pushes the
+whole `/audio/` tree.

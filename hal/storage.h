@@ -26,6 +26,15 @@ struct Storage {
         virtual void   close() = 0;
     };
     virtual Reader* open_read(const std::string& path) = 0;  // nullptr on failure
+
+    // Streaming write — used to receive asset uploads (audio clips) over BLE
+    // without buffering the whole file in RAM. Creates parent dirs.
+    struct Writer {
+        virtual ~Writer() = default;
+        virtual bool write(const uint8_t* buf, size_t n) = 0;
+        virtual bool close() = 0;                          // false on flush error
+    };
+    virtual Writer* open_write(const std::string& path) = 0;  // nullptr on failure
 };
 
 }  // namespace hal

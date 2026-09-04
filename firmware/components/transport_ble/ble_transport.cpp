@@ -37,6 +37,7 @@
 
 #include "core/codec/protocol.h"
 #include "firmware/components/transport_ble/ble_uuids.h"
+#include "hal/storage.h"
 
 namespace transport::ble {
 
@@ -88,6 +89,16 @@ uint8_t                g_ota_expect[32];
 uint8_t*               g_ota_buf = nullptr;   // 4 KB, alloc'd for the transfer only
 uint32_t               g_ota_buf_len = 0;
 constexpr uint32_t     kOtaBufSize = 4096;
+
+// ── asset (SD file) upload ──────────────────────────────────────────────────
+enum : uint8_t { AST_OP_BEGIN = 0x01, AST_OP_DATA = 0x02, AST_OP_END = 0x03, AST_OP_ABORT = 0x04,
+                 AST_NTF_OK = 0x11, AST_NTF_ERR = 0x12 };
+hal::Storage*          g_storage = nullptr;
+hal::Storage::Writer*  g_asset_w = nullptr;
+uint32_t               g_asset_recv = 0;
+uint16_t g_asset_h = 0;
+bool     g_asset_sub = false;
+
 uint8_t  g_own_addr_type = 0;
 char     g_addr_str[18] = {0};
 
@@ -105,6 +116,7 @@ const ble_uuid128_t k_settings = {{BLE_UUID_TYPE_128}, BDSP_BLE_UUID128(BDSP_BLE
 const ble_uuid128_t k_time     = {{BLE_UUID_TYPE_128}, BDSP_BLE_UUID128(BDSP_BLE_SLOT_TIME)};
 const ble_uuid128_t k_ui_config = {{BLE_UUID_TYPE_128}, BDSP_BLE_UUID128(BDSP_BLE_SLOT_UI_CONFIG)};
 const ble_uuid128_t k_ota = {{BLE_UUID_TYPE_128}, BDSP_BLE_UUID128(BDSP_BLE_SLOT_OTA)};
+const ble_uuid128_t k_asset = {{BLE_UUID_TYPE_128}, BDSP_BLE_UUID128(BDSP_BLE_SLOT_ASSET)};
 
 void start_advertising();
 
@@ -232,6 +244,61 @@ int ota_handle_write(const uint8_t* d, uint16_t n) {
     return 0;
 }
 
+// ── asset upload: write a file straight to the SD card ───────────────────────
+void asset_notify(uint8_t op) {
+    if (g_conn == BLE_HS_CONN_HANDLE_NONE || !g_asset_sub) return;
+    struct os_mbuf* om = ble_hs_mbuf_from_flat(&op, 1);
+    if (om) ble_gatts_notify_custom(g_conn, g_asset_h, om);
+}
+
+void asset_reset() {
+    if (g_asset_w) { g_asset_w->close(); g_asset_w = nullptr; }
+    g_asset_recv = 0;
+}
+
+int asset_handle_write(const uint8_t* d, uint16_t n) {
+    if (n < 1) return BLE_ATT_ERR_INVALID_PDU;
+    const uint8_t op = d[0];
+
+    if (op == AST_OP_BEGIN) {
+        asset_reset();
+        if (!g_storage || !g_storage->mounted()) { asset_notify(AST_NTF_ERR); return 0; }
+        if (n < 2) return BLE_ATT_ERR_INVALID_PDU;
+        const uint8_t plen = d[1];
+        if (n < 2u + plen) return BLE_ATT_ERR_INVALID_PDU;
+        std::string path(reinterpret_cast<const char*>(d + 2), plen);
+        g_asset_w = g_storage->open_write(path);
+        if (!g_asset_w) { ESP_LOGW(TAG, "asset: open %s failed", path.c_str()); asset_notify(AST_NTF_ERR); return 0; }
+        ESP_LOGI(TAG, "asset: receiving %s", path.c_str());
+        return 0;
+    }
+
+    if (op == AST_OP_DATA) {
+        if (!g_asset_w) return 0;
+        if (!g_asset_w->write(d + 1, n - 1)) {
+            ESP_LOGE(TAG, "asset: write failed");
+            asset_reset();
+            asset_notify(AST_NTF_ERR);
+            return 0;
+        }
+        g_asset_recv += n - 1;
+        return 0;
+    }
+
+    if (op == AST_OP_END) {
+        if (!g_asset_w) return 0;
+        const bool ok = g_asset_w->close();
+        g_asset_w = nullptr;
+        ESP_LOGI(TAG, "asset: %lu bytes %s", (unsigned long)g_asset_recv, ok ? "ok" : "FLUSH FAIL");
+        g_asset_recv = 0;
+        asset_notify(ok ? AST_NTF_OK : AST_NTF_ERR);
+        return 0;
+    }
+
+    if (op == AST_OP_ABORT) { asset_reset(); return 0; }
+    return 0;
+}
+
 // ── GATT access ──────────────────────────────────────────────────────────────
 int gatt_access(uint16_t /*conn*/, uint16_t /*attr*/, ble_gatt_access_ctxt* ctxt, void* arg) {
     const int slot = static_cast<int>(reinterpret_cast<intptr_t>(arg));
@@ -280,6 +347,9 @@ int gatt_access(uint16_t /*conn*/, uint16_t /*attr*/, ble_gatt_access_ctxt* ctxt
             }
             if (slot == BDSP_BLE_SLOT_OTA) {
                 return ota_handle_write(buf, got);   // raw framing, not CBOR
+            }
+            if (slot == BDSP_BLE_SLOT_ASSET) {
+                return asset_handle_write(buf, got);
             }
             return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
         }
@@ -382,6 +452,16 @@ const struct ble_gatt_chr_def k_chars[] = {
         .val_handle = &g_ota_h,
         .cpfd = nullptr,
     },
+    {
+        .uuid = &k_asset.u,
+        .access_cb = gatt_access,
+        .arg = reinterpret_cast<void*>(BDSP_BLE_SLOT_ASSET),
+        .descriptors = nullptr,
+        .flags = BLE_GATT_CHR_F_WRITE_NO_RSP | BLE_GATT_CHR_F_NOTIFY,
+        .min_key_size = 0,
+        .val_handle = &g_asset_h,
+        .cpfd = nullptr,
+    },
     {0},
 };
 
@@ -415,8 +495,9 @@ int gap_event(struct ble_gap_event* event, void* /*arg*/) {
         case BLE_GAP_EVENT_DISCONNECT:
             ESP_LOGI(TAG, "disconnected (0x%02x)", event->disconnect.reason);
             g_conn = BLE_HS_CONN_HANDLE_NONE;
-            g_event_sub = g_settings_sub = g_ui_config_sub = g_ota_sub = false;
+            g_event_sub = g_settings_sub = g_ui_config_sub = g_ota_sub = g_asset_sub = false;
             if (g_ota_active) { ESP_LOGW(TAG, "OTA aborted (disconnect)"); ota_reset(true); }
+            asset_reset();
             g_link = transport::LinkStatus::Advertising;
             {
                 Lock lk;
@@ -434,6 +515,8 @@ int gap_event(struct ble_gap_event* event, void* /*arg*/) {
                 g_ui_config_sub = event->subscribe.cur_notify;
             else if (event->subscribe.attr_handle == g_ota_h)
                 g_ota_sub = event->subscribe.cur_notify;
+            else if (event->subscribe.attr_handle == g_asset_h)
+                g_asset_sub = event->subscribe.cur_notify;
             return 0;
 
         case BLE_GAP_EVENT_ADV_COMPLETE:
@@ -607,6 +690,7 @@ bool BleTransport::state_stale() const {
 }
 
 uint8_t BleTransport::ota_percent() const { return g_ota_percent; }
+void BleTransport::set_storage(hal::Storage* s) { g_storage = s; }
 
 void BleTransport::set_caps(uint32_t caps) { g_caps = caps; }
 void BleTransport::set_fw_version(const char* v) { g_fw = v; }

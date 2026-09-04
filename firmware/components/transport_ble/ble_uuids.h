@@ -20,6 +20,7 @@ enum {
     BDSP_BLE_SLOT_TIME         = 0x0005,  // Write: {epochS, tzOffsetMin} -> PCF85063
     BDSP_BLE_SLOT_UI_CONFIG    = 0x0006,  // Read/Write/Notify, CBOR UiConfig (dev feature switches)
     BDSP_BLE_SLOT_OTA          = 0x0007,  // Write/Notify, chunked firmware image (M9-D)
+    BDSP_BLE_SLOT_ASSET        = 0x0008,  // Write/Notify, chunked file -> SD card (audio clips)
 };
 
 // DeviceInfo capability bits (integer key 2 in the CBOR map).

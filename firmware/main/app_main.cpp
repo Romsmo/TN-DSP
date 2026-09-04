@@ -121,6 +121,7 @@ extern "C" void app_main(void) {
 #if defined(CONFIG_BDSP_ENABLE_BLE)
     static transport::ble::BleTransport ble;
     ble.set_fw_version(BSP_FW_VERSION);
+    ble.set_storage(storage);           // asset-upload characteristic -> SD card
     {
         uint32_t caps = BDSP_CAP_HAS_RTC | BDSP_CAP_HAS_OTA;
 #if defined(CONFIG_BDSP_FEATURE_SPEEDCAM)

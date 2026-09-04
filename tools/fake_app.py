@@ -44,7 +44,7 @@ def _uuid(slot: int) -> str:
 
 
 (SVC_UUID, STATE_UUID, EVENT_UUID, INFO_UUID, SETTINGS_UUID, TIME_UUID,
- UICONFIG_UUID, OTA_UUID) = (_uuid(i) for i in range(8))
+ UICONFIG_UUID, OTA_UUID, ASSET_UUID) = (_uuid(i) for i in range(9))
 
 # UiConfig feature-switch bits (core/model/ui_config.h)
 UI_BITS = ["meldenPage", "settingsPage", "hazardOverlay", "confirmOverlay", "signColumns",
@@ -329,6 +329,8 @@ class Link:
         self._ota_total = 0
         self.ota_progress = None          # None idle, 0..100, -1 error
         self._ota_done = threading.Event()
+        self._asset_done = threading.Event()
+        self._asset_ok = False
         self._loop = asyncio.new_event_loop()
         self._thr = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thr.start()
@@ -377,6 +379,10 @@ class Link:
             self.log(f"  (ui-config unavailable: {e})")
         try:
             await self.client.start_notify(OTA_UUID, self._on_ota)
+        except Exception:
+            pass
+        try:
+            await self.client.start_notify(ASSET_UUID, self._on_asset)
         except Exception:
             pass
         self._changed()
@@ -487,6 +493,47 @@ class Link:
                                                   response=False))
         self._run(self.client.write_gatt_char(OTA_UUID, b"\x03", response=False))
         self._ota_done.wait(timeout=180)
+
+    # -- asset (SD file) upload --
+    def _on_asset(self, _c, d):
+        self._asset_ok = (d[0] == 0x11)
+        self._asset_done.set()
+
+    def upload_file(self, local_path, remote_path):
+        data = open(local_path, "rb").read()
+        rp = remote_path.encode()
+        self._asset_done.clear()
+        self._asset_ok = False
+        self._run(self.client.write_gatt_char(ASSET_UUID, bytes([1, len(rp)]) + rp, response=False))
+        CHUNK = 230
+
+        async def _send():
+            for i, off in enumerate(range(0, len(data), CHUNK)):
+                await self.client.write_gatt_char(ASSET_UUID, b"\x02" + data[off:off + CHUNK],
+                                                  response=False)
+                if i % 10 == 9:
+                    await asyncio.sleep(0.04)     # let the device drain to the card
+            await self.client.write_gatt_char(ASSET_UUID, b"\x03", response=False)
+        self._run(_send())
+        if not self._asset_done.wait(timeout=20):
+            self.log(f"  asset {remote_path}  TIMEOUT")
+            return False
+        self.log(f"  asset {remote_path}  {len(data)} B  {'ok' if self._asset_ok else 'FAIL'}")
+        return self._asset_ok
+
+    def upload_tree(self, local_dir, remote_prefix=""):
+        base = os.path.abspath(local_dir)
+        n = ok = 0
+        for root, _, files in os.walk(base):
+            for f in sorted(files):
+                lp = os.path.join(root, f)
+                rel = os.path.relpath(lp, base).replace("\\", "/")
+                rp = f"{remote_prefix}/{rel}" if remote_prefix else rel
+                n += 1
+                ok += 1 if self.upload_file(lp, rp) else 0
+                time.sleep(0.25)          # let the card settle between files
+        self.log(f"  upload done: {ok}/{n} files")
+        return ok, n
 
     def read_settings(self):
         data = self._run(self.client.read_gatt_char(SETTINGS_UUID))
@@ -707,6 +754,25 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
                                 speed=v["hazspd"].get() or None))
     ttk.Button(r, text="Cue senden", command=lambda: send_cue()).pack(side="left")
     ttk.Button(r, text="Testton", command=lambda: send_cue(force_tone=True)).pack(side="left", padx=2)
+    r2 = ttk.Frame(b); r2.pack(fill="x", pady=2)
+
+    def upload_sd_tree():
+        import os
+        d = os.path.join(os.path.dirname(__file__), "sd_root", "audio")
+        if os.path.isdir(d):
+            threading.Thread(target=lambda: link.upload_tree(d, "audio"), daemon=True).start()
+        else:
+            link.log("  ! tools/sd_root/audio fehlt — erst tools/gen_voice.py laufen lassen")
+
+    def gen_and_upload():
+        def work():
+            import subprocess
+            link.log("  gen_voice.py läuft …")
+            subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "gen_voice.py")])
+            upload_sd_tree()
+        threading.Thread(target=work, daemon=True).start()
+    ttk.Button(r2, text="SD-Audio hochladen", command=upload_sd_tree).pack(side="left")
+    ttk.Button(r2, text="Sprachclips neu + hochladen", command=gen_and_upload).pack(side="left", padx=2)
 
     # right column
     b = box(right_col, "Feature-Schalter (dev, persistent)"); b.pack(fill="x", pady=3)
@@ -862,6 +928,8 @@ commands (state is remembered; every change re-sends the DisplayState):
   time [tzMinutes]           write the Time characteristic (now)
   info                       read DeviceInfo
   scenario <name>            run a scripted scenario (%s)
+  ota <file.bin>             push a firmware image
+  upload <dir> [prefix] | upload <file> <remote>   copy files onto the SD card
   reconnect                  drop the link and reconnect (tests seq reset)
   sleep <secs>               pause (useful when piping a command script)
   help | quit
@@ -929,7 +997,8 @@ def repl(link: Link):
                 ev = CUE_EVENTS[args[0].lower()]
                 mode = 1 if (len(args) > 1 and args[1] == "voice") else 0
                 rest = args[2:] if len(args) > 1 and args[1] in ("voice", "tones") else args[1:]
-                haz = HAZARDS.get(rest[0].lower(), int(rest[0])) if len(rest) > 0 else None
+                haz = (HAZARDS[rest[0].lower()] if rest and rest[0].lower() in HAZARDS
+                       else int(rest[0]) if rest else None)
                 dist = int(rest[1]) if len(rest) > 1 else None
                 spd = int(rest[2]) if len(rest) > 2 else None
                 link.seq += 1
@@ -954,6 +1023,10 @@ def repl(link: Link):
                 link.set_ui(args[0], args[1] == "on")
             elif cmd == "ota":
                 link.ota(args[0])
+            elif cmd == "upload":
+                p = args[0]
+                (link.upload_tree(p, args[1] if len(args) > 1 else "")
+                 if os.path.isdir(p) else link.upload_file(p, args[1]))
             elif cmd == "time":
                 link.write_time(tz_min=int(args[0]) if args else 0)
             elif cmd == "info":

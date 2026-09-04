@@ -9,6 +9,7 @@
 #include <functional>
 
 #include "core/model/settings.h"
+#include "hal/storage.h"
 #include "transport/transport.h"
 
 namespace transport::ble {
@@ -31,6 +32,7 @@ public:
     // ── config (call before start()) ───────────────────────────────────────
     void set_caps(uint32_t caps);
     void set_fw_version(const char* v);
+    void set_storage(hal::Storage* s);   // enables the asset-upload characteristic
     // Fires (from the BLE task) when the app writes the Time characteristic.
     void on_time_set(std::function<void(uint32_t epochS, int16_t tzOffsetMin)> cb);
 
