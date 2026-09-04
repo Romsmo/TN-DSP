@@ -79,8 +79,8 @@ printf 'speed 50\nsleep 2\nhazard ice 300\nsleep 6\nreconnect\nhazard accident 2
 
 | Area | Drive it with | Expect |
 |---|---|---|
-| Speed sign | `speed 30`, `speed 80 mph` | big number, unit as sent (no conversion) |
-| Sign columns | `signs L ban`, `signs R deer slippery` | prohibitions left, danger right, centred, not clipped |
+| Speed sign | `speed 30`, `speed 80 mph`, `speed 120` | big number, unit as sent; 3 digits still clear the ring |
+| Sign columns | GUI *Verkehrszeichen* ＋ / − (the tool routes each sign L/R by type and replaces same-category ones); REPL `signs L ban` / `signs R deer` | round prohibition signs left, triangular Gefahrzeichen right, centred, not clipped |
 | Direction chevrons | `arrows on` (no hazard) | green chevrons above the sign |
 | Hazard overlay | `hazard fixedcam 500` | per-type icon, distance bar, blink; chevrons hidden |
 | Hazard → sign | `hazard mobilecam 300 50` | speed sign switches to the hazard limit (50) |

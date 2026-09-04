@@ -129,6 +129,13 @@ def sign_major(code: int) -> int:
     return code // 100
 
 
+def sign_side(vznr: str) -> str:
+    """Which Home column a sign belongs in — matches the firmware layout:
+    round prohibition/restriction signs (VzNr 2xx) go left, triangular
+    Gefahrzeichen (VzNr 1xx) go right."""
+    return "left" if 200 <= sign_major(sign_code(vznr)) < 300 else "right"
+
+
 # ── DisplayState builder ────────────────────────────────────────────────────
 def encode_state(*, seq, internet=True, speed=None, unit=0, arrows=False,
                  hazard=None, dist=None, hazard_speed=None, confirm=False, confirm_to=15,
@@ -586,53 +593,54 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
     ttk.Label(r, text="Peers").pack(side="left")
     ttk.Spinbox(r, from_=0, to=9999999, increment=1000, width=9, textvariable=v["peers"]).pack(side="left", padx=4)
 
-    # ── sign columns: pick from a dropdown, add/remove, auto-replace ────────
+    # ── one sign list; the tool decides the column and replaces conflicts ──
     sign_opts = [f"{k} — {SIGN_LABELS.get(k, k)}"
                  for k in sorted(SIGN_LABELS, key=lambda s: (int(s.split('-')[0]), s))]
-    sign_boxes = {}
+    sign_list = tk.Listbox(b, height=4, exportselection=False)
 
-    def add_sign(side, choice):
+    def refresh_signs():
+        sign_list.delete(0, "end")
+        for s in signs["left"] + signs["right"]:
+            col = "L" if s in signs["left"] else "R"
+            sign_list.insert("end", f"[{col}]  {s} — {SIGN_LABELS.get(s, s)}")
+
+    def add_sign(choice):
         if not choice:
             return
         vznr = choice.split(" — ")[0]
-        col = signs[side]
-        # replacing signs: drop any with the same category, and clear the
-        # counterpart of an "Ende …" sign.
+        side = sign_side(vznr)
         maj = sign_major(sign_code(vznr))
-        col[:] = [s for s in col if sign_major(sign_code(s)) != maj]
-        if vznr in SIGN_ENDS:
+        # a replacing sign kicks out any of the same category, in either column
+        for col in signs.values():
+            col[:] = [s for s in col if sign_major(sign_code(s)) != maj]
+        if vznr in SIGN_ENDS:                       # "Ende …" cancels its counterpart
             end_of = SIGN_ENDS[vznr]
-            col[:] = ([] if end_of is None
-                      else [s for s in col if not s.startswith(end_of)])
-        if vznr not in col and len(col) < 4:
-            col.append(vznr)
-        refresh_signs(side)
+            for col in signs.values():
+                col[:] = [] if end_of is None else [s for s in col if not s.startswith(end_of)]
+        if vznr not in signs[side] and len(signs[side]) < 4:
+            signs[side].append(vznr)
+        refresh_signs()
         push_state()
 
-    def remove_sign(side):
-        lb = sign_boxes[side]
-        for i in reversed(lb.curselection()):
-            del signs[side][i]
-        refresh_signs(side)
+    def remove_sign():
+        for line in sign_list.curselection():
+            vznr = sign_list.get(line).split()[1]
+            for col in signs.values():
+                if vznr in col:
+                    col.remove(vznr)
+        refresh_signs()
         push_state()
 
-    def refresh_signs(side):
-        lb = sign_boxes[side]
-        lb.delete(0, "end")
-        for s in signs[side]:
-            lb.insert("end", f"{s} — {SIGN_LABELS.get(s, s)}")
-
-    for side, de in (("left", "links"), ("right", "rechts")):
-        f = ttk.Frame(b); f.pack(fill="x", pady=2)
-        ttk.Label(f, text=f"Schilder {de}").pack(anchor="w")
-        pick = ttk.Combobox(f, values=sign_opts, state="readonly", width=40)
-        pick.pack(side="left")
-        ttk.Button(f, text="＋", width=3,
-                   command=lambda s=side, p=pick: add_sign(s, p.get())).pack(side="left", padx=2)
-        ttk.Button(f, text="－", width=3, command=lambda s=side: remove_sign(s)).pack(side="left")
-        lb = tk.Listbox(b, height=3, exportselection=False)
-        lb.pack(fill="x")
-        sign_boxes[side] = lb
+    f = ttk.Frame(b); f.pack(fill="x", pady=2)
+    ttk.Label(f, text="Verkehrszeichen").pack(anchor="w")
+    pick = ttk.Combobox(f, values=sign_opts, state="readonly", width=40)
+    pick.pack(side="left")
+    ttk.Button(f, text="＋", width=3,
+               command=lambda: add_sign(pick.get())).pack(side="left", padx=2)
+    ttk.Button(f, text="－", width=3, command=remove_sign).pack(side="left")
+    sign_list.pack(fill="x")
+    ttk.Label(b, text="[L] = Verbots-/Vorschriftzeichen (links) · [R] = Gefahrzeichen (rechts)",
+              foreground="#888").pack(anchor="w")
 
     b = box(left_col, "Gefahr-Overlay"); b.pack(fill="x", pady=3)
     r = ttk.Frame(b); r.pack(fill="x")
