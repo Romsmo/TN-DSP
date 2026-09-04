@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+#include "core/model/ui_config.h"
+
 namespace core {
 
 enum class Screen : uint8_t { Home, Melden, Settings, Connect };
@@ -17,11 +19,12 @@ struct ViewModel {
     bool        linkDown = false;       // no app connection (badge)
     bool        demo = false;           // demo/mock mode indicator
     uint8_t     confirmSecondsLeft = 0; // for the countdown ring
+    UiConfig    ui{};                   // which pages / elements are enabled
 
     bool operator==(const ViewModel& o) const {
         return screen == o.screen && overlay == o.overlay && navLocked == o.navLocked &&
                cacheStale == o.cacheStale && linkDown == o.linkDown && demo == o.demo &&
-               confirmSecondsLeft == o.confirmSecondsLeft;
+               confirmSecondsLeft == o.confirmSecondsLeft && ui == o.ui;
     }
     bool operator!=(const ViewModel& o) const { return !(*this == o); }
 };

@@ -26,6 +26,8 @@ struct FakeTransport : ITransport {
     void emit(const core::DeviceEvent&) override { ++emits; }
     void push_settings(const core::Settings&) override {}
     bool poll_settings(core::Settings&) override { return false; }
+    void push_ui_config(const core::UiConfig&) override {}
+    bool poll_ui_config(core::UiConfig&) override { return false; }
     bool state_stale() const override { return false; }
 };
 

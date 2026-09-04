@@ -66,23 +66,36 @@ void HomeScreen::on_plus(std::function<void()> cb) { plus_->on_press(std::move(c
 void HomeScreen::on_settings(std::function<void()> cb) { settings_cb_ = std::move(cb); }
 void HomeScreen::show_swipe_hint() { plus_->show_hint(); }
 
+void HomeScreen::set_ui_config(const core::UiConfig& c) {
+    ui_ = c;
+    auto vis = [](lv_obj_t* o, bool on) {
+        if (on) lv_obj_remove_flag(o, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(o, LV_OBJ_FLAG_HIDDEN);
+    };
+    vis(gear_, c.gearButton);
+    vis(plus_->root(), c.meldenPage);
+    set_state(state_);   // re-apply element visibility that depends on the config
+}
+
 void HomeScreen::set_state(const core::DisplayState& s) {
     state_ = s;
 
-    badge_->set(s.internetConnected, s.networkPeers);
+    badge_->set(s.internetConnected, ui_.peerCount ? s.networkPeers : 0);
 
     const bool hazard = s.hazardActive;
-    chevrons_->set_visible(s.directionArrows && !hazard);
+    chevrons_->set_visible(s.directionArrows && !hazard && ui_.directionArrows);
 
     std::optional<int> shown = s.speedLimit;
     if (hazard && s.hazardSpeedLimit) shown = s.hazardSpeedLimit;
     sign_->set(shown, s.speedLimitUnit, /*stale=*/false);
 
     // The context-sign columns step aside while a hazard overlay is up so the
-    // hazard icon + distance bar own the flanks.
+    // hazard icon + distance bar own the flanks — and stay hidden if the app
+    // stripped them entirely.
+    const bool cols = ui_.signColumns && !hazard;
     for (lv_obj_t* col : {left_->root(), right_->root()}) {
-        if (hazard) lv_obj_add_flag(col, LV_OBJ_FLAG_HIDDEN);
-        else lv_obj_remove_flag(col, LV_OBJ_FLAG_HIDDEN);
+        if (cols) lv_obj_remove_flag(col, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(col, LV_OBJ_FLAG_HIDDEN);
     }
     left_->set(s.leftSigns);
     right_->set(s.rightSigns);

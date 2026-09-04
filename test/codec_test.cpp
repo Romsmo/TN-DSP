@@ -157,6 +157,32 @@ TEST_CASE("Settings and Time round-trip") {
     CHECK(to.tzOffsetMin == -120);
 }
 
+TEST_CASE("UiConfig round-trips; a fresh device decodes to all-on") {
+    UiConfig c;
+    c.meldenPage = false;
+    c.hazardOverlay = false;
+    c.peerCount = false;
+    c.bootAnimation = false;
+
+    uint8_t buf[64];
+    const size_t n = encode_ui_config(c, buf, sizeof(buf));
+    UiConfig out;
+    REQUIRE(decode_ui_config(buf, n, out));
+    CHECK(out == c);
+    CHECK_FALSE(out.meldenPage);
+    CHECK(out.settingsPage);
+    CHECK(out.confirmOverlay);
+
+    // An empty map (no bits key) -> defaults, i.e. everything on.
+    uint8_t empty[8];
+    cbor::Writer w(empty, sizeof(empty));
+    w.map(1);
+    w.kv(0, 1);
+    UiConfig def;
+    REQUIRE(decode_ui_config(empty, w.size(), def));
+    CHECK(def == UiConfig{});
+}
+
 TEST_CASE("overflow is reported, not written past the buffer") {
     const DisplayState in = sample_state();
     uint8_t tiny[8];

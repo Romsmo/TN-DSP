@@ -119,6 +119,14 @@ extern "C" void app_main(void) {
     runner.set_settings(settings_store.load());
     runner.set_settings_store(&settings_store);
 
+    static core::UiConfigStore ui_config_store(*hal::esp::nvs_instance(), BSP_NVS_NS_UICFG);
+    const core::UiConfig ui_config = ui_config_store.load();
+    runner.sm().set_ui_config(ui_config);
+    runner.set_ui_config_store(&ui_config_store);
+#if defined(CONFIG_BDSP_ENABLE_BLE)
+    ble.push_ui_config(ui_config);   // so a read returns the persisted config
+#endif
+
     // Restore the last DisplayState so Home shows the last-known limit (greyed
     // once stale) instead of the pairing screen until the app reconnects.
     static core::CacheStore cache_store(*hal::esp::nvs_instance(), BSP_NVS_NS_CACHE);
@@ -178,9 +186,13 @@ extern "C" void app_main(void) {
         mgr->set_callbacks(std::move(cb));
     }
     mgr->set_connect_qr(BSP_PAIR_URL);
+    mgr->set_view(runner.sm().view());   // apply the feature switches before first paint
     static std::atomic<bool> boot_done{false};
-    static ui::BootScreen* boot = new ui::BootScreen(lv_screen_active(),
-                                                     []() { boot_done.store(true); });
+    static ui::BootScreen* boot =
+        ui_config.bootAnimation
+            ? new ui::BootScreen(lv_screen_active(), []() { boot_done.store(true); })
+            : nullptr;
+    if (!boot) boot_done.store(true);
     hal::esp::lvgl_unlock();
 
     hal::Buttons* btn = hal::esp::buttons_instance();

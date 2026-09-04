@@ -8,6 +8,7 @@
 #include "core/model/device_event.h"
 #include "core/model/display_state.h"
 #include "core/model/settings.h"
+#include "core/model/ui_config.h"
 
 namespace transport {
 
@@ -33,6 +34,10 @@ struct ITransport : IStateSource, IEventSink {
     // logic hands it the current Settings and gets notified of remote changes.
     virtual void push_settings(const core::Settings& s) = 0;
     virtual bool poll_settings(core::Settings& out) = 0;
+
+    // UiConfig (the dev feature switches) syncs the same way.
+    virtual void push_ui_config(const core::UiConfig& c) = 0;
+    virtual bool poll_ui_config(core::UiConfig& out) = 0;
 
     // True once no DisplayState has arrived for the watchdog interval.
     virtual bool state_stale() const = 0;

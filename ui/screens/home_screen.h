@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "core/model/display_state.h"
+#include "core/model/ui_config.h"
 #include "lvgl.h"
 
 namespace ui {
@@ -25,6 +26,7 @@ public:
     HomeScreen& operator=(const HomeScreen&) = delete;
 
     void set_state(const core::DisplayState& s);
+    void set_ui_config(const core::UiConfig& c);  // hide stripped elements
     void on_plus(std::function<void()> cb);      // "+" tapped -> Melden
     void on_settings(std::function<void()> cb);  // gear long-pressed / strong swipe-up -> Settings
     void show_swipe_hint();
@@ -43,6 +45,7 @@ private:
     std::function<void()>        settings_cb_;
 
     core::DisplayState state_{};
+    core::UiConfig     ui_{};
 };
 
 }  // namespace ui

@@ -20,6 +20,8 @@ stand-in), `docs/app-reference/blitzerdsp_protocol.dart` (Flutter sketch).
 | `0003` | `079a0003-…` | **DeviceInfo** | Read | device → app |
 | `0004` | `079a0004-…` | **Settings** | Read / Write / Notify | both |
 | `0005` | `079a0005-…` | **Time** | Write | app → device |
+| `0006` | `079a0006-…` | **UiConfig** | Read / Write / Notify | both |
+| `0007` | `079a0007-…` | **OTA** | Write / Notify | both (M9-D) |
 
 Payloads fit one ATT packet (`kMaxPayload = 244`, targeting a 247-byte MTU). A typical State
 packet is 25–50 bytes.
@@ -81,6 +83,27 @@ Wildwechsel right.)
 
 The per-category warning filter lives in the app; the device also persists these bits to NVS and
 suppresses overlays of disabled categories as a second layer.
+
+## UiConfig  (`0006`, read / write / notify — dev feature switches)
+
+`0` version · `1` **bits** (uint32; **bit set = feature ON**, so a fresh device with no stored
+config reads all-on and behaves normally).
+
+| Bit | Feature | Off means |
+|---|---|---|
+| 0 | `meldenPage` | no "Melden" tile, the "+" is hidden, no left-swipe |
+| 1 | `settingsPage` | the gear tap does nothing |
+| 2 | `hazardOverlay` | hazard packets update the sign but raise no overlay |
+| 3 | `confirmOverlay` | the "Gesehen?" prompt never appears |
+| 4 | `signColumns` | the left/right StVO sign columns are hidden |
+| 5 | `directionArrows` | no green "free road" chevrons |
+| 6 | `peerCount` | no "480K" under the globe |
+| 7 | `gearButton` | the Settings gear is hidden (independent of bit 1) |
+| 8 | `connectQr` | "Handy verbinden" shows no QR |
+| 9 | `bootAnimation` | no chevron sweep at power-on |
+
+The device persists the config to NVS and echoes it on notify, so a reconnecting app (or a second
+client) reads back the current set. Changing it takes effect on the next render.
 
 ## DeviceInfo  (`0003`, read)
 

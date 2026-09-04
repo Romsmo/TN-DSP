@@ -105,6 +105,29 @@ TEST_CASE("AppRunner: Settings sync both ways + persistence") {
     CHECK(mock.settings_pushes() == 1);   // adopting a remote change doesn't re-push
 }
 
+TEST_CASE("AppRunner: a UiConfig write from the app is adopted, persisted and echoed") {
+    fakes::Clock clk;
+    fakes::Nvs   nvs;
+    transport::mock::MockTransport mock(clk);
+    mock.start();
+
+    UiConfigStore store(nvs);
+    AppRunner runner(mock, clk);
+    runner.set_ui_config_store(&store);
+
+    auto noop = [](const DisplayState&, const ViewModel&) {};
+
+    UiConfig want;
+    want.meldenPage = false;
+    want.gearButton = false;
+    mock.inject_ui_config(want);
+    runner.step(noop);
+
+    CHECK(runner.sm().ui_config() == want);   // adopted
+    CHECK(store.load() == want);              // persisted
+    CHECK(mock.pushed_ui_config() == want);   // echoed so a read / other client sees it
+}
+
 TEST_CASE("AppRunner: DisplayState is persisted and restored across a restart") {
     fakes::Clock clk;
     fakes::Nvs   nvs;

@@ -25,6 +25,7 @@ public:
     void set_status(Status s);
     // The string the pairing QR encodes (points to the companion app in the store).
     void set_qr_payload(const char* s);
+    void set_qr_enabled(bool on);   // app can strip the QR (button then just shows status)
     void show_qr(bool on);
     // Back to the prompt (e.g. when leaving the screen).
     void reset();
@@ -39,6 +40,7 @@ private:
     lv_obj_t*             guide_ = nullptr;
     lv_obj_t*             status_ = nullptr;
     PillButton*           button_ = nullptr;
+    bool                  qr_enabled_ = true;
     std::function<void()> connect_;
 };
 

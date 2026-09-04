@@ -77,7 +77,13 @@ ConnectScreen::ConnectScreen(lv_obj_t* parent) {
 
 ConnectScreen::~ConnectScreen() { delete button_; }
 
+void ConnectScreen::set_qr_enabled(bool on) {
+    qr_enabled_ = on;
+    if (!on) show_qr(false);
+}
+
 void ConnectScreen::show_qr(bool on) {
+    if (on && !qr_enabled_) return;   // stripped by the app
     for (lv_obj_t* o : {qr_, guide_}) {
         if (on) lv_obj_remove_flag(o, LV_OBJ_FLAG_HIDDEN);
         else lv_obj_add_flag(o, LV_OBJ_FLAG_HIDDEN);

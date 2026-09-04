@@ -48,6 +48,8 @@ uint32_t           g_last_seq = 0;
 int64_t            g_last_rx_us = 0;
 core::Settings     g_settings{};
 bool               g_settings_new = false;
+core::UiConfig     g_ui_config{};
+bool               g_ui_config_new = false;
 
 // ── config ───────────────────────────────────────────────────────────────────
 uint32_t    g_caps = 0;
@@ -59,8 +61,10 @@ volatile transport::LinkStatus g_link = transport::LinkStatus::Disconnected;
 uint16_t g_conn = BLE_HS_CONN_HANDLE_NONE;
 uint16_t g_event_h = 0;
 uint16_t g_settings_h = 0;
+uint16_t g_ui_config_h = 0;
 bool     g_event_sub = false;
 bool     g_settings_sub = false;
+bool     g_ui_config_sub = false;
 uint8_t  g_own_addr_type = 0;
 char     g_addr_str[18] = {0};
 
@@ -76,6 +80,7 @@ const ble_uuid128_t k_event    = {{BLE_UUID_TYPE_128}, BDSP_BLE_UUID128(BDSP_BLE
 const ble_uuid128_t k_info     = {{BLE_UUID_TYPE_128}, BDSP_BLE_UUID128(BDSP_BLE_SLOT_DEVICE_INFO)};
 const ble_uuid128_t k_settings = {{BLE_UUID_TYPE_128}, BDSP_BLE_UUID128(BDSP_BLE_SLOT_SETTINGS)};
 const ble_uuid128_t k_time     = {{BLE_UUID_TYPE_128}, BDSP_BLE_UUID128(BDSP_BLE_SLOT_TIME)};
+const ble_uuid128_t k_ui_config = {{BLE_UUID_TYPE_128}, BDSP_BLE_UUID128(BDSP_BLE_SLOT_UI_CONFIG)};
 
 void start_advertising();
 
@@ -111,6 +116,14 @@ int gatt_access(uint16_t /*conn*/, uint16_t /*attr*/, ble_gatt_access_ctxt* ctxt
                 g_settings_new = true;
                 return 0;
             }
+            if (slot == BDSP_BLE_SLOT_UI_CONFIG) {
+                core::UiConfig c;
+                if (!core::proto::decode_ui_config(buf, got, c)) return BLE_ATT_ERR_INVALID_PDU;
+                Lock lk;
+                g_ui_config = c;
+                g_ui_config_new = true;
+                return 0;
+            }
             if (slot == BDSP_BLE_SLOT_TIME) {
                 core::proto::TimeSync t;
                 if (!core::proto::decode_time(buf, got, t)) return BLE_ATT_ERR_INVALID_PDU;
@@ -132,6 +145,9 @@ int gatt_access(uint16_t /*conn*/, uint16_t /*attr*/, ble_gatt_access_ctxt* ctxt
             } else if (slot == BDSP_BLE_SLOT_SETTINGS) {
                 Lock lk;
                 n = core::proto::encode_settings(g_settings, buf, sizeof(buf));
+            } else if (slot == BDSP_BLE_SLOT_UI_CONFIG) {
+                Lock lk;
+                n = core::proto::encode_ui_config(g_ui_config, buf, sizeof(buf));
             } else {
                 return BLE_ATT_ERR_READ_NOT_PERMITTED;
             }
@@ -195,6 +211,16 @@ const struct ble_gatt_chr_def k_chars[] = {
         .val_handle = nullptr,
         .cpfd = nullptr,
     },
+    {
+        .uuid = &k_ui_config.u,
+        .access_cb = gatt_access,
+        .arg = reinterpret_cast<void*>(BDSP_BLE_SLOT_UI_CONFIG),
+        .descriptors = nullptr,
+        .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_NOTIFY,
+        .min_key_size = 0,
+        .val_handle = &g_ui_config_h,
+        .cpfd = nullptr,
+    },
     {0},
 };
 
@@ -228,7 +254,7 @@ int gap_event(struct ble_gap_event* event, void* /*arg*/) {
         case BLE_GAP_EVENT_DISCONNECT:
             ESP_LOGI(TAG, "disconnected (0x%02x)", event->disconnect.reason);
             g_conn = BLE_HS_CONN_HANDLE_NONE;
-            g_event_sub = g_settings_sub = false;
+            g_event_sub = g_settings_sub = g_ui_config_sub = false;
             g_link = transport::LinkStatus::Advertising;
             {
                 Lock lk;
@@ -242,6 +268,8 @@ int gap_event(struct ble_gap_event* event, void* /*arg*/) {
                 g_event_sub = event->subscribe.cur_notify;
             else if (event->subscribe.attr_handle == g_settings_h)
                 g_settings_sub = event->subscribe.cur_notify;
+            else if (event->subscribe.attr_handle == g_ui_config_h)
+                g_ui_config_sub = event->subscribe.cur_notify;
             return 0;
 
         case BLE_GAP_EVENT_ADV_COMPLETE:
@@ -383,6 +411,28 @@ bool BleTransport::poll_settings(core::Settings& out) {
     if (!g_settings_new) return false;
     g_settings_new = false;
     out = g_settings;
+    return true;
+}
+
+void BleTransport::push_ui_config(const core::UiConfig& c) {
+    {
+        Lock lk;
+        g_ui_config = c;
+    }
+    if (g_conn == BLE_HS_CONN_HANDLE_NONE || !g_ui_config_sub) return;
+    uint8_t buf[core::proto::kMaxPayload];
+    const size_t n = core::proto::encode_ui_config(c, buf, sizeof(buf));
+    if (n == 0) return;
+    struct os_mbuf* om = ble_hs_mbuf_from_flat(buf, n);
+    if (!om) return;
+    ble_gatts_notify_custom(g_conn, g_ui_config_h, om);
+}
+
+bool BleTransport::poll_ui_config(core::UiConfig& out) {
+    Lock lk;
+    if (!g_ui_config_new) return false;
+    g_ui_config_new = false;
+    out = g_ui_config;
     return true;
 }
 

@@ -11,6 +11,7 @@
 #include "core/model/device_event.h"
 #include "core/model/display_state.h"
 #include "core/model/settings.h"
+#include "core/model/ui_config.h"
 
 namespace core::proto {
 
@@ -34,6 +35,7 @@ struct TimeSync {
 size_t encode_state(const DisplayState& s, uint8_t* out, size_t cap);
 size_t encode_event(const DeviceEvent& e, uint8_t* out, size_t cap);
 size_t encode_settings(const Settings& s, uint8_t* out, size_t cap);
+size_t encode_ui_config(const UiConfig& c, uint8_t* out, size_t cap);
 size_t encode_device_info(const DeviceInfo& d, uint8_t* out, size_t cap);
 size_t encode_time(const TimeSync& t, uint8_t* out, size_t cap);
 
@@ -41,6 +43,7 @@ size_t encode_time(const TimeSync& t, uint8_t* out, size_t cap);
 bool decode_state(const uint8_t* in, size_t len, DisplayState& out);
 bool decode_event(const uint8_t* in, size_t len, DeviceEvent& out);
 bool decode_settings(const uint8_t* in, size_t len, Settings& out);
+bool decode_ui_config(const uint8_t* in, size_t len, UiConfig& out);
 bool decode_time(const uint8_t* in, size_t len, TimeSync& out);
 
 // Reads just key 0 (protocol version) without a full decode.

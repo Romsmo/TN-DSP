@@ -37,6 +37,9 @@ enum TK {
     TK_FILTER = 5, TK_NIGHT_START = 6, TK_NIGHT_END = 7, TK_CACHE_MIN = 8,
 };
 
+// ── UiConfig keys ──────────────────────────────────────────────────────────
+enum UK { UK_VER = 0, UK_BITS = 1 };
+
 void put_signs(Writer& w, uint32_t key, const SignList& l) {
     w.key(key);
     w.array(static_cast<size_t>(l.size()));
@@ -169,6 +172,14 @@ size_t encode_device_info(const DeviceInfo& d, uint8_t* out, size_t cap) {
     w.kv(2, d.caps);
     w.kv(3, d.width);
     w.kv(4, d.height);
+    return w.ok() ? w.size() : 0;
+}
+
+size_t encode_ui_config(const UiConfig& c, uint8_t* out, size_t cap) {
+    Writer w(out, cap);
+    w.map(2);
+    w.kv(UK_VER, kVersion);
+    w.kv(UK_BITS, c.bits());
     return w.ok() ? w.size() : 0;
 }
 
@@ -324,6 +335,22 @@ bool decode_settings(const uint8_t* in, size_t len, Settings& out) {
             case TK_NIGHT_START: out.nightHours.startHour = static_cast<uint8_t>(r.read_uint()); break;
             case TK_NIGHT_END: out.nightHours.endHour = static_cast<uint8_t>(r.read_uint()); break;
             case TK_CACHE_MIN: out.cacheStaleMinutes = static_cast<uint16_t>(r.read_uint()); break;
+            default: r.skip(); break;
+        }
+    }
+    return r.ok();
+}
+
+bool decode_ui_config(const uint8_t* in, size_t len, UiConfig& out) {
+    out = UiConfig{};
+    Reader r(in, len);
+    if (r.peek_type() != Type::Map) return false;
+    const size_t n = r.enter();
+    for (size_t i = 0; i < n && r.ok(); ++i) {
+        const uint32_t key = static_cast<uint32_t>(r.read_uint());
+        switch (key) {
+            case UK_VER: r.read_uint(); break;
+            case UK_BITS: out.set_bits(static_cast<uint32_t>(r.read_uint())); break;
             default: r.skip(); break;
         }
     }

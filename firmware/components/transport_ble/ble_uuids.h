@@ -18,6 +18,8 @@ enum {
     BDSP_BLE_SLOT_DEVICE_INFO  = 0x0003,  // Read: proto ver, fw ver, caps bitmask, resolution
     BDSP_BLE_SLOT_SETTINGS     = 0x0004,  // Read/Write/Notify, CBOR Settings (bidirectional sync)
     BDSP_BLE_SLOT_TIME         = 0x0005,  // Write: {epochS, tzOffsetMin} -> PCF85063
+    BDSP_BLE_SLOT_UI_CONFIG    = 0x0006,  // Read/Write/Notify, CBOR UiConfig (dev feature switches)
+    BDSP_BLE_SLOT_OTA          = 0x0007,  // Write/Notify, chunked firmware image (M9-D)
 };
 
 // DeviceInfo capability bits (integer key 2 in the CBOR map).
@@ -27,4 +29,5 @@ enum {
     BDSP_CAP_HAS_RTC        = 1u << 2,
     BDSP_CAP_HAS_SD         = 1u << 3,
     BDSP_CAP_SPEEDCAM_BUILD = 1u << 4,   // CONFIG_BDSP_FEATURE_SPEEDCAM was set
+    BDSP_CAP_HAS_OTA        = 1u << 5,   // dual-slot partition table, OTA characteristic live
 };

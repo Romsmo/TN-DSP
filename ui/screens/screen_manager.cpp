@@ -130,6 +130,10 @@ void ScreenManager::set_state(const core::DisplayState& s) {
 }
 
 void ScreenManager::set_view(const core::ViewModel& vm) {
+    // Feature switches: hide the elements the app stripped.
+    home_->set_ui_config(vm.ui);
+    connect_->set_qr_enabled(vm.ui.connectQr);
+
     // Connect screen (its own layer, on top of everything).
     const bool want_connect = vm.screen == core::Screen::Connect;
     if (want_connect) {
@@ -157,9 +161,10 @@ void ScreenManager::set_view(const core::ViewModel& vm) {
     } else if (vm.overlay != core::OverlayKind::Confirm && confirm_->active()) {
         confirm_->set_active(false);
     }
-    // Lock the tileview under the confirm prompt, and on Melden (the rotary
-    // crown owns all drags there — leave via its back chevron or the timeout).
-    if (vm.navLocked || vm.screen == core::Screen::Melden) {
+    // Lock the tileview under the confirm prompt, on Melden (the rotary crown
+    // owns all drags there), and when the Melden page has been stripped (nothing
+    // to swipe to).
+    if (vm.navLocked || vm.screen == core::Screen::Melden || !vm.ui.meldenPage) {
         lv_obj_remove_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
     } else {
         lv_obj_add_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);

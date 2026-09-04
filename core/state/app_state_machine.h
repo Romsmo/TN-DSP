@@ -13,6 +13,7 @@
 #include "core/model/display_state.h"
 #include "core/model/hazard_type.h"
 #include "core/model/settings.h"
+#include "core/model/ui_config.h"
 #include "core/state/view_model.h"
 #include "transport/transport.h"
 
@@ -24,6 +25,8 @@ public:
 
     // ── configuration ──────────────────────────────────────────────────────
     void set_settings(const Settings& s) { settings_ = s; }
+    void set_ui_config(const UiConfig& c) { ui_ = c; }
+    const UiConfig& ui_config() const { return ui_; }
     void set_bonded(bool b) { bonded_ = b; }
 
     // Seed the offline cache from persistent storage on boot: the board shows
@@ -79,6 +82,7 @@ private:
 
     transport::IEventSink& sink_;
     Settings               settings_{};
+    UiConfig               ui_{};
     OfflineCache           cache_;
 
     DisplayState effective_{};

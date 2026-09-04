@@ -24,6 +24,8 @@ public:
     void emit(const core::DeviceEvent& e) override;      // notify on the Event char
     void push_settings(const core::Settings& s) override;
     bool poll_settings(core::Settings& out) override;
+    void push_ui_config(const core::UiConfig& c) override;
+    bool poll_ui_config(core::UiConfig& out) override;
     bool state_stale() const override;
 
     // ── config (call before start()) ───────────────────────────────────────

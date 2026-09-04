@@ -109,6 +109,7 @@
 // NVS namespaces
 #define BSP_NVS_NS_SETTINGS        "settings"
 #define BSP_NVS_NS_CACHE           "cache"
+#define BSP_NVS_NS_UICFG           "uicfg"
 
 // Task config
 #define BSP_UI_TASK_STACK          8192

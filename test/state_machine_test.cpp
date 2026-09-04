@@ -190,6 +190,35 @@ TEST_CASE("stale packets (seq not advancing) are dropped") {
     CHECK(r.sm.effective_state().speedLimit.value() == 80);
 }
 
+TEST_CASE("UiConfig: a stripped page can't be opened and a stripped overlay is suppressed") {
+    Rig r;
+    r.sm.set_bonded(true);
+    r.sm.on_link(LinkStatus::Connected);
+
+    UiConfig ui;
+    ui.meldenPage = false;
+    ui.hazardOverlay = false;
+    r.sm.set_ui_config(ui);
+
+    r.sm.open_melden();
+    r.tick();
+    CHECK(r.sm.view().screen == Screen::Home);       // nav refused
+
+    DisplayState s = r.live(1);
+    s.hazardActive = true;
+    s.hazardType = HazardType::FixedSpeedCamera;
+    r.sm.on_state(s);
+    r.tick();
+    CHECK(r.sm.view().overlay == OverlayKind::None);  // overlay stripped
+    CHECK(r.sm.view().ui.meldenPage == false);        // exposed to the renderer
+
+    // Re-enable and it works again.
+    r.sm.set_ui_config(UiConfig{});
+    r.sm.open_melden();
+    r.tick();
+    CHECK(r.sm.view().screen == Screen::Melden);
+}
+
 TEST_CASE("reconnect: peer restarts its stateSeq counter and packets still land") {
     Rig r;
     r.sm.set_bonded(true);

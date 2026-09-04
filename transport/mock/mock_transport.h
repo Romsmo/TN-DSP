@@ -37,6 +37,16 @@ public:
         out = incoming_settings_;
         return true;
     }
+    void push_ui_config(const core::UiConfig& c) override {
+        last_ui_config_ = c;
+        ++ui_config_pushes_;
+    }
+    bool poll_ui_config(core::UiConfig& out) override {
+        if (!incoming_ui_config_new_) return false;
+        incoming_ui_config_new_ = false;
+        out = incoming_ui_config_;
+        return true;
+    }
     bool state_stale() const override;
 
     // test / sim introspection
@@ -47,6 +57,12 @@ public:
     void inject_settings(const core::Settings& s) {   // simulate an app-side write
         incoming_settings_ = s;
         incoming_settings_new_ = true;
+    }
+    const core::UiConfig& pushed_ui_config() const { return last_ui_config_; }
+    int  ui_config_pushes() const { return ui_config_pushes_; }
+    void inject_ui_config(const core::UiConfig& c) {
+        incoming_ui_config_ = c;
+        incoming_ui_config_new_ = true;
     }
 
 private:
@@ -65,6 +81,10 @@ private:
     int                            settings_pushes_ = 0;
     core::Settings                 incoming_settings_{};
     bool                           incoming_settings_new_ = false;
+    core::UiConfig                 last_ui_config_{};
+    int                            ui_config_pushes_ = 0;
+    core::UiConfig                 incoming_ui_config_{};
+    bool                           incoming_ui_config_new_ = false;
 };
 
 // A ready-made demo timeline: home -> hazard approach with countdown -> confirm

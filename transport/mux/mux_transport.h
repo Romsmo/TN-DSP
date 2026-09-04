@@ -36,6 +36,8 @@ public:
     void emit(const core::DeviceEvent& e) override { active().emit(e); }
     void push_settings(const core::Settings& s) override { active().push_settings(s); }
     bool poll_settings(core::Settings& out) override { return active().poll_settings(out); }
+    void push_ui_config(const core::UiConfig& c) override { active().push_ui_config(c); }
+    bool poll_ui_config(core::UiConfig& out) override { return active().poll_ui_config(out); }
     bool state_stale() const override { return active().state_stale(); }
 
 private:

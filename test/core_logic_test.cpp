@@ -5,7 +5,9 @@
 #include "core/cache/offline_cache.h"
 #include "core/model/display_state.h"
 #include "core/model/hazard_type.h"
+#include "core/model/ui_config.h"
 #include "core/settings/settings_store.h"
+#include "core/settings/ui_config_store.h"
 #include "core/state/warning_filter_apply.h"
 #include "test/fakes.h"
 
@@ -82,6 +84,23 @@ TEST_CASE("CacheStore round-trips a DisplayState through a fake NVS") {
 
     store.clear();
     CHECK_FALSE(store.load(loaded));
+}
+
+TEST_CASE("UiConfigStore round-trips; missing/short blob -> all features on") {
+    fakes::Nvs nvs;
+    UiConfigStore store(nvs);
+
+    CHECK(store.load() == UiConfig{});          // nothing stored -> defaults
+
+    UiConfig c;
+    c.settingsPage = false;
+    c.signColumns = false;
+    c.gearButton = false;
+    CHECK(store.save(c));
+    CHECK(store.load() == c);
+
+    nvs.store[fakes::Nvs::k("uicfg", "v")] = {0x02};   // wrong version/short
+    CHECK(store.load() == UiConfig{});
 }
 
 TEST_CASE("SettingsStore round-trips through a fake NVS; bad blob -> defaults") {

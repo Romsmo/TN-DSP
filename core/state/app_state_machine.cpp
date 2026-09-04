@@ -43,12 +43,16 @@ void AppStateMachine::on_state(const DisplayState& s) {
 }
 
 void AppStateMachine::open_melden() {
+    if (!ui_.meldenPage) return;   // page stripped by the app
     nav_ = Screen::Melden;
     melden_deadline_ms_ = 0;  // set on next tick
     sink_.emit(DeviceEvent{ReportPressed{}});
 }
 
-void AppStateMachine::open_settings() { nav_ = Screen::Settings; }
+void AppStateMachine::open_settings() {
+    if (!ui_.settingsPage) return;
+    nav_ = Screen::Settings;
+}
 
 void AppStateMachine::go_home() { nav_ = Screen::Home; }
 
@@ -153,18 +157,19 @@ void AppStateMachine::recompute(uint64_t now_ms, uint32_t now_epoch_s) {
         vm.screen = nav_;
     }
 
-    // Overlay priority: confirm > hazard.
-    if (confirm_showing_) {
+    // Overlay priority: confirm > hazard. Either can be stripped by the app.
+    if (confirm_showing_ && ui_.confirmOverlay) {
         vm.overlay = OverlayKind::Confirm;
         vm.navLocked = true;
         if (now_ms < confirm_deadline_ms_) {
             vm.confirmSecondsLeft =
                 static_cast<uint8_t>((confirm_deadline_ms_ - now_ms + 999) / 1000);
         }
-    } else if (effective_.hazardActive) {
+    } else if (effective_.hazardActive && ui_.hazardOverlay) {
         vm.overlay = OverlayKind::Hazard;
     }
 
+    vm.ui = ui_;
     vm_ = vm;
 }
 

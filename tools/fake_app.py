@@ -36,7 +36,12 @@ def _uuid(slot: int) -> str:
     return f"079a{slot:04x}-d673-469c-98a0-12c0c5eb43b3"
 
 
-SVC_UUID, STATE_UUID, EVENT_UUID, INFO_UUID, SETTINGS_UUID, TIME_UUID = (_uuid(i) for i in range(6))
+(SVC_UUID, STATE_UUID, EVENT_UUID, INFO_UUID, SETTINGS_UUID, TIME_UUID,
+ UICONFIG_UUID, OTA_UUID) = (_uuid(i) for i in range(8))
+
+# UiConfig feature-switch bits (core/model/ui_config.h)
+UI_BITS = ["meldenPage", "settingsPage", "hazardOverlay", "confirmOverlay", "signColumns",
+           "directionArrows", "peerCount", "gearButton", "connectQr", "bootAnimation"]
 
 # ── DisplayState keys / flags (core/codec/protocol.cpp) ──────────────────────
 (SK_VER, SK_FLAGS, SK_SPEED, SK_SPEED_UNIT, SK_HAZ_TYPE, SK_HAZ_DIST, SK_HAZ_SPEED,
@@ -119,6 +124,16 @@ def encode_time(epoch=None, tz_min=0):
     return cbor2.dumps({0: PROTO, 1: int(epoch if epoch is not None else time.time()), 2: tz_min})
 
 
+def encode_ui_config(bits):
+    return cbor2.dumps({0: PROTO, 1: bits & 0xFFFFFFFF})
+
+
+def describe_ui_config(data: bytes) -> str:
+    bits = cbor2.loads(data).get(1, 0)
+    off = [n for i, n in enumerate(UI_BITS) if not (bits & (1 << i))]
+    return "all on" if not off else "OFF: " + " ".join(off)
+
+
 # ── decoders for what the device sends back ──────────────────────────────────
 def describe_event(data: bytes) -> str:
     m = cbor2.loads(data)
@@ -153,8 +168,8 @@ def describe_settings(data: bytes) -> str:
 def describe_info(data: bytes) -> str:
     m = cbor2.loads(data)
     caps = m.get(2, 0)
-    bits = [n for n, b in (("audio", 1), ("imu", 2), ("rtc", 4), ("sd", 8), ("speedcam", 16))
-            if caps & b]
+    bits = [n for n, b in (("audio", 1), ("imu", 2), ("rtc", 4), ("sd", 8), ("speedcam", 16),
+                           ("ota", 32)) if caps & b]
     return f"proto v{m.get(0)}  fw {m.get(1)!r}  {m.get(3)}x{m.get(4)}  caps={caps} {bits}"
 
 
@@ -228,6 +243,7 @@ class Link:
         self.seq = 0
         self.state = dict(speed=50, arrows=True, internet=True, peers=480000)
         self.settings = dict(self.DEFAULT_SETTINGS)
+        self.ui_bits = (1 << len(UI_BITS)) - 1   # all features on
         self._loop = asyncio.new_event_loop()
         self._thr = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thr.start()
@@ -262,6 +278,13 @@ class Link:
         cur = await self.client.read_gatt_char(SETTINGS_UUID)
         self.settings = parse_settings(bytes(cur))    # so writes don't stomp untouched fields
         print(f"  settings:    {describe_settings(bytes(cur))}")
+        try:
+            uc = await self.client.read_gatt_char(UICONFIG_UUID)
+            self.ui_bits = cbor2.loads(bytes(uc)).get(1, self.ui_bits)
+            await self.client.start_notify(UICONFIG_UUID, self._on_uiconfig)
+            print(f"  ui-config:   {describe_ui_config(bytes(uc))}")
+        except Exception as e:
+            print(f"  (ui-config unavailable: {e})")
 
     def disconnect(self):
         if self.client:
@@ -274,6 +297,10 @@ class Link:
 
     def _on_settings(self, _c, data):
         print(f"\n  << settings  {describe_settings(bytes(data))}\n> ", end="", flush=True)
+
+    def _on_uiconfig(self, _c, data):
+        self.ui_bits = cbor2.loads(bytes(data)).get(1, self.ui_bits)
+        print(f"\n  << ui-config  {describe_ui_config(bytes(data))}\n> ", end="", flush=True)
 
     # -- writes --
     def send(self, **changes):
@@ -294,6 +321,21 @@ class Link:
         pkt = encode_time(tz_min=tz_min)
         self._run(self.client.write_gatt_char(TIME_UUID, pkt, response=True))
         print(f"  >> time  epoch={cbor2.loads(pkt)[1]}  tz={tz_min}min")
+
+    def set_ui(self, name, on):
+        if name == "all":
+            self.ui_bits = (1 << len(UI_BITS)) - 1 if on else 0
+        else:
+            i = UI_BITS.index(name)
+            self.ui_bits = (self.ui_bits | (1 << i)) if on else (self.ui_bits & ~(1 << i))
+        pkt = encode_ui_config(self.ui_bits)
+        self._run(self.client.write_gatt_char(UICONFIG_UUID, pkt, response=True))
+        print(f"  >> ui-config  {describe_ui_config(pkt)}")
+
+    def read_ui(self):
+        data = self._run(self.client.read_gatt_char(UICONFIG_UUID))
+        self.ui_bits = cbor2.loads(bytes(data)).get(1, self.ui_bits)
+        print(f"  ui-config: {describe_ui_config(bytes(data))}")
 
     def read_settings(self):
         data = self._run(self.client.read_gatt_char(SETTINGS_UUID))
@@ -339,13 +381,17 @@ commands (state is remembered; every change re-sends the DisplayState):
   state                      print the current state dict
   settings                   read the Settings characteristic
   set sound on|off | set units km|mph | set theme <0-2> | set filter <hex>
+  uiconfig                   read the feature switches
+  ui <name|all> on|off       flip a feature switch (names below)
   time [tzMinutes]           write the Time characteristic (now)
   info                       read DeviceInfo
   scenario <name>            run a scripted scenario (%s)
   reconnect                  drop the link and reconnect (tests seq reset)
   sleep <secs>               pause (useful when piping a command script)
   help | quit
-""" % (" ".join(SIGNS), " ".join(SCENARIOS))
+
+feature switches: %s
+""" % (" ".join(SIGNS), " ".join(SCENARIOS), " ".join(UI_BITS))
 
 
 def repl(link: Link):
@@ -426,6 +472,10 @@ def repl(link: Link):
                 elif what == "theme": link.write_settings(theme=int(args[1]))
                 elif what == "filter": link.write_settings(filter_bits=int(args[1], 0))
                 else: print("  ! set sound|units|theme|filter")
+            elif cmd == "uiconfig":
+                link.read_ui()
+            elif cmd == "ui":
+                link.set_ui(args[0], args[1] == "on")
             elif cmd == "time":
                 link.write_time(tz_min=int(args[0]) if args else 0)
             elif cmd == "info":
