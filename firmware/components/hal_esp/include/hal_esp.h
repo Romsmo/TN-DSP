@@ -19,6 +19,14 @@ hal::RtcDriver*  rtc_instance();
 // Only valid after the display has initialised the SPI2 bus.
 hal::Storage*    storage_instance();
 
+// ES8311 audio output. First call sets up I2S + the codec; nullptr if that fails
+// or CONFIG_BDSP_ENABLE_AUDIO is off. Needs the shared I2C bus up first.
+hal::AudioDriver* audio_instance();
+
+// TCA9554 helpers (also used by esp_audio for the speaker PA on P7).
+void io_expander_set_output(uint8_t pin, bool enable_output);
+void io_expander_set_level(uint8_t pin, bool high);
+
 // Wipe the whole NVS partition (settings + offline cache + BLE bonds) and reboot.
 // Does not return.
 [[noreturn]] void factory_reset();

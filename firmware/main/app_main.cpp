@@ -119,6 +119,11 @@ extern "C" void app_main(void) {
     static core::AppRunner runner(mock, *clk);
 #endif
 
+#if defined(CONFIG_BDSP_ENABLE_AUDIO)
+    static core::audio::AudioService audio(hal::esp::audio_instance(), storage);
+    runner.set_audio(&audio);
+#endif
+
     static core::SettingsStore settings_store(*hal::esp::nvs_instance(), BSP_NVS_NS_SETTINGS);
     runner.set_settings(settings_store.load());
     runner.set_settings_store(&settings_store);

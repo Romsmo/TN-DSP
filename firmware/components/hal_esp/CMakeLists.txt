@@ -12,13 +12,14 @@ set(SRCS
   esp_touch.cpp
   esp_lvgl.cpp
   esp_storage.cpp
+  esp_audio.cpp
 )
 
 idf_component_register(
   SRCS ${SRCS}
   INCLUDE_DIRS "include" "." "${REPO}" "${REPO}/firmware/main"
-  REQUIRES driver esp_driver_i2c esp_driver_gpio esp_driver_spi esp_driver_sdspi esp_timer
-           nvs_flash esp_lcd esp_lcd_sh8601 lvgl fatfs sdmmc
+  REQUIRES driver esp_driver_i2c esp_driver_gpio esp_driver_spi esp_driver_sdspi esp_driver_i2s
+           esp_timer nvs_flash esp_lcd esp_lcd_sh8601 lvgl fatfs sdmmc esp_codec_dev
 )
 
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error)

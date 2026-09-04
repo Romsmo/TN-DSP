@@ -49,6 +49,23 @@ powershell -File tools/gen_audio_voice.ps1            # German TTS voice clips  
 tools/build_sd_audio.sh                               # assemble sd_root/audio/ for copying to a card
 ```
 
+## On the device
+
+The ES8311 codec + I2S output is `firmware/components/hal_esp/esp_audio.cpp`
+(`CONFIG_BDSP_ENABLE_AUDIO`, on by default). Pins in `board_config.h`
+(MCLK 19 / BCLK 21 / WS 22 / DOUT 23); the speaker amplifier is enabled through TCA9554 **P7**
+when sound is on. `AudioService` streams each clip to the codec a chunk at a time from the io task.
+
+To load the voice clips, copy the built tree onto the card:
+
+```bash
+tools/build_sd_audio.sh                # -> tools/sd_root/audio/
+cp -r tools/sd_root/*  <mounted SD card>/
+```
+
+`warn.wav` and `info.wav` are embedded in flash, so hazard/info chimes still play with **no card**;
+everything else needs the card.
+
 ## Master gate
 
 `Settings.soundEnabled` ("Ton An/Aus") gates all board audio. The toggle is also mirrored to the

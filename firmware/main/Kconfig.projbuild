@@ -14,6 +14,13 @@ menu "BlitzerdeDsp"
             Phase D. Pulls in the Bluetooth stack. When off, the UI runs purely
             from the MockTransport demo timeline.
 
+    config BDSP_ENABLE_AUDIO
+        bool "Build the ES8311 audio output"
+        default y
+        help
+            Warning tones + composed voice phrases on the board speaker. Pulls in
+            esp_codec_dev + the I2S driver. When off, cues are decoded but silent.
+
     config BDSP_FEATURE_SPEEDCAM
         bool "Compile speed-camera (Blitzer) support"
         default y

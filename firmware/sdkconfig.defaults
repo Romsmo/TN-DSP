@@ -16,6 +16,7 @@ CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 # ── BlitzerdeDsp ────────────────────────────────────────────────────────────
 CONFIG_BDSP_ENABLE_DISPLAY=y
 CONFIG_BDSP_ENABLE_BLE=y
+CONFIG_BDSP_ENABLE_AUDIO=y
 CONFIG_BDSP_FEATURE_SPEEDCAM=y
 
 # ── BLE — NimBLE peripheral only (see firmware/components/transport_ble) ─────

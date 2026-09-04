@@ -5,3 +5,6 @@ dependencies:
   # Display + UI (only needed when CONFIG_BDSP_ENABLE_DISPLAY=y).
   lvgl/lvgl: "~9.2.2"
   espressif/esp_lcd_sh8601: "~2.0"
+
+  # Audio codec (ES8311 over I2S). Only used when CONFIG_BDSP_ENABLE_AUDIO=y.
+  espressif/esp_codec_dev: "~1.3"
