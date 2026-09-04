@@ -1,6 +1,8 @@
 // test/fakes.h — in-memory HAL fakes + an event sink recorder for host tests.
 #pragma once
 
+#include <algorithm>
+#include <cstring>
 #include <map>
 #include <string>
 #include <vector>
@@ -80,7 +82,30 @@ struct Storage : hal::Storage {
     }
     bool exists(const std::string& p) override { return files.count(p) > 0; }
     bool list_dir(const std::string&, std::vector<std::string>&) override { return false; }
-    Reader* open_read(const std::string&) override { return nullptr; }
+    struct MemReader : Reader {
+        std::vector<uint8_t> buf; size_t pos = 0;
+        size_t read(uint8_t* d, size_t n) override {
+            const size_t k = std::min(n, buf.size() - pos);
+            std::memcpy(d, buf.data() + pos, k);
+            pos += k;
+            return k;
+        }
+        void close() override { delete this; }
+    };
+    Reader* open_read(const std::string& p) override {
+        auto it = files.find(p);
+        if (it == files.end()) return nullptr;
+        auto* r = new MemReader();
+        r->buf = it->second;
+        return r;
+    }
+    struct MemWriter : Writer {
+        Storage* owner; std::string dst; std::vector<uint8_t> buf;
+        MemWriter(Storage* o, std::string d) : owner(o), dst(std::move(d)) {}
+        bool write(const uint8_t* d, size_t n) override { buf.insert(buf.end(), d, d + n); return true; }
+        bool close() override { owner->files[dst] = buf; delete this; return true; }
+    };
+    Writer* open_write(const std::string& path) override { return new MemWriter(this, path); }
 
     // helper: a valid 16 kHz mono 16-bit WAV with `samples` frames of silence-ish
     void put_wav(const std::string& path, int samples) {

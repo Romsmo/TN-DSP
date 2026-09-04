@@ -34,7 +34,8 @@ public:
     bool write_file(const std::string&, const uint8_t*, size_t) override { return false; }
     bool exists(const std::string& path) override;
     bool list_dir(const std::string&, std::vector<std::string>&) override { return false; }
-    Reader* open_read(const std::string&) override { return nullptr; }
+    Reader* open_read(const std::string& path) override;
+    Writer* open_write(const std::string&) override { return nullptr; }
 
 private:
     std::string base_;

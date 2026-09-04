@@ -28,6 +28,7 @@ public:
     bool init() {
         // ── I2S std TX channel ────────────────────────────────────────────────
         i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
+        chan_cfg.auto_clear = true;   // send zeros on underrun, not the stale buffer
         if (i2s_new_channel(&chan_cfg, &tx_, nullptr) != ESP_OK) {
             ESP_LOGE(TAG, "i2s_new_channel failed");
             return false;
@@ -99,6 +100,7 @@ public:
         amp_ = on;
         hal::esp::io_expander_set_output(BSP_IOEXP_PIN_AUDIO_PA, true);
         hal::esp::io_expander_set_level(BSP_IOEXP_PIN_AUDIO_PA, on);
+        if (on) vTaskDelay(pdMS_TO_TICKS(20));   // let the PA settle before the first sample
         ESP_LOGI(TAG, "amp %s", on ? "on" : "off");
     }
 
@@ -137,7 +139,12 @@ public:
 
     void stop() override {
         if (dev_ && open_) {
-            esp_codec_dev_close(dev_);   // drains the DMA, then releases the codec
+            // Push ~30 ms of silence so the last real sample has fully clocked
+            // out and the DAC is at zero before the codec (and then the PA)
+            // shuts down — otherwise the tail crackles / thumps.
+            static const int16_t quiet[256] = {0};
+            for (int i = 0; i < 8; ++i) esp_codec_dev_write(dev_, (void*)quiet, sizeof(quiet));
+            esp_codec_dev_close(dev_);
             open_ = false;
         }
     }

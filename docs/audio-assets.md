@@ -56,12 +56,18 @@ The ES8311 codec + I2S output is `firmware/components/hal_esp/esp_audio.cpp`
 (MCLK 19 / BCLK 21 / WS 22 / DOUT 23); the speaker amplifier is enabled through TCA9554 **P7**
 when sound is on. `AudioService` streams each clip to the codec a chunk at a time from the io task.
 
-To load the voice clips, copy the built tree onto the card:
+To load the voice clips onto the card:
 
 ```bash
-tools/build_sd_audio.sh                # -> tools/sd_root/audio/
+python tools/gen_voice.py              # regenerate the clips + assemble tools/sd_root/audio/
+python tools/gen_voice.py --upload     # + push the tree to the device over BLE
+
+# or, card in a reader:
 cp -r tools/sd_root/*  <mounted SD card>/
 ```
+
+`gen_voice.py` drives the Windows SAPI voices (`--voice Hedda`, `--list-voices`). The BLE push
+uses the Asset characteristic (`docs/ble-protocol.md`); the GUI has buttons for it too.
 
 `warn.wav` and `info.wav` are embedded in flash, so hazard/info chimes still play with **no card**;
 everything else needs the card.

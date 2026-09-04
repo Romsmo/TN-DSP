@@ -1,6 +1,7 @@
 #include "core/audio/audio_service.h"
 
 #include <algorithm>
+#include <cstring>
 #include <string>
 
 #include "core/audio/wav.h"
@@ -35,8 +36,6 @@ void AudioService::start(const Clip* list, int n) {
     std::copy(list, list + n, playlist_);
     pl_count_ = n;
     pl_idx_ = 0;
-    cur_.clear();
-    cur_pos_ = 0;
 
     if (drv_ && !amp_on_) {
         drv_->set_amplifier(true);
@@ -44,41 +43,62 @@ void AudioService::start(const Clip* list, int n) {
     }
 }
 
+void AudioService::close_current() {
+    if (rd_) { rd_->close(); rd_ = nullptr; }
+    rd_left_ = 0;
+    flash_ = nullptr;
+    flash_left_ = 0;
+}
+
 void AudioService::stop() {
     if (drv_) drv_->stop();
+    close_current();
     pl_count_ = 0;
     pl_idx_ = 0;
-    cur_.clear();
-    cur_pos_ = 0;
     if (drv_ && amp_on_) {
         drv_->set_amplifier(false);
         amp_on_ = false;
     }
 }
 
-bool AudioService::load_clip(Clip c, std::vector<int16_t>& pcm) const {
-    pcm.clear();
+// Open the next clip in the playlist. Prefers the SD stream; falls back to the
+// flash tone if the file is missing / unparseable.
+bool AudioService::open_next() {
+    close_current();
+    while (pl_idx_ < pl_count_) {
+        const Clip c = playlist_[pl_idx_++];
 
-    std::vector<uint8_t> bytes;
-    const bool from_sd = sd_ && sd_->mounted() &&
-                         sd_->read_file(std::string("/audio/") + clip_path(c), bytes);
-    if (from_sd) {
-        WavInfo w;
-        if (parse_wav_header(bytes.data(), bytes.size(), w) && w.channels == 1) {
-            const size_t n = w.data_bytes / 2;
-            pcm.resize(n);
-            for (size_t i = 0; i < n; ++i) {
-                pcm[i] = static_cast<int16_t>(bytes[w.data_offset + 2 * i] |
-                                              (bytes[w.data_offset + 2 * i + 1] << 8));
+        if (sd_ && sd_->mounted()) {
+            const std::string path = std::string("/audio/") + clip_path(c);
+            if (auto* r = sd_->open_read(path)) {
+                uint8_t hdr[128];
+                const size_t got = r->read(hdr, sizeof(hdr));
+                WavInfo w;
+                if (parse_wav_header(hdr, got, w) && w.channels == 1 && w.bits == 16 &&
+                    w.data_offset > 0 && w.data_offset <= got) {
+                    rd_ = r;
+                    rd_left_ = w.data_bytes;
+                    // We over-read the header — feed the PCM bytes already in hdr.
+                    size_t leftover = (got - w.data_offset) & ~size_t(1);
+                    if (leftover > 2 * (sizeof(buf_) / 2)) leftover = 2 * (sizeof(buf_) / 2);
+                    if (leftover >= 2 && drv_) {
+                        std::memcpy(buf_, hdr + w.data_offset, leftover);
+                        drv_->write_pcm(buf_, leftover / 2);
+                        rd_left_ -= std::min(rd_left_, leftover);
+                    }
+                    return true;
+                }
+                r->close();
             }
+        }
+
+        size_t ns = 0;
+        if (const int16_t* fb = fallback_pcm(c, ns)) {
+            flash_ = fb;
+            flash_left_ = ns;
             return true;
         }
-    }
-
-    size_t ns = 0;
-    if (const int16_t* fb = fallback_pcm(c, ns)) {
-        pcm.assign(fb, fb + ns);
-        return true;
+        // nothing for this clip — try the next one
     }
     return false;
 }
@@ -86,22 +106,30 @@ bool AudioService::load_clip(Clip c, std::vector<int16_t>& pcm) const {
 void AudioService::pump() {
     if (pl_count_ == 0 || !drv_) return;
 
-    if (cur_.empty() || cur_pos_ >= cur_.size()) {
-        if (pl_idx_ >= pl_count_) {           // playlist done
-            if (!drv_->busy()) stop();
-            return;
-        }
-        if (!load_clip(playlist_[pl_idx_], cur_)) {
-            ++pl_idx_;                          // skip a missing clip
-            return;
-        }
-        cur_pos_ = 0;
-        ++pl_idx_;
+    const bool have_clip = rd_ || flash_;
+    if (!have_clip && !open_next()) {   // playlist finished
+        stop();
+        return;
     }
 
-    const size_t chunk = std::min<size_t>(512, cur_.size() - cur_pos_);
-    const size_t wrote = drv_->write_pcm(cur_.data() + cur_pos_, chunk);
-    cur_pos_ += wrote;
+    if (flash_) {
+        const size_t n = std::min<size_t>(sizeof(buf_) / 2, flash_left_);
+        const size_t wrote = drv_->write_pcm(flash_, n);
+        flash_ += wrote;
+        flash_left_ -= wrote;
+        if (flash_left_ == 0) close_current();
+        return;
+    }
+
+    // SD stream
+    const size_t want = std::min<size_t>(sizeof(buf_), rd_left_) & ~size_t(1);
+    if (want == 0) { close_current(); return; }
+    const size_t got = rd_->read(reinterpret_cast<uint8_t*>(buf_), want);
+    if (got == 0) { close_current(); return; }
+    const size_t frames = got / 2;
+    const size_t wrote = drv_->write_pcm(buf_, frames);
+    rd_left_ -= std::min(rd_left_, wrote * 2);
+    if (rd_left_ == 0) close_current();
 }
 
 int AudioService::playlist(Clip out[kMaxPlaylist]) const {

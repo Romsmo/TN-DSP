@@ -34,8 +34,9 @@ public:
     uint32_t last_seq() const { return last_seq_; }
 
 private:
-    bool load_clip(Clip c, std::vector<int16_t>& pcm) const;
     void start(const Clip* list, int n);
+    bool open_next();          // advance to the next clip; false when the list ends
+    void close_current();
 
     hal::AudioDriver* drv_ = nullptr;
     hal::Storage*     sd_ = nullptr;
@@ -47,9 +48,15 @@ private:
     Clip     playlist_[kMaxPlaylist]{};
     int      pl_count_ = 0;
     int      pl_idx_ = 0;
-    std::vector<int16_t> cur_;
-    size_t   cur_pos_ = 0;
     uint32_t last_seq_ = 0;
+
+    // The current clip is streamed, not loaded whole (a 60 KB voice clip would
+    // not fit in RAM alongside BLE + SD + LFN).
+    hal::Storage::Reader* rd_ = nullptr;   // SD stream, else nullptr
+    size_t   rd_left_ = 0;                 // PCM bytes still to read
+    const int16_t* flash_ = nullptr;       // flash-fallback PCM, else nullptr
+    size_t   flash_left_ = 0;
+    int16_t  buf_[512];
 };
 
 }  // namespace core::audio

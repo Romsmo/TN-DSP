@@ -15,8 +15,10 @@ struct WavInfo {
     size_t   data_bytes = 0;
 };
 
-// Parses the header in `buf` (at least ~44 bytes). Returns false on anything that
-// isn't 16-bit PCM mono/stereo WAVE.
+// Parses the header in `buf` (at least ~44 bytes — a partial file is fine, the
+// caller may be streaming). `data_bytes` is the size the `data` chunk *declares*;
+// a streaming reader stops early if the file turns out shorter. Returns false on
+// anything that isn't 16-bit PCM mono/stereo WAVE.
 inline bool parse_wav_header(const uint8_t* buf, size_t len, WavInfo& out) {
     if (len < 44 || std::memcmp(buf, "RIFF", 4) != 0 || std::memcmp(buf + 8, "WAVE", 4) != 0) {
         return false;
@@ -42,8 +44,9 @@ inline bool parse_wav_header(const uint8_t* buf, size_t len, WavInfo& out) {
             have_fmt = true;
         } else if (std::memcmp(ck, "data", 4) == 0) {
             out.data_offset = pos + 8;
-            out.data_bytes = (out.data_offset + sz <= len) ? sz : (len - out.data_offset);
-            return have_fmt && out.bits == 16 && out.channels >= 1 && out.channels <= 2;
+            out.data_bytes = sz;   // declared size; a streaming reader hits real EOF sooner
+            return have_fmt && out.bits == 16 && out.channels >= 1 && out.channels <= 2 &&
+                   out.data_offset <= len;
         }
         pos += 8 + sz + (sz & 1);   // chunks are word-aligned
     }

@@ -3,6 +3,8 @@
 #include <SDL.h>
 
 #include <cstdio>
+#include <algorithm>
+#include <cstring>
 #include <fstream>
 
 namespace sim {
@@ -69,6 +71,29 @@ bool SimStorage::read_file(const std::string& path, std::vector<uint8_t>& out) {
 bool SimStorage::exists(const std::string& path) {
     std::vector<uint8_t> tmp;
     return read_file(path, tmp);
+}
+
+namespace {
+struct VecReader : hal::Storage::Reader {
+    std::vector<uint8_t> buf;
+    size_t pos = 0;
+    size_t read(uint8_t* d, size_t n) override {
+        const size_t k = std::min(n, buf.size() - pos);
+        std::memcpy(d, buf.data() + pos, k);
+        pos += k;
+        return k;
+    }
+    void close() override { delete this; }
+};
+}  // namespace
+
+hal::Storage::Reader* SimStorage::open_read(const std::string& path) {
+    auto* r = new VecReader();
+    if (!read_file(path, r->buf)) {
+        delete r;
+        return nullptr;
+    }
+    return r;
 }
 
 }  // namespace sim
