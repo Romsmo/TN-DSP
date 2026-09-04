@@ -20,7 +20,10 @@ See docs/testing.md for the walk-through checklist.
 """
 import argparse
 import asyncio
+import hashlib
+import os
 import shlex
+import struct
 import sys
 import threading
 import time
@@ -244,6 +247,8 @@ class Link:
         self.state = dict(speed=50, arrows=True, internet=True, peers=480000)
         self.settings = dict(self.DEFAULT_SETTINGS)
         self.ui_bits = (1 << len(UI_BITS)) - 1   # all features on
+        self._ota_total = 0
+        self._ota_done = threading.Event()
         self._loop = asyncio.new_event_loop()
         self._thr = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thr.start()
@@ -302,6 +307,22 @@ class Link:
         self.ui_bits = cbor2.loads(bytes(data)).get(1, self.ui_bits)
         print(f"\n  << ui-config  {describe_ui_config(bytes(data))}\n> ", end="", flush=True)
 
+    def _on_ota(self, _c, data):
+        b = bytes(data)
+        op = b[0]
+        if op == 0x10:
+            got = struct.unpack("<I", b[1:5])[0]
+            pct = got * 100 // self._ota_total if self._ota_total else 0
+            print(f"\r  ota: {pct:3d}%  ({got}/{self._ota_total})", end="", flush=True)
+        elif op == 0x11:
+            print("\n  ota: OK — device rebooting into the new image")
+            self._ota_done.set()
+        elif op == 0x12:
+            reasons = {1: "no OTA partition", 2: "esp_ota_begin", 3: "flash write",
+                       4: "sha mismatch", 5: "esp_ota_end/set_boot"}
+            print(f"\n  ota: ERROR — {reasons.get(b[1] if len(b) > 1 else 0, b[1:])}")
+            self._ota_done.set()
+
     # -- writes --
     def send(self, **changes):
         self.state.update(changes)
@@ -336,6 +357,22 @@ class Link:
         data = self._run(self.client.read_gatt_char(UICONFIG_UUID))
         self.ui_bits = cbor2.loads(bytes(data)).get(1, self.ui_bits)
         print(f"  ui-config: {describe_ui_config(bytes(data))}")
+
+    def ota(self, path):
+        img = open(path, "rb").read()
+        sha = hashlib.sha256(img).digest()
+        self._ota_total = len(img)
+        self._ota_done.clear()
+        print(f"  ota: {path}  {len(img)} bytes  sha256 {sha.hex()[:16]}…")
+        self._run(self.client.start_notify(OTA_UUID, self._on_ota))
+        self._run(self.client.write_gatt_char(OTA_UUID, b"\x01" + struct.pack("<I", len(img)) + sha,
+                                              response=False))
+        CHUNK = 230
+        for off in range(0, len(img), CHUNK):
+            self._run(self.client.write_gatt_char(OTA_UUID, b"\x02" + img[off:off + CHUNK],
+                                                  response=False))
+        self._run(self.client.write_gatt_char(OTA_UUID, b"\x03", response=False))
+        self._ota_done.wait(timeout=120)
 
     def read_settings(self):
         data = self._run(self.client.read_gatt_char(SETTINGS_UUID))
@@ -476,6 +513,8 @@ def repl(link: Link):
                 link.read_ui()
             elif cmd == "ui":
                 link.set_ui(args[0], args[1] == "on")
+            elif cmd == "ota":
+                link.ota(args[0])
             elif cmd == "time":
                 link.write_time(tz_min=int(args[0]) if args else 0)
             elif cmd == "info":

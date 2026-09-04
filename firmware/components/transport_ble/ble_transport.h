@@ -36,6 +36,9 @@ public:
 
     // "XX:XX:XX:XX:XX:XX", empty until the host has synced (~1 s after start()).
     const char* address_string() const;
+
+    // 0..100 while a BLE firmware update is being received, 0xFF when idle.
+    uint8_t ota_percent() const;
 };
 
 }  // namespace transport::ble

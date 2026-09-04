@@ -4,6 +4,7 @@
 #include "board_config.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "esp_ota_ops.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "sdkconfig.h"
@@ -64,6 +65,39 @@ void i2c_check() {
 #include "firmware/components/transport_ble/ble_uuids.h"
 #endif
 
+namespace {
+// A dead-simple full-screen "Update … NN%" layer while a BLE OTA is running.
+// pct == 0xFF means idle (hide it). Called every loop under no LVGL lock, so
+// take one here.
+void ota_progress_overlay(uint8_t pct) {
+    static lv_obj_t* layer = nullptr;
+    static lv_obj_t* label = nullptr;
+    static uint8_t   shown = 0xFF;
+    if (pct == shown) return;
+    shown = pct;
+
+    hal::esp::lvgl_lock();
+    if (pct == 0xFF) {
+        if (layer) { lv_obj_delete(layer); layer = nullptr; label = nullptr; }
+        hal::esp::lvgl_unlock();
+        return;
+    }
+    if (!layer) {
+        layer = lv_obj_create(lv_layer_top());
+        lv_obj_remove_style_all(layer);
+        lv_obj_set_size(layer, 466, 466);
+        lv_obj_set_style_bg_color(layer, lv_color_black(), 0);
+        lv_obj_set_style_bg_opa(layer, LV_OPA_COVER, 0);
+        label = lv_label_create(layer);
+        lv_obj_set_style_text_color(label, lv_color_hex(0xF5F5F5), 0);
+        lv_obj_center(label);
+    }
+    lv_label_set_text_fmt(label, "Update\n%u %%", pct);
+    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+    hal::esp::lvgl_unlock();
+}
+}  // namespace
+
 extern "C" void app_main(void) {
     std::printf("\nBlitzerdeDsp %s  proto v%d  esp32c6  [display]\n", BSP_FW_VERSION,
                 BSP_PROTOCOL_VERSION);
@@ -88,11 +122,14 @@ extern "C" void app_main(void) {
     static transport::ble::BleTransport ble;
     ble.set_fw_version(BSP_FW_VERSION);
     {
-        uint32_t caps = BDSP_CAP_HAS_RTC;
+        uint32_t caps = BDSP_CAP_HAS_RTC | BDSP_CAP_HAS_OTA;
 #if defined(CONFIG_BDSP_FEATURE_SPEEDCAM)
         caps |= BDSP_CAP_SPEEDCAM_BUILD;
 #endif
         if (storage && storage->mounted()) caps |= BDSP_CAP_HAS_SD;
+#if defined(CONFIG_BDSP_ENABLE_AUDIO)
+        if (hal::esp::audio_instance()) caps |= BDSP_CAP_HAS_AUDIO;
+#endif
         ble.set_caps(caps);
     }
     static transport::mux::MuxTransport mux(ble, mock);
@@ -242,6 +279,15 @@ extern "C" void app_main(void) {
             hal::esp::lvgl_unlock();
         });
         ++ticks;
+        // Confirm this image once it has clearly booted, so the rollback watchdog
+        // (CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE) doesn't revert a good OTA.
+        if (ticks == 150) {
+            if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK)
+                ESP_LOGI(TAG, "OTA image confirmed valid");
+        }
+#if defined(CONFIG_BDSP_ENABLE_BLE)
+        ota_progress_overlay(ble.ota_percent());
+#endif
         const uint64_t now = clk->now_ms();
         if (now - last_beat >= 3000) {
             last_beat = now;

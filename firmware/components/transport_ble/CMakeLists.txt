@@ -14,7 +14,7 @@ endif()
 idf_component_register(
   SRCS ${SRCS}
   INCLUDE_DIRS "." "${REPO}"
-  REQUIRES nvs_flash bt esp_timer bdsp
+  REQUIRES nvs_flash bt esp_timer bdsp app_update mbedtls
 )
 
 if(CONFIG_BDSP_ENABLE_BLE)

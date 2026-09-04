@@ -148,10 +148,31 @@ still accepted.
   removed). On a major mismatch the device keeps rendering the last good state and the app should
   surface an "update firmware / app" prompt (it can read the device's version from DeviceInfo).
 
-## Firmware update (OTA) — `TODO`, not implemented
+## OTA  (`0007`, write-without-response / notify — firmware update)
 
-The device's Settings → "Updates" panel tells the user that firmware arrives over Bluetooth via
-the app. The transport for that does not exist yet: no OTA characteristic, and the partition table
-is still single-slot (`firmware/partitions.csv`). When built, add a chunked-upload characteristic
-(or its own service), dual OTA slots + `otadata`, and an apply/verify/`esp_restart` path. Until
-then, updates are a manual `idf.py flash` over USB. See the `blitzerdsp-ota-pending` note.
+Raw framing (**not CBOR** — the payload is a firmware image, so every byte counts). First byte is
+the opcode.
+
+**App → device**
+
+| Op | Bytes | Meaning |
+|---|---|---|
+| `0x01` begin | `[1..4]` total length (uint32 LE) · `[5..36]` SHA-256 of the image | start; picks the idle OTA slot |
+| `0x02` data | `[1..]` raw image bytes, **sent in order** | appended; device buffers 4 KB then writes to flash |
+| `0x03` end | — | flush, verify the SHA, set the boot partition, reboot after 0.6 s |
+| `0x04` abort | — | discard |
+
+**Device → app** (notify)
+
+| Op | Bytes | Meaning |
+|---|---|---|
+| `0x10` progress | `[1..4]` bytes received (uint32 LE) | every ~32 KB |
+| `0x11` ok | — | image accepted, rebooting |
+| `0x12` error | `[1]` code (1 no slot · 2 begin · 3 write · 4 SHA · 5 end) | aborted |
+
+Partition table is dual-slot (`ota_0` / `ota_1` + `otadata`, `firmware/partitions.csv`). The new
+image boots once in *pending-verify*; `app_main` calls `esp_ota_mark_app_valid_cancel_rollback()`
+after ~3 s of running, so a broken update rolls back on the next reset
+(`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`). A disconnect mid-transfer aborts cleanly.
+`tools/fake_app.py` pushes an image with `ota <path/to/blitzerdsp.bin>`. The `HAS_OTA` capability
+bit in DeviceInfo is set whenever the running firmware has the dual-slot layout.
