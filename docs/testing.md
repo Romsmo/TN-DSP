@@ -1,22 +1,31 @@
 # Testing the device over BLE
 
 Until the companion phone app exists, [`tools/fake_app.py`](../tools/fake_app.py) is the
-stand-in. It speaks the full BLE protocol (`docs/ble-protocol.md`) and lets you drive every
-`DisplayState` field and every characteristic from a PC console, and prints the events the device
-sends back.
+stand-in. It speaks the full BLE protocol (`docs/ble-protocol.md`) — every `DisplayState` field,
+every characteristic, OTA — and shows the events the device sends back.
 
 ```
-pip install bleak cbor2          # tested against bleak 3.0.2
+pip install bleak cbor2          # tested against bleak 3.0.2 · tkinter ships with Python
 ```
 
 The host machine's **Bluetooth radio must be on**. The device advertises as `BlitzerdeDsp`; the
-script finds it by name (override with `--address`).
+tool finds it by name (override with `--address`).
+
+## Two layers
+
+- **Dev — vollständig**: every control for every protocol field, plus the dev feature switches and
+  the OTA uploader. Nothing is hidden — this is the complete surface.
+- **App-Simulation**: what the finished phone app would show a driver — a big current-limit
+  readout, the user-level "which hazards to warn about" toggles (→ `filterBits`), sound/units, and
+  a few canned "drives". Intentionally **incomplete**: there is no map and no Blitzer.de API, so
+  routes come from the scenario buttons.
 
 ## Modes
 
 | Command | What it does |
 |---|---|
-| `python tools/fake_app.py --repl` | interactive console (see below) — the main tool |
+| `python tools/fake_app.py` | **GUI** (default) — the two layers above + a live log |
+| `python tools/fake_app.py --repl` | interactive text console (see below) |
 | `python tools/fake_app.py --scenario approach` | run one scripted scenario |
 | `python tools/fake_app.py --all` | run every scenario back to back on one connection |
 | `python tools/fake_app.py --scan` | list nearby BLE devices |
@@ -25,6 +34,13 @@ script finds it by name (override with `--address`).
 Scenarios: `approach` (hazard countdown + cues), `confirm` (the Gesehen? prompt),
 `offline` (internet drop), `night` (panel dim), `signs` (sign columns + a km/h→mph switch),
 `hazards` (every `HazardType` in turn, including an unknown value → generic icon).
+
+## Firmware update (OTA)
+
+GUI: *Firmware / Zeit → Firmware-Update …* → pick `firmware/build/blitzerdsp.bin`. REPL:
+`ota firmware/build/blitzerdsp.bin`. The tool streams the image, the device verifies the SHA-256,
+switches slots and reboots; a bad image rolls back on the next reset. Progress shows in the GUI
+bar / the log.
 
 ## REPL
 
@@ -87,8 +103,9 @@ printf 'speed 50\nsleep 2\nhazard ice 300\nsleep 6\nreconnect\nhazard accident 2
 BLE traffic; `scratchpad/rstmon.ps1` pulses a reset first. The 3-second `beat:` line reports
 `screen` (0 Home · 1 Melden · 2 Settings · 3 Connect) and `overlay` (0 none · 1 Hazard · 2 Confirm).
 
-## Not yet testable
+## Needs ears / a card
 
-Audio (ES8311) and the SD card are stubbed pending the C6 pin map, so `cue …` reaches the device
-but plays nothing. OTA firmware update over BLE is not implemented — see the "Firmware update"
-note in [`docs/ble-protocol.md`](ble-protocol.md).
+Audio output and the voice announcements need a speaker to confirm — drive them with a `cue` or
+the `approach` scenario, or the demo mode (BOOT long-press). The voice clips must be on the SD
+card: `tools/build_sd_audio.sh` then copy `tools/sd_root/*` to the card root (tones also live in
+flash, so chimes work with no card).

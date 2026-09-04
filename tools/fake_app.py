@@ -33,6 +33,10 @@ import cbor2
 PROTO = 1
 ADV_NAME = "BlitzerdeDsp"
 
+# Output sink — the terminal by default; the GUI swaps in its log widget.
+def emit(msg=""):
+    print(msg)
+
 
 # ── UUIDs: base 079aXXXX-d673-469c-98a0-12c0c5eb43b3 (PROVISIONAL, see ble_uuids.h)
 def _uuid(slot: int) -> str:
@@ -241,17 +245,26 @@ class Link:
     DEFAULT_SETTINGS = dict(sound=True, sound_mode=0, theme=0, mph=False, filter_bits=0xFFFF,
                             night_start=22, night_end=6, cache_min=10)
 
-    def __init__(self):
+    def __init__(self, log=emit):
         self.client = None
         self.seq = 0
         self.state = dict(speed=50, arrows=True, internet=True, peers=480000)
         self.settings = dict(self.DEFAULT_SETTINGS)
         self.ui_bits = (1 << len(UI_BITS)) - 1   # all features on
+        self.info = {}
+        self.log = log
+        self.on_change = None            # GUI hook: called after settings/ui/info update
+        self.on_link = None              # GUI hook: called with True/False on (dis)connect
         self._ota_total = 0
+        self.ota_progress = None          # None idle, 0..100, -1 error
         self._ota_done = threading.Event()
         self._loop = asyncio.new_event_loop()
         self._thr = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thr.start()
+
+    def _changed(self):
+        if self.on_change:
+            self.on_change()
 
     def _run(self, coro):
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
@@ -268,44 +281,63 @@ class Link:
             if dev is None:
                 raise SystemExit(f"no device advertising as {name!r}")
             target = dev
-            print(f"found {name!r} at {dev.address}")
+            self.log(f"found {name!r} at {dev.address}")
         self.client = BleakClient(target)
         await self.client.connect()
         self.seq = 0                                  # fresh session, seq from 1
-        print(f"connected to {getattr(target, 'address', target)}")
+        self.log(f"connected to {getattr(target, 'address', target)}")
         await self.client.start_notify(EVENT_UUID, self._on_event)
         try:
             await self.client.start_notify(SETTINGS_UUID, self._on_settings)
         except Exception as e:                       # notify optional on Settings
-            print(f"  (settings notify unavailable: {e})")
+            self.log(f"  (settings notify unavailable: {e})")
         info = await self.client.read_gatt_char(INFO_UUID)
-        print(f"  device info: {describe_info(bytes(info))}")
+        self.info = cbor2.loads(bytes(info))
+        self.log(f"  device info: {describe_info(bytes(info))}")
         cur = await self.client.read_gatt_char(SETTINGS_UUID)
         self.settings = parse_settings(bytes(cur))    # so writes don't stomp untouched fields
-        print(f"  settings:    {describe_settings(bytes(cur))}")
+        self.log(f"  settings:    {describe_settings(bytes(cur))}")
         try:
             uc = await self.client.read_gatt_char(UICONFIG_UUID)
             self.ui_bits = cbor2.loads(bytes(uc)).get(1, self.ui_bits)
             await self.client.start_notify(UICONFIG_UUID, self._on_uiconfig)
-            print(f"  ui-config:   {describe_ui_config(bytes(uc))}")
+            self.log(f"  ui-config:   {describe_ui_config(bytes(uc))}")
         except Exception as e:
-            print(f"  (ui-config unavailable: {e})")
+            self.log(f"  (ui-config unavailable: {e})")
+        try:
+            await self.client.start_notify(OTA_UUID, self._on_ota)
+        except Exception:
+            pass
+        self._changed()
+        if self.on_link:
+            self.on_link(True)
 
     def disconnect(self):
         if self.client:
-            self._run(self.client.disconnect())
+            try:
+                self._run(self.client.disconnect())
+            except Exception:
+                pass
             self.client = None
-            print("disconnected")
+            self.log("disconnected")
+            if self.on_link:
+                self.on_link(False)
+
+    def connected(self):
+        return self.client is not None and self.client.is_connected
 
     def _on_event(self, _c, data):
-        print(f"\n  << event  {describe_event(bytes(data))}\n> ", end="", flush=True)
+        self.log(f"  << event  {describe_event(bytes(data))}")
 
     def _on_settings(self, _c, data):
-        print(f"\n  << settings  {describe_settings(bytes(data))}\n> ", end="", flush=True)
+        self.settings = parse_settings(bytes(data))
+        self.log(f"  << settings  {describe_settings(bytes(data))}")
+        self._changed()
 
     def _on_uiconfig(self, _c, data):
         self.ui_bits = cbor2.loads(bytes(data)).get(1, self.ui_bits)
-        print(f"\n  << ui-config  {describe_ui_config(bytes(data))}\n> ", end="", flush=True)
+        self.log(f"  << ui-config  {describe_ui_config(bytes(data))}")
+        self._changed()
 
     def _on_ota(self, _c, data):
         b = bytes(data)
@@ -313,35 +345,42 @@ class Link:
         if op == 0x10:
             got = struct.unpack("<I", b[1:5])[0]
             pct = got * 100 // self._ota_total if self._ota_total else 0
-            print(f"\r  ota: {pct:3d}%  ({got}/{self._ota_total})", end="", flush=True)
+            self.ota_progress = pct
+            self.log(f"  ota: {pct:3d}%  ({got}/{self._ota_total})")
         elif op == 0x11:
-            print("\n  ota: OK — device rebooting into the new image")
+            self.ota_progress = 100
+            self.log("  ota: OK — device rebooting into the new image")
             self._ota_done.set()
         elif op == 0x12:
             reasons = {1: "no OTA partition", 2: "esp_ota_begin", 3: "flash write",
                        4: "sha mismatch", 5: "esp_ota_end/set_boot"}
-            print(f"\n  ota: ERROR — {reasons.get(b[1] if len(b) > 1 else 0, b[1:])}")
+            self.ota_progress = -1
+            self.log(f"  ota: ERROR — {reasons.get(b[1] if len(b) > 1 else 0, b[1:])}")
             self._ota_done.set()
 
     # -- writes --
     def send(self, **changes):
+        if not self.connected():
+            self.log("  ! not connected")
+            return
         self.state.update(changes)
         self.seq += 1
         pkt = encode_state(seq=self.seq, **self.state)
         self._run(self.client.write_gatt_char(STATE_UUID, pkt, response=False))
         shown = {k: v for k, v in self.state.items() if v not in (None, False, 0)}
-        print(f"  >> state #{self.seq} ({len(pkt)} B)  {shown}")
+        self.log(f"  >> state #{self.seq} ({len(pkt)} B)  {shown}")
 
     def write_settings(self, **kw):
         self.settings.update(kw)                      # merge, don't clobber other fields
         pkt = encode_settings(**self.settings)
         self._run(self.client.write_gatt_char(SETTINGS_UUID, pkt, response=True))
-        print(f"  >> settings ({len(pkt)} B)  {self.settings}")
+        self.log(f"  >> settings ({len(pkt)} B)  {self.settings}")
+        self._changed()
 
     def write_time(self, tz_min=0):
         pkt = encode_time(tz_min=tz_min)
         self._run(self.client.write_gatt_char(TIME_UUID, pkt, response=True))
-        print(f"  >> time  epoch={cbor2.loads(pkt)[1]}  tz={tz_min}min")
+        self.log(f"  >> time  epoch={cbor2.loads(pkt)[1]}  tz={tz_min}min")
 
     def set_ui(self, name, on):
         if name == "all":
@@ -349,22 +388,26 @@ class Link:
         else:
             i = UI_BITS.index(name)
             self.ui_bits = (self.ui_bits | (1 << i)) if on else (self.ui_bits & ~(1 << i))
+        self.write_ui_bits()
+
+    def write_ui_bits(self):
         pkt = encode_ui_config(self.ui_bits)
         self._run(self.client.write_gatt_char(UICONFIG_UUID, pkt, response=True))
-        print(f"  >> ui-config  {describe_ui_config(pkt)}")
+        self.log(f"  >> ui-config  {describe_ui_config(pkt)}")
 
     def read_ui(self):
         data = self._run(self.client.read_gatt_char(UICONFIG_UUID))
         self.ui_bits = cbor2.loads(bytes(data)).get(1, self.ui_bits)
-        print(f"  ui-config: {describe_ui_config(bytes(data))}")
+        self.log(f"  ui-config: {describe_ui_config(bytes(data))}")
+        self._changed()
 
     def ota(self, path):
         img = open(path, "rb").read()
         sha = hashlib.sha256(img).digest()
         self._ota_total = len(img)
+        self.ota_progress = 0
         self._ota_done.clear()
-        print(f"  ota: {path}  {len(img)} bytes  sha256 {sha.hex()[:16]}…")
-        self._run(self.client.start_notify(OTA_UUID, self._on_ota))
+        self.log(f"  ota: {path}  {len(img)} bytes  sha256 {sha.hex()[:16]}…")
         self._run(self.client.write_gatt_char(OTA_UUID, b"\x01" + struct.pack("<I", len(img)) + sha,
                                               response=False))
         CHUNK = 230
@@ -372,15 +415,18 @@ class Link:
             self._run(self.client.write_gatt_char(OTA_UUID, b"\x02" + img[off:off + CHUNK],
                                                   response=False))
         self._run(self.client.write_gatt_char(OTA_UUID, b"\x03", response=False))
-        self._ota_done.wait(timeout=120)
+        self._ota_done.wait(timeout=180)
 
     def read_settings(self):
         data = self._run(self.client.read_gatt_char(SETTINGS_UUID))
-        print(f"  settings: {describe_settings(bytes(data))}")
+        self.settings = parse_settings(bytes(data))
+        self.log(f"  settings: {describe_settings(bytes(data))}")
+        self._changed()
 
     def read_info(self):
         data = self._run(self.client.read_gatt_char(INFO_UUID))
-        print(f"  {describe_info(bytes(data))}")
+        self.info = cbor2.loads(bytes(data))
+        self.log(f"  {describe_info(bytes(data))}")
 
     def play_scenario(self, name):
         steps = scenario(name)
@@ -397,8 +443,283 @@ class Link:
             m[SK_SEQ] = self.seq
             pkt = cbor2.dumps(m)
             await self.client.write_gatt_char(STATE_UUID, pkt, response=False)
-            print(f"  >> {m}")
+            self.log(f"  >> {m}")
         await asyncio.sleep(1.5)
+
+
+# ── GUI (tkinter, stdlib) ───────────────────────────────────────────────────
+HAZ_LABELS = ["Fest-Blitzer", "Mobil-Blitzer", "Anhänger-Blitzer", "Rotlicht", "Abstand",
+              "Stau", "Glätte", "Unfall", "Baustelle", "Panne", "Hindernis"]
+
+
+def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
+    import queue
+    import tkinter as tk
+    from tkinter import ttk, filedialog
+
+    root = tk.Tk()
+    root.title("BlitzerdeDsp — Testkonsole")
+    root.geometry("980x760")
+
+    logq = queue.Queue()
+    link.log = logq.put
+    suspend_trace = [False]      # ignore var callbacks while we refresh from the device
+
+    # ── connection bar ─────────────────────────────────────────────────────
+    bar = ttk.Frame(root, padding=6)
+    bar.pack(fill="x")
+    status = ttk.Label(bar, text="nicht verbunden", width=22)
+    info_lbl = ttk.Label(bar, text="", foreground="#666")
+
+    def do_connect():
+        status.config(text="suche …")
+        root.update_idletasks()
+        try:
+            link.connect(address=connect_addr, name=connect_name)
+        except SystemExit as e:
+            logq.put(f"  ! {e}")
+            status.config(text="nicht gefunden")
+
+    def do_disconnect():
+        link.disconnect()
+
+    ttk.Button(bar, text="Verbinden", command=lambda: threading.Thread(
+        target=do_connect, daemon=True).start()).pack(side="left")
+    ttk.Button(bar, text="Trennen", command=do_disconnect).pack(side="left", padx=4)
+    status.pack(side="left", padx=8)
+    info_lbl.pack(side="left")
+
+    nb = ttk.Notebook(root)
+    nb.pack(fill="both", expand=True, padx=6)
+    dev = ttk.Frame(nb, padding=8)
+    sim = ttk.Frame(nb, padding=8)
+    nb.add(dev, text="  Dev — vollständig  ")
+    nb.add(sim, text="  App-Simulation  ")
+
+    # ── vars ───────────────────────────────────────────────────────────────
+    v = dict(
+        speed=tk.IntVar(value=50), mph=tk.BooleanVar(), arrows=tk.BooleanVar(value=True),
+        online=tk.BooleanVar(value=True), night=tk.BooleanVar(), peers=tk.IntVar(value=480000),
+        left=tk.StringVar(), right=tk.StringVar(),
+        haz=tk.StringVar(value="(keine)"), hazdist=tk.IntVar(value=400), hazspd=tk.IntVar(value=0),
+        confto=tk.IntVar(value=15),
+        s_sound=tk.BooleanVar(value=True), s_mph=tk.BooleanVar(), s_theme=tk.IntVar(value=0),
+    )
+    ui_vars = {n: tk.BooleanVar(value=True) for n in UI_BITS}
+    filt_vars = [tk.BooleanVar(value=True) for _ in HAZ_LABELS]
+
+    def push_state(*_):
+        if suspend_trace[0] or not link.connected():
+            return
+        left = [SIGNS.get(x.strip().lower(), None) or (int(x) if x.strip().isdigit() else None)
+                for x in v["left"].get().split(",") if x.strip()]
+        right = [SIGNS.get(x.strip().lower(), None) or (int(x) if x.strip().isdigit() else None)
+                 for x in v["right"].get().split(",") if x.strip()]
+        hz = v["haz"].get()
+        hzv = HAZARDS.get(hz.split()[0].lower()) if hz in ("",) else None
+        hzv = {lbl: i for i, lbl in enumerate(HAZ_LABELS)}.get(hz)   # label -> value
+        link.send(speed=v["speed"].get(), unit=1 if v["mph"].get() else 0, mph=v["mph"].get(),
+                  arrows=v["arrows"].get(), internet=v["online"].get(), night=v["night"].get(),
+                  peers=v["peers"].get(), left=[x for x in left if x], right=[x for x in right if x],
+                  hazard=hzv, dist=v["hazdist"].get() if hzv is not None else None,
+                  hazard_speed=v["hazspd"].get() or None if hzv is not None else None,
+                  confirm=v.get("_conf", tk.BooleanVar()).get() if "_conf" in v else False,
+                  confirm_to=v["confto"].get())
+
+    for key in ("speed", "mph", "arrows", "online", "night", "peers", "left", "right",
+                "haz", "hazdist", "hazspd"):
+        v[key].trace_add("write", push_state)
+
+    # ── DEV TAB ────────────────────────────────────────────────────────────
+    def box(parent, title):
+        f = ttk.LabelFrame(parent, text=title, padding=6)
+        return f
+
+    left_col = ttk.Frame(dev); left_col.pack(side="left", fill="both", expand=True)
+    right_col = ttk.Frame(dev); right_col.pack(side="left", fill="both", expand=True, padx=(10, 0))
+
+    b = box(left_col, "Anzeige (DisplayState)"); b.pack(fill="x", pady=3)
+    r = ttk.Frame(b); r.pack(fill="x")
+    ttk.Label(r, text="Tempo").pack(side="left")
+    ttk.Spinbox(r, from_=0, to=200, increment=5, width=5, textvariable=v["speed"]).pack(side="left", padx=4)
+    ttk.Checkbutton(r, text="mph", variable=v["mph"]).pack(side="left")
+    ttk.Checkbutton(b, text="Richtungspfeile", variable=v["arrows"]).pack(anchor="w")
+    ttk.Checkbutton(b, text="Internet verbunden", variable=v["online"]).pack(anchor="w")
+    ttk.Checkbutton(b, text="Nachtmodus (dimmt Panel)", variable=v["night"]).pack(anchor="w")
+    r = ttk.Frame(b); r.pack(fill="x")
+    ttk.Label(r, text="Peers").pack(side="left")
+    ttk.Spinbox(r, from_=0, to=9999999, increment=1000, width=9, textvariable=v["peers"]).pack(side="left", padx=4)
+    for side in ("left", "right"):
+        r = ttk.Frame(b); r.pack(fill="x", pady=1)
+        ttk.Label(r, text=f"Schilder {side[0].upper()}").pack(side="left")
+        ttk.Entry(r, textvariable=v[side]).pack(side="left", fill="x", expand=True, padx=4)
+    ttk.Label(b, text="Namen: " + " ".join(SIGNS) + "  — oder VzNr-Codes, komma-getrennt",
+              foreground="#888").pack(anchor="w")
+
+    b = box(left_col, "Gefahr-Overlay"); b.pack(fill="x", pady=3)
+    r = ttk.Frame(b); r.pack(fill="x")
+    ttk.Combobox(r, textvariable=v["haz"], width=16, state="readonly",
+                 values=["(keine)"] + HAZ_LABELS + ["Unbekannt (11)"]).pack(side="left")
+    ttk.Label(r, text="Dist").pack(side="left", padx=(6, 0))
+    ttk.Spinbox(r, from_=0, to=2000, increment=50, width=5, textvariable=v["hazdist"]).pack(side="left")
+    ttk.Label(r, text="Limit").pack(side="left", padx=(6, 0))
+    ttk.Spinbox(r, from_=0, to=200, increment=5, width=4, textvariable=v["hazspd"]).pack(side="left")
+
+    b = box(left_col, "Gesehen?-Prompt"); b.pack(fill="x", pady=3)
+    r = ttk.Frame(b); r.pack(fill="x")
+    ttk.Label(r, text="Timeout s").pack(side="left")
+    ttk.Spinbox(r, from_=3, to=60, width=4, textvariable=v["confto"]).pack(side="left", padx=4)
+    v["_conf"] = tk.BooleanVar()
+    ttk.Button(r, text="zeigen", command=lambda: (v["_conf"].set(True), push_state())).pack(side="left")
+    ttk.Button(r, text="aus", command=lambda: (v["_conf"].set(False), push_state())).pack(side="left")
+
+    b = box(left_col, "Audio-Cue"); b.pack(fill="x", pady=3)
+    r = ttk.Frame(b); r.pack(fill="x")
+    cue_ev = tk.StringVar(value="approach")
+    cue_mode = tk.StringVar(value="voice")
+    ttk.Combobox(r, textvariable=cue_ev, width=10, state="readonly",
+                 values=list(CUE_EVENTS)).pack(side="left")
+    ttk.Combobox(r, textvariable=cue_mode, width=7, state="readonly",
+                 values=["voice", "tones"]).pack(side="left", padx=4)
+
+    def send_cue():
+        hz = {lbl: i for i, lbl in enumerate(HAZ_LABELS)}.get(v["haz"].get())
+        link.send(cue=audio_cue(seq=int(time.time()) & 0xFFFF,
+                                mode=1 if cue_mode.get() == "voice" else 0,
+                                event=CUE_EVENTS[cue_ev.get()], hazard=hz,
+                                dist=v["hazdist"].get(), speed=v["hazspd"].get() or None))
+    ttk.Button(r, text="Cue senden", command=send_cue).pack(side="left")
+
+    # right column
+    b = box(right_col, "Feature-Schalter (dev, persistent)"); b.pack(fill="x", pady=3)
+
+    def push_ui(*_):
+        if suspend_trace[0] or not link.connected():
+            return
+        bits = 0
+        for i, n in enumerate(UI_BITS):
+            if ui_vars[n].get():
+                bits |= (1 << i)
+        link.ui_bits = bits
+        threading.Thread(target=link.write_ui_bits, daemon=True).start()
+    for n in UI_BITS:
+        ui_vars[n].trace_add("write", push_ui)
+        ttk.Checkbutton(b, text=n, variable=ui_vars[n]).pack(anchor="w")
+
+    b = box(right_col, "Einstellungen"); b.pack(fill="x", pady=3)
+
+    def push_settings(*_):
+        if suspend_trace[0] or not link.connected():
+            return
+        bits = 0
+        for i, fv in enumerate(filt_vars):
+            if fv.get():
+                bits |= (1 << i)
+        threading.Thread(target=lambda: link.write_settings(
+            sound=v["s_sound"].get(), mph=v["s_mph"].get(), theme=v["s_theme"].get(),
+            filter_bits=bits), daemon=True).start()
+    ttk.Checkbutton(b, text="Ton an", variable=v["s_sound"], command=push_settings).pack(anchor="w")
+    ttk.Checkbutton(b, text="Einheiten mph", variable=v["s_mph"], command=push_settings).pack(anchor="w")
+    r = ttk.Frame(b); r.pack(fill="x")
+    ttk.Label(r, text="Theme (0 auto / 1 tag / 2 nacht — Gerät ignoriert es)").pack(side="left")
+    theme_cb = ttk.Combobox(r, width=4, state="readonly", values=["0", "1", "2"])
+    theme_cb.set("0")
+    theme_cb.pack(side="left", padx=4)
+    theme_cb.bind("<<ComboboxSelected>>",
+                  lambda _e: (v["s_theme"].set(int(theme_cb.get())), push_settings()))
+
+    b = box(right_col, "Firmware / Zeit"); b.pack(fill="x", pady=3)
+    ttk.Button(b, text="Zeit senden (jetzt)", command=lambda: threading.Thread(
+        target=lambda: link.write_time(), daemon=True).start()).pack(anchor="w")
+    ttk.Button(b, text="DeviceInfo lesen", command=lambda: threading.Thread(
+        target=link.read_info, daemon=True).start()).pack(anchor="w")
+    ota_prog = ttk.Progressbar(b, length=220, maximum=100)
+    ota_prog.pack(anchor="w", pady=2)
+
+    def pick_fw():
+        p = filedialog.askopenfilename(title="Firmware .bin", filetypes=[("bin", "*.bin")])
+        if p:
+            threading.Thread(target=lambda: link.ota(p), daemon=True).start()
+    ttk.Button(b, text="Firmware-Update …", command=pick_fw).pack(anchor="w")
+
+    b = box(right_col, "Szenarien"); b.pack(fill="x", pady=3)
+    grid = ttk.Frame(b); grid.pack(fill="x")
+    for i, name in enumerate(SCENARIOS):
+        ttk.Button(grid, text=name, width=10, command=lambda n=name: threading.Thread(
+            target=lambda: link.play_scenario(n), daemon=True).start()
+                   ).grid(row=i // 3, column=i % 3, padx=1, pady=1)
+
+    # ── APP-SIM TAB ────────────────────────────────────────────────────────
+    ttk.Label(sim, text="App-Simulation — was die spätere Handy-App dem Fahrer zeigt.\n"
+              "Unvollständig: Karte + Blitzer.de-API fehlen. Fahrten über die Szenario-Buttons.",
+              foreground="#666").pack(anchor="w")
+    simbig = ttk.Label(sim, text="—", font=("Segoe UI", 40))
+    simbig.pack(pady=10)
+    simhaz = ttk.Label(sim, text="", font=("Segoe UI", 16), foreground="#c0392b")
+    simhaz.pack()
+
+    sb = box(sim, "Wovor warnen? (User-Ebene → filterBits)"); sb.pack(fill="x", pady=6)
+    for i, lbl in enumerate(HAZ_LABELS):
+        filt_vars[i].trace_add("write", push_settings)
+        ttk.Checkbutton(sb, text=lbl, variable=filt_vars[i]).pack(anchor="w")
+    sb2 = box(sim, "Ton / Einheiten"); sb2.pack(fill="x")
+    ttk.Checkbutton(sb2, text="Warntöne an", variable=v["s_sound"], command=push_settings).pack(anchor="w")
+    ttk.Checkbutton(sb2, text="mph statt km/h", variable=v["s_mph"], command=push_settings).pack(anchor="w")
+    sb3 = box(sim, "Simulierte Fahrt"); sb3.pack(fill="x", pady=6)
+    for name in SCENARIOS:
+        ttk.Button(sb3, text=name, command=lambda n=name: threading.Thread(
+            target=lambda: link.play_scenario(n), daemon=True).start()).pack(side="left", padx=2)
+
+    # ── log ────────────────────────────────────────────────────────────────
+    logbox = tk.Text(root, height=12, bg="#111", fg="#ddd", font=("Consolas", 9))
+    logbox.pack(fill="both", expand=False, padx=6, pady=(4, 6))
+
+    def drain():
+        try:
+            while True:
+                line = logq.get_nowait()
+                logbox.insert("end", str(line) + "\n")
+                logbox.see("end")
+        except queue.Empty:
+            pass
+        # OTA progress
+        p = getattr(link, "ota_progress", None)
+        ota_prog["value"] = 0 if p is None or p < 0 else p
+        # App-sim mirror of the current picture
+        st = link.state
+        unit = "mph" if st.get("mph") else "km/h"
+        simbig.config(text=f"{st.get('speed', '—')} {unit}" if link.connected() else "—")
+        hz = st.get("hazard")
+        simhaz.config(text=("⚠ " + HAZ_LABELS[hz] + f"  {st.get('dist','?')} m"
+                            if hz is not None and hz < len(HAZ_LABELS) else ""))
+        root.after(120, drain)
+
+    def refresh_from_device():
+        suspend_trace[0] = True
+        try:
+            v["s_sound"].set(link.settings.get("sound", True))
+            v["s_mph"].set(link.settings.get("mph", False))
+            fb = link.settings.get("filter_bits", 0xFFFF)
+            for i, fv in enumerate(filt_vars):
+                fv.set(bool(fb & (1 << i)))
+            for i, n in enumerate(UI_BITS):
+                ui_vars[n].set(bool(link.ui_bits & (1 << i)))
+            caps = link.info.get(2, 0)
+            info_lbl.config(text=f"fw {link.info.get(1, '?')}  caps 0x{caps:02x}")
+        finally:
+            suspend_trace[0] = False
+
+    def on_link(up):
+        status.config(text="verbunden" if up else "getrennt")
+        if up:
+            root.after(200, refresh_from_device)
+    link.on_link = on_link
+    link.on_change = lambda: root.after(0, refresh_from_device)
+
+    drain()
+    if connect_addr or connect_name:
+        root.after(300, lambda: threading.Thread(target=do_connect, daemon=True).start())
+    root.mainloop()
 
 
 # ── REPL ────────────────────────────────────────────────────────────────────
@@ -541,12 +862,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--address", help="device BLE address (else find by name)")
     ap.add_argument("--name", default=ADV_NAME, help=f"advertised name (default {ADV_NAME!r})")
-    ap.add_argument("--repl", action="store_true", help="interactive console")
+    ap.add_argument("--gui", action="store_true", help="graphical console (default)")
+    ap.add_argument("--repl", action="store_true", help="interactive text console")
     ap.add_argument("--scenario", choices=SCENARIOS, help="run one scripted scenario")
     ap.add_argument("--all", action="store_true", help="run every scenario back to back")
     ap.add_argument("--dry", action="store_true", help="print packets, no BLE")
     ap.add_argument("--scan", action="store_true", help="list nearby BLE devices")
     args = ap.parse_args()
+
+    # GUI is the default unless another mode is asked for.
+    if args.gui or not (args.repl or args.scenario or args.all or args.dry or args.scan):
+        run_gui(Link(), connect_name=args.name, connect_addr=args.address)
+        return
 
     if args.scan:
         async def _scan():
