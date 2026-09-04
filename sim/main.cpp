@@ -130,7 +130,7 @@ void step(uint32_t now_ms) {
     g_sm.tick(now_ms, 1'700'000'000u + now_ms / 1000u);
     if (g_audio) {
         g_audio->on_state(g_sm.effective_state());
-        g_audio->pump();
+        if (!g_audio_drv || g_audio_drv->wants_pcm()) g_audio->pump();
     }
     g_mgr->set_state(g_sm.effective_state());
     g_mgr->set_view(g_sm.view());

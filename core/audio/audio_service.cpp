@@ -12,15 +12,18 @@ namespace core::audio {
 extern const int16_t* fallback_pcm(Clip c, size_t& n_samples);
 
 void AudioService::apply_settings(const Settings& s) {
+    std::lock_guard<std::mutex> lk(mtx_);
     enabled_ = s.soundEnabled;
     volume_ = 70;
     if (drv_) drv_->set_volume(volume_);
-    if (!enabled_) stop();
+    if (!enabled_) stop_locked();
 }
 
 void AudioService::on_state(const DisplayState& s) {
     if (!s.audioCue) return;
     const AudioCue& cue = *s.audioCue;
+
+    std::lock_guard<std::mutex> lk(mtx_);
     if (cue.seq == 0 || cue.seq == last_seq_) return;
     last_seq_ = cue.seq;
 
@@ -32,7 +35,7 @@ void AudioService::on_state(const DisplayState& s) {
 }
 
 void AudioService::start(const Clip* list, int n) {
-    stop();
+    stop_locked();
     std::copy(list, list + n, playlist_);
     pl_count_ = n;
     pl_idx_ = 0;
@@ -51,6 +54,11 @@ void AudioService::close_current() {
 }
 
 void AudioService::stop() {
+    std::lock_guard<std::mutex> lk(mtx_);
+    stop_locked();
+}
+
+void AudioService::stop_locked() {
     if (drv_) drv_->stop();
     close_current();
     pl_count_ = 0;
@@ -104,11 +112,12 @@ bool AudioService::open_next() {
 }
 
 void AudioService::pump() {
+    std::lock_guard<std::mutex> lk(mtx_);
     if (pl_count_ == 0 || !drv_) return;
 
     const bool have_clip = rd_ || flash_;
     if (!have_clip && !open_next()) {   // playlist finished
-        stop();
+        stop_locked();
         return;
     }
 
@@ -133,6 +142,7 @@ void AudioService::pump() {
 }
 
 int AudioService::playlist(Clip out[kMaxPlaylist]) const {
+    std::lock_guard<std::mutex> lk(mtx_);
     std::copy(playlist_, playlist_ + pl_count_, out);
     return pl_count_;
 }

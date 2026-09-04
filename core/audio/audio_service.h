@@ -2,11 +2,16 @@
 //
 // on_state() watches DisplayState.audioCue and starts a playlist on a new seq
 // (subject to the master gate). pump() streams the current playlist to the
-// AudioDriver a chunk at a time; call it from the io task. All decisions about
-// *what* to play are in cue_composer; this is the plumbing + the gate.
+// AudioDriver a chunk at a time. All decisions about *what* to play are in
+// cue_composer; this is the plumbing + the gate.
+//
+// Threading: on_state()/apply_settings()/stop() run on the app loop while
+// pump() runs on a dedicated audio task (see app_main). Every public method
+// takes mtx_ so the task can't read a Reader the app loop just freed.
 #pragma once
 
 #include <cstdint>
+#include <mutex>
 #include <vector>
 
 #include "core/audio/clips.h"
@@ -27,16 +32,25 @@ public:
     void pump();
     void stop();
 
-    bool playing() const { return pl_count_ > 0; }
+    bool playing() const {
+        std::lock_guard<std::mutex> lk(mtx_);
+        return pl_count_ > 0;
+    }
 
     // test introspection
     int  playlist(Clip out[kMaxPlaylist]) const;
-    uint32_t last_seq() const { return last_seq_; }
+    uint32_t last_seq() const {
+        std::lock_guard<std::mutex> lk(mtx_);
+        return last_seq_;
+    }
 
 private:
-    void start(const Clip* list, int n);
+    void start(const Clip* list, int n);   // caller holds mtx_
+    void stop_locked();                    // caller holds mtx_
     bool open_next();          // advance to the next clip; false when the list ends
     void close_current();
+
+    mutable std::mutex mtx_;
 
     hal::AudioDriver* drv_ = nullptr;
     hal::Storage*     sd_ = nullptr;

@@ -29,6 +29,10 @@ public:
         // ── I2S std TX channel ────────────────────────────────────────────────
         i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
         chan_cfg.auto_clear = true;   // send zeros on underrun, not the stale buffer
+        // ~240 ms of DMA slack (default is 6 x 240 frames ≈ 90 ms): the audio task
+        // tops this up in ~32 ms chunks, so give it headroom against render jitter.
+        chan_cfg.dma_desc_num = 8;
+        chan_cfg.dma_frame_num = 480;
         if (i2s_new_channel(&chan_cfg, &tx_, nullptr) != ESP_OK) {
             ESP_LOGE(TAG, "i2s_new_channel failed");
             return false;

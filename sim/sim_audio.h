@@ -20,6 +20,10 @@ public:
     void stop() override;
     bool busy() const override;
 
+    // The sim loop runs faster than real time; only pump when the SDL queue is
+    // running low so it doesn't balloon seconds ahead of the timeline.
+    bool wants_pcm() const;
+
 private:
     unsigned dev_ = 0;
     uint8_t  volume_ = 80;

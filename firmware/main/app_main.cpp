@@ -160,6 +160,20 @@ extern "C" void app_main(void) {
 #if defined(CONFIG_BDSP_ENABLE_AUDIO)
     static core::audio::AudioService audio(hal::esp::audio_instance(), storage);
     runner.set_audio(&audio);
+    // Stream the clip from its own task: the app loop renders + sleeps 20 ms per
+    // iteration, which is slower than real-time audio and starves the I2S DMA
+    // (slow / stuttering / crackly playback). esp_codec_dev_write() blocks while
+    // the DMA is full, so this loop paces itself to the sample rate.
+    runner.set_external_audio_pump(true);
+    xTaskCreate(
+        [](void* arg) {
+            auto* svc = static_cast<core::audio::AudioService*>(arg);
+            for (;;) {
+                svc->pump();
+                vTaskDelay(svc->playing() ? 1 : pdMS_TO_TICKS(20));
+            }
+        },
+        "audio", 6144, &audio, 5, nullptr);
 #endif
 
     static core::SettingsStore settings_store(*hal::esp::nvs_instance(), BSP_NVS_NS_SETTINGS);

@@ -57,6 +57,11 @@ bool SimAudio::busy() const {
     return dev_ && SDL_GetQueuedAudioSize(dev_) > 0;
 }
 
+bool SimAudio::wants_pcm() const {
+    // keep ~250 ms (16 kHz * 2 B) queued, no more
+    return !dev_ || SDL_GetQueuedAudioSize(dev_) < 8000;
+}
+
 // --- storage ---------------------------------------------------------------
 
 bool SimStorage::read_file(const std::string& path, std::vector<uint8_t>& out) {

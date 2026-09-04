@@ -27,6 +27,9 @@ public:
 
     AppStateMachine& sm() { return sm_; }
     void set_audio(audio::AudioService* a) { audio_ = a; }
+    // On the firmware a dedicated task drives audio::AudioService::pump() so it
+    // keeps up with real time; call this so step() only feeds on_state().
+    void set_external_audio_pump(bool on) { external_audio_pump_ = on; }
     void set_settings(const Settings& s) {
         sm_.set_settings(s);
         if (audio_) audio_->apply_settings(s);
@@ -80,7 +83,7 @@ public:
 
         if (audio_) {
             audio_->on_state(sm_.effective_state());
-            audio_->pump();
+            if (!external_audio_pump_) audio_->pump();
         }
 
         // Persist the last rendered state periodically (bounded NVS wear).
@@ -102,6 +105,7 @@ private:
     hal::Clock&            clock_;
     AppStateMachine        sm_;
     audio::AudioService*   audio_ = nullptr;
+    bool                   external_audio_pump_ = false;
     SettingsStore*         store_ = nullptr;
     UiConfigStore*         ui_store_ = nullptr;
     CacheStore*            cache_store_ = nullptr;
