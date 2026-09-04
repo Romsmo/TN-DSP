@@ -116,8 +116,23 @@ SIGN_LABELS = {
     "283": "Absolutes Haltverbot", "286": "Eingeschränktes Haltverbot",
 }
 
-# "ends" signs cancel their counterpart in the same column.
-SIGN_ENDS = {"280": "276", "281": "277", "282": None}   # None -> clears every prohibition
+# Signs that cannot stand together — adding one from a family removes the rest of
+# that family (in either column). The numbered variants of one VzNr (e.g. 101-11 /
+# 101-15, 262-5 / …) are handled separately by their shared major number.
+SIGN_GROUPS = {
+    "gefahrstelle":   {"101", "101-10", "101-11", "101-12", "101-13", "101-14", "101-15",
+                       "101-51", "101-52", "101-53", "101-54", "101-55"},
+    "kurve":          {"103-10", "105-10"},
+    "laengsneigung":  {"108-4", "110-4"},          # Gefälle / Steigung
+    "ueberholverbot": {"276", "277", "280", "281"},  # Verbot + jeweiliges "Ende"
+    "haltverbot":     {"283", "286"},                # absolut / eingeschränkt
+}
+_SIGN_GROUP = {vz: g for g, members in SIGN_GROUPS.items() for vz in members}
+
+# Adding these also removes further signs (beyond their own family).
+SIGN_CANCELS = {
+    "282": ("274", "276", "277"),   # Ende sämtlicher Streckenverbote
+}
 
 
 def sign_code(vznr: str) -> int:
@@ -127,6 +142,16 @@ def sign_code(vznr: str) -> int:
 
 def sign_major(code: int) -> int:
     return code // 100
+
+
+def sign_conflicts(new_vz: str, other_vz: str) -> bool:
+    """True if adding new_vz should evict other_vz."""
+    g = _SIGN_GROUP.get(new_vz)
+    if g and _SIGN_GROUP.get(other_vz) == g:
+        return True
+    if sign_major(sign_code(new_vz)) == sign_major(sign_code(other_vz)):
+        return True
+    return other_vz.split("-")[0] in SIGN_CANCELS.get(new_vz, ())
 
 
 def sign_side(vznr: str) -> str:
@@ -609,16 +634,16 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
             return
         vznr = choice.split(" — ")[0]
         side = sign_side(vznr)
-        maj = sign_major(sign_code(vznr))
-        # a replacing sign kicks out any of the same category, in either column
+        # evict every sign the new one conflicts with, from both columns
+        removed = []
         for col in signs.values():
-            col[:] = [s for s in col if sign_major(sign_code(s)) != maj]
-        if vznr in SIGN_ENDS:                       # "Ende …" cancels its counterpart
-            end_of = SIGN_ENDS[vznr]
-            for col in signs.values():
-                col[:] = [] if end_of is None else [s for s in col if not s.startswith(end_of)]
+            keep = [s for s in col if not sign_conflicts(vznr, s)]
+            removed += [s for s in col if s not in keep]
+            col[:] = keep
         if vznr not in signs[side] and len(signs[side]) < 4:
             signs[side].append(vznr)
+        if removed:
+            link.log(f"  signs: {vznr} ersetzt {', '.join(removed)}")
         refresh_signs()
         push_state()
 
