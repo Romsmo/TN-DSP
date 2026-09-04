@@ -8,6 +8,10 @@ CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 # OTA: verify the new app on first boot, roll back if it never marks itself valid.
 CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
 
+# FATFS long file names — the audio clips (blitzer_abstand.wav …) exceed 8.3.
+CONFIG_FATFS_LFN_HEAP=y
+CONFIG_FATFS_MAX_LFN=128
+
 CONFIG_COMPILER_OPTIMIZATION_PERF=y
 CONFIG_COMPILER_CXX_EXCEPTIONS=n
 CONFIG_COMPILER_CXX_RTTI=n

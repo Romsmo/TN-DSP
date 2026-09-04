@@ -48,4 +48,9 @@ void lvgl_lock();
 void lvgl_unlock();
 #endif
 
+// SPI2 is shared between the panel and the SD card — serialise access. No-ops
+// until the display has been brought up.
+void spi2_bus_lock();
+void spi2_bus_unlock();
+
 }  // namespace hal::esp

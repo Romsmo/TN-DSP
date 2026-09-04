@@ -39,6 +39,7 @@ const sh8601_lcd_init_cmd_t kInit[] = {
 esp_lcd_panel_io_handle_t g_io = nullptr;
 esp_lcd_panel_handle_t    g_panel = nullptr;
 SemaphoreHandle_t         g_flush_done = nullptr;
+SemaphoreHandle_t         g_spi2_mtx = nullptr;   // LCD flush ↔ SD card share SPI2
 uint8_t                   g_controller_id = 0;
 
 bool IRAM_ATTR on_trans_done(esp_lcd_panel_io_handle_t, esp_lcd_panel_io_event_data_t*, void*) {
@@ -47,13 +48,17 @@ bool IRAM_ATTR on_trans_done(esp_lcd_panel_io_handle_t, esp_lcd_panel_io_event_d
     return hp == pdTRUE;
 }
 
+// Synchronous flush: hold the SPI2 lock for the whole draw+DMA so an SD-card
+// access on the other task can never interleave (the SPI HAL asserts if it does).
 void flush_cb(lv_display_t* disp, const lv_area_t* area, uint8_t* px) {
     auto* panel = static_cast<esp_lcd_panel_handle_t>(lv_display_get_user_data(disp));
     lv_draw_sw_rgb565_swap(px, lv_area_get_width(area) * lv_area_get_height(area));
+    if (g_spi2_mtx) xSemaphoreTake(g_spi2_mtx, portMAX_DELAY);
     esp_lcd_panel_draw_bitmap(panel, area->x1, area->y1, area->x2 + 1, area->y2 + 1, px);
+    xSemaphoreTake(g_flush_done, portMAX_DELAY);   // wait for the trans-done ISR
+    if (g_spi2_mtx) xSemaphoreGive(g_spi2_mtx);
+    lv_display_flush_ready(disp);
 }
-
-void flush_wait_cb(lv_display_t*) { xSemaphoreTake(g_flush_done, portMAX_DELAY); }
 
 // The AMOLED wants even-aligned rows/cols.
 void rounder_cb(lv_event_t* e) {
@@ -83,6 +88,7 @@ public:
 lv_display_t* display_init(hal::DisplayDriver** out_driver) {
     if (!lv_is_initialized()) lv_init();
     g_flush_done = xSemaphoreCreateBinary();
+    g_spi2_mtx = xSemaphoreCreateMutex();
 
     spi_bus_config_t bus = {};
     bus.sclk_io_num = BSP_LCD_PIN_PCLK;
@@ -128,8 +134,7 @@ lv_display_t* display_init(hal::DisplayDriver** out_driver) {
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(g_panel, true));
 
     lv_display_t* disp = lv_display_create(BSP_LCD_H_RES, BSP_LCD_V_RES);
-    lv_display_set_flush_cb(disp, flush_cb);
-    lv_display_set_flush_wait_cb(disp, flush_wait_cb);
+    lv_display_set_flush_cb(disp, flush_cb);   // synchronous (see flush_cb)
     lv_display_set_user_data(disp, g_panel);
     lv_display_add_event_cb(disp, rounder_cb, LV_EVENT_INVALIDATE_AREA, nullptr);
 
@@ -150,5 +155,8 @@ DisplayInit display_bringup() {
     touch_init(&r.touch);
     return r;
 }
+
+void spi2_bus_lock() { if (g_spi2_mtx) xSemaphoreTake(g_spi2_mtx, portMAX_DELAY); }
+void spi2_bus_unlock() { if (g_spi2_mtx) xSemaphoreGive(g_spi2_mtx); }
 
 }  // namespace hal::esp

@@ -89,9 +89,11 @@ From `waveshareteam/ESP32-C6-Touch-AMOLED-1.43` — `Example/ESP-IDF/04_SD_Card`
 | **microSD** (SPI, **shares SPI2 with the LCD**) | MOSI 4 (=LCD D0), MISO 5 (=LCD D1), CLK 11 (=LCD PCLK), **CS 15** · mount `/sdcard` |
 | **Audio I²S** (ES8311 playback + ES7210 mic) | BCLK 21, WS 22, DOUT 23, DIN 20, MCLK 19 · ES8311 `0x18` · speaker PA = TCA9554 **P7** · use MCLK, `pa_gain` 6 |
 
-The LCD `spi_bus_initialize`s SPI2; `esp_storage` only adds the SD device (its own CS). The SPI
-master driver serialises transactions across the two devices — SD reads are boot-time asset loads,
-so the odd LCD stall is acceptable.
+The LCD `spi_bus_initialize`s SPI2; `esp_storage` only adds the SD device (its own CS). The two
+**must not** touch the bus concurrently — the SPI HAL asserts, and it hung the mount. So the LVGL
+flush is synchronous and holds `hal::esp::spi2_bus_*`, and every card access takes the same lock;
+card ops briefly stall the display, which is fine (they're rare). FATFS also needs
+`CONFIG_FATFS_LFN_*` on — the audio clip names (`blitzer_abstand.wav`) exceed 8.3.
 
 ## `TODO(verify)` — still needs the C6 schematic PDF (`docs/vendor/`)
 
