@@ -34,8 +34,8 @@ public:
         }
         i2s_std_config_t std_cfg = {
             .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(BSP_AUDIO_SAMPLE_RATE_HZ),
-            .slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,
-                                                       I2S_SLOT_MODE_STEREO),
+            .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,
+                                                           I2S_SLOT_MODE_STEREO),
             .gpio_cfg = {
                 .mclk = static_cast<gpio_num_t>(BSP_AUDIO_PIN_I2S_MCLK),
                 .bclk = static_cast<gpio_num_t>(BSP_AUDIO_PIN_I2S_BCLK),
@@ -99,6 +99,7 @@ public:
         amp_ = on;
         hal::esp::io_expander_set_output(BSP_IOEXP_PIN_AUDIO_PA, true);
         hal::esp::io_expander_set_level(BSP_IOEXP_PIN_AUDIO_PA, on);
+        ESP_LOGI(TAG, "amp %s", on ? "on" : "off");
     }
 
     void set_volume(uint8_t percent) override {
@@ -111,25 +112,40 @@ public:
         if (!open_) {
             esp_codec_dev_sample_info_t fs = {};
             fs.sample_rate = BSP_AUDIO_SAMPLE_RATE_HZ;
-            fs.channel = 1;
+            fs.channel = 2;                     // I2S slot mode is stereo
             fs.bits_per_sample = BSP_AUDIO_BITS_PER_SAMPLE;
-            if (esp_codec_dev_open(dev_, &fs) != ESP_CODEC_DEV_OK) return 0;
+            if (esp_codec_dev_open(dev_, &fs) != ESP_CODEC_DEV_OK) {
+                ESP_LOGE(TAG, "codec_dev_open failed");
+                return 0;
+            }
             open_ = true;
             esp_codec_dev_set_out_vol(dev_, static_cast<float>(vol_));
+            ESP_LOGI(TAG, "playback open (vol %u)", vol_);
         }
-        // esp_codec_dev_write takes bytes and blocks until the DMA has room.
-        esp_codec_dev_write(dev_, const_cast<int16_t*>(frames), count * sizeof(int16_t));
+        // Duplicate the mono source into L+R and hand it to the codec (blocks
+        // until the DMA queue has room).
+        int16_t st[256];
+        size_t done = 0;
+        while (done < count) {
+            const size_t n = count - done < 128 ? count - done : 128;
+            for (size_t i = 0; i < n; ++i) st[2 * i] = st[2 * i + 1] = frames[done + i];
+            esp_codec_dev_write(dev_, st, n * 2 * sizeof(int16_t));
+            done += n;
+        }
         return count;
     }
 
     void stop() override {
         if (dev_ && open_) {
-            esp_codec_dev_close(dev_);
+            esp_codec_dev_close(dev_);   // drains the DMA, then releases the codec
             open_ = false;
         }
     }
 
-    bool busy() const override { return open_; }
+    // esp_codec_dev_write() already blocked until the DMA had room, and stop()'s
+    // close() drains the tail — so once AudioService has handed us every sample
+    // there is nothing left to wait for.
+    bool busy() const override { return false; }
 
 private:
     i2s_chan_handle_t             tx_ = nullptr;

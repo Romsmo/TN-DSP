@@ -78,7 +78,7 @@ EVENT_TAGS = {
     4: "SettingsSoundToggle", 5: "SettingsThemeChanged", 6: "SettingsUnitChanged",
     7: "SettingsFilterChanged", 8: "Heartbeat",
 }
-# A few handy StVO sign codes (major*100 + minal); see ui/assets/signs/_index.txt.
+# A few handy StVO sign codes (major*100 + minor); see ui/assets/signs/_index.txt.
 SIGNS = {
     "ban": 27600,          # Überholverbot
     "deer": 14210,         # Wildwechsel
@@ -88,6 +88,45 @@ SIGNS = {
     "roadworks": 12300,    # Baustelle
     "priority": 30600,     # Vorfahrt
 }
+
+# VzNr -> German label for the vendored sign set (tools/../ui/assets/signs/_index.txt).
+SIGN_LABELS = {
+    "101": "Gefahrstelle", "101-10": "Flugbetrieb", "101-11": "Fußgängerüberweg",
+    "101-12": "Viehtrieb", "101-13": "Amphibienwanderung", "101-14": "Steinschlag",
+    "101-15": "Splitt/Schotter", "101-51": "Schnee/Eis", "101-52": "bewegliche Brücke",
+    "101-53": "Ufer", "101-54": "Stau", "101-55": "Fußgänger",
+    "102": "Kreuzung mit Vorfahrt von rechts", "103-10": "Kurve (rechts)",
+    "105-10": "Doppelkurve (rechts)", "108-4": "Gefälle 4%", "110-4": "Steigung 4%",
+    "112": "unebene Fahrbahn", "114": "Schleudergefahr", "117-10": "Seitenwind",
+    "120": "verengte Fahrbahn", "121-10": "einseitig verengt", "123": "Baustelle",
+    "124": "Stau", "125": "Gegenverkehr", "131": "Lichtzeichenanlage",
+    "133-10": "Fußgänger", "136-10": "Kinder", "138-10": "Radverkehr",
+    "142-10": "Wildwechsel", "151": "Bahnübergang",
+    "250": "Verbot für Fahrzeuge aller Art", "251": "Verbot für Kraftwagen",
+    "253": "Verbot für Kraftfahrzeuge über 3,5 t", "254": "Verbot für Radverkehr",
+    "255": "Verbot für Krafträder", "257-50": "Verbot für Mofas", "259": "Verbot für Fußgänger",
+    "260": "Verbot für Krafträder und Kraftwagen", "261": "Verbot für kennzeichnungspflichtige GfG",
+    "262-5": "tatsächliche Masse 5 t", "263-8": "tatsächliche Achslast 8 t",
+    "264-2": "Breite 2 m", "265-3": "Höhe 3 m", "266-10": "Länge 10 m",
+    "267": "Verbot der Einfahrt", "268": "Verbot für Fahrzeuge mit wassergef. Ladung",
+    "269": "Verbot für Fahrzeuge mit wassergefährdender Ladung", "270": "Umweltzone",
+    "272": "Wendeverbot", "273-70": "Verbot für Fahrzeuge über 70 dB",
+    "276": "Überholverbot", "277": "Überholverbot für Lkw", "280": "Ende Überholverbot",
+    "281": "Ende Überholverbot für Lkw", "282": "Ende sämtlicher Streckenverbote",
+    "283": "Absolutes Haltverbot", "286": "Eingeschränktes Haltverbot",
+}
+
+# "ends" signs cancel their counterpart in the same column.
+SIGN_ENDS = {"280": "276", "281": "277", "282": None}   # None -> clears every prohibition
+
+
+def sign_code(vznr: str) -> int:
+    major, _, minor = vznr.partition("-")
+    return int(major) * 100 + (int(minor) if minor else 0)
+
+
+def sign_major(code: int) -> int:
+    return code // 100
 
 
 # ── DisplayState builder ────────────────────────────────────────────────────
@@ -500,34 +539,31 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
     v = dict(
         speed=tk.IntVar(value=50), mph=tk.BooleanVar(), arrows=tk.BooleanVar(value=True),
         online=tk.BooleanVar(value=True), night=tk.BooleanVar(), peers=tk.IntVar(value=480000),
-        left=tk.StringVar(), right=tk.StringVar(),
         haz=tk.StringVar(value="(keine)"), hazdist=tk.IntVar(value=400), hazspd=tk.IntVar(value=0),
         confto=tk.IntVar(value=15),
         s_sound=tk.BooleanVar(value=True), s_mph=tk.BooleanVar(), s_theme=tk.IntVar(value=0),
     )
+    v["_conf"] = tk.BooleanVar()
     ui_vars = {n: tk.BooleanVar(value=True) for n in UI_BITS}
     filt_vars = [tk.BooleanVar(value=True) for _ in HAZ_LABELS]
+    signs = {"left": [], "right": []}       # lists of VzNr strings, per column
 
     def push_state(*_):
         if suspend_trace[0] or not link.connected():
             return
-        left = [SIGNS.get(x.strip().lower(), None) or (int(x) if x.strip().isdigit() else None)
-                for x in v["left"].get().split(",") if x.strip()]
-        right = [SIGNS.get(x.strip().lower(), None) or (int(x) if x.strip().isdigit() else None)
-                 for x in v["right"].get().split(",") if x.strip()]
-        hz = v["haz"].get()
-        hzv = HAZARDS.get(hz.split()[0].lower()) if hz in ("",) else None
-        hzv = {lbl: i for i, lbl in enumerate(HAZ_LABELS)}.get(hz)   # label -> value
+        hzv = {lbl: i for i, lbl in enumerate(HAZ_LABELS)}.get(v["haz"].get())
+        if v["haz"].get().startswith("Unbekannt"):
+            hzv = 11
         link.send(speed=v["speed"].get(), unit=1 if v["mph"].get() else 0, mph=v["mph"].get(),
                   arrows=v["arrows"].get(), internet=v["online"].get(), night=v["night"].get(),
-                  peers=v["peers"].get(), left=[x for x in left if x], right=[x for x in right if x],
+                  peers=v["peers"].get(),
+                  left=[sign_code(x) for x in signs["left"]],
+                  right=[sign_code(x) for x in signs["right"]],
                   hazard=hzv, dist=v["hazdist"].get() if hzv is not None else None,
                   hazard_speed=v["hazspd"].get() or None if hzv is not None else None,
-                  confirm=v.get("_conf", tk.BooleanVar()).get() if "_conf" in v else False,
-                  confirm_to=v["confto"].get())
+                  confirm=v["_conf"].get(), confirm_to=v["confto"].get())
 
-    for key in ("speed", "mph", "arrows", "online", "night", "peers", "left", "right",
-                "haz", "hazdist", "hazspd"):
+    for key in ("speed", "mph", "arrows", "online", "night", "peers", "haz", "hazdist", "hazspd"):
         v[key].trace_add("write", push_state)
 
     # ── DEV TAB ────────────────────────────────────────────────────────────
@@ -549,12 +585,54 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
     r = ttk.Frame(b); r.pack(fill="x")
     ttk.Label(r, text="Peers").pack(side="left")
     ttk.Spinbox(r, from_=0, to=9999999, increment=1000, width=9, textvariable=v["peers"]).pack(side="left", padx=4)
-    for side in ("left", "right"):
-        r = ttk.Frame(b); r.pack(fill="x", pady=1)
-        ttk.Label(r, text=f"Schilder {side[0].upper()}").pack(side="left")
-        ttk.Entry(r, textvariable=v[side]).pack(side="left", fill="x", expand=True, padx=4)
-    ttk.Label(b, text="Namen: " + " ".join(SIGNS) + "  — oder VzNr-Codes, komma-getrennt",
-              foreground="#888").pack(anchor="w")
+
+    # ── sign columns: pick from a dropdown, add/remove, auto-replace ────────
+    sign_opts = [f"{k} — {SIGN_LABELS.get(k, k)}"
+                 for k in sorted(SIGN_LABELS, key=lambda s: (int(s.split('-')[0]), s))]
+    sign_boxes = {}
+
+    def add_sign(side, choice):
+        if not choice:
+            return
+        vznr = choice.split(" — ")[0]
+        col = signs[side]
+        # replacing signs: drop any with the same category, and clear the
+        # counterpart of an "Ende …" sign.
+        maj = sign_major(sign_code(vznr))
+        col[:] = [s for s in col if sign_major(sign_code(s)) != maj]
+        if vznr in SIGN_ENDS:
+            end_of = SIGN_ENDS[vznr]
+            col[:] = ([] if end_of is None
+                      else [s for s in col if not s.startswith(end_of)])
+        if vznr not in col and len(col) < 4:
+            col.append(vznr)
+        refresh_signs(side)
+        push_state()
+
+    def remove_sign(side):
+        lb = sign_boxes[side]
+        for i in reversed(lb.curselection()):
+            del signs[side][i]
+        refresh_signs(side)
+        push_state()
+
+    def refresh_signs(side):
+        lb = sign_boxes[side]
+        lb.delete(0, "end")
+        for s in signs[side]:
+            lb.insert("end", f"{s} — {SIGN_LABELS.get(s, s)}")
+
+    for side, de in (("left", "links"), ("right", "rechts")):
+        f = ttk.Frame(b); f.pack(fill="x", pady=2)
+        ttk.Label(f, text=f"Schilder {de}").pack(anchor="w")
+        pick = ttk.Combobox(f, values=sign_opts, state="readonly", width=40)
+        pick.pack(side="left")
+        ttk.Button(f, text="＋", width=3,
+                   command=lambda s=side, p=pick: add_sign(s, p.get())).pack(side="left", padx=2)
+        ttk.Button(f, text="－", width=3, command=lambda s=side: remove_sign(s)).pack(side="left")
+        lb = tk.Listbox(b, height=3, exportselection=False)
+        lb.pack(fill="x")
+        sign_boxes[side] = lb
 
     b = box(left_col, "Gefahr-Overlay"); b.pack(fill="x", pady=3)
     r = ttk.Frame(b); r.pack(fill="x")
@@ -569,26 +647,33 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
     r = ttk.Frame(b); r.pack(fill="x")
     ttk.Label(r, text="Timeout s").pack(side="left")
     ttk.Spinbox(r, from_=3, to=60, width=4, textvariable=v["confto"]).pack(side="left", padx=4)
-    v["_conf"] = tk.BooleanVar()
     ttk.Button(r, text="zeigen", command=lambda: (v["_conf"].set(True), push_state())).pack(side="left")
     ttk.Button(r, text="aus", command=lambda: (v["_conf"].set(False), push_state())).pack(side="left")
 
-    b = box(left_col, "Audio-Cue"); b.pack(fill="x", pady=3)
-    r = ttk.Frame(b); r.pack(fill="x")
+    b = box(left_col, "Audio"); b.pack(fill="x", pady=3)
+    ttk.Label(b, text='Töne brauchen "Ton an" (Einstellungen). Sprachansagen brauchen '
+              "zusätzlich die WAV-Clips auf der SD-Karte (tools/build_sd_audio.sh).",
+              foreground="#888", wraplength=360).pack(anchor="w")
+    r = ttk.Frame(b); r.pack(fill="x", pady=2)
     cue_ev = tk.StringVar(value="approach")
-    cue_mode = tk.StringVar(value="voice")
+    cue_mode = tk.StringVar(value="tones")
     ttk.Combobox(r, textvariable=cue_ev, width=10, state="readonly",
                  values=list(CUE_EVENTS)).pack(side="left")
     ttk.Combobox(r, textvariable=cue_mode, width=7, state="readonly",
-                 values=["voice", "tones"]).pack(side="left", padx=4)
+                 values=["tones", "voice"]).pack(side="left", padx=4)
 
-    def send_cue():
+    def send_cue(force_tone=False):
+        if not v["s_sound"].get():
+            v["s_sound"].set(True)
+            link.write_settings(sound=True)          # unmute first
         hz = {lbl: i for i, lbl in enumerate(HAZ_LABELS)}.get(v["haz"].get())
         link.send(cue=audio_cue(seq=int(time.time()) & 0xFFFF,
-                                mode=1 if cue_mode.get() == "voice" else 0,
-                                event=CUE_EVENTS[cue_ev.get()], hazard=hz,
-                                dist=v["hazdist"].get(), speed=v["hazspd"].get() or None))
-    ttk.Button(r, text="Cue senden", command=send_cue).pack(side="left")
+                                mode=0 if force_tone else (1 if cue_mode.get() == "voice" else 0),
+                                event=CUE_EVENTS["approach" if force_tone else cue_ev.get()],
+                                hazard=hz, dist=v["hazdist"].get(),
+                                speed=v["hazspd"].get() or None))
+    ttk.Button(r, text="Cue senden", command=lambda: send_cue()).pack(side="left")
+    ttk.Button(r, text="Testton", command=lambda: send_cue(force_tone=True)).pack(side="left", padx=2)
 
     # right column
     b = box(right_col, "Feature-Schalter (dev, persistent)"); b.pack(fill="x", pady=3)

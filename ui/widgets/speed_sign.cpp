@@ -1,6 +1,7 @@
 #include "ui/widgets/speed_sign.h"
 
 #include <cstdio>
+#include <string>
 
 #include "ui/theme/fonts.h"
 #include "ui/theme/tokens.h"
@@ -71,7 +72,18 @@ void SpeedSign::refresh() {
 
     char buf[8];
     std::snprintf(buf, sizeof(buf), "%d", *value_);
+
+    // The 92 px digits are sized for two of them; scale the label down so a
+    // 3-digit limit ("100", "120") still clears the red ring.
+    lv_obj_set_style_transform_scale(label_, 256, 0);
     lv_label_set_text(label_, buf);
+    lv_obj_update_layout(label_);
+    const int w = lv_obj_get_width(label_);
+    const int fit = dia_ - 2 * (dia_ * 22 / 196) - dia_ / 12;   // inner face minus a margin
+    const int32_t scale = (w > fit && w > 0) ? (256 * fit / w) : 256;
+    lv_obj_set_style_transform_pivot_x(label_, w / 2, 0);
+    lv_obj_set_style_transform_pivot_y(label_, lv_obj_get_height(label_) / 2, 0);
+    lv_obj_set_style_transform_scale(label_, scale, 0);
 
     if (shown_ >= 0 && shown_ != *value_) {
         set_glow(true);   // an owning screen clears the glow after kCrossfade
