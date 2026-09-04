@@ -64,24 +64,28 @@
 #define BSP_RTC_I2C_ADDR           0x51            // PCF85063 fixed
 
 // ─────────────────────────────────────────────────────────────────────────────
-// microSD — SPI                                                        [S1] TODO(verify) all pins
+// microSD — SPI, SHARES the SPI2 bus with the LCD (MOSI=D0, MISO=D1, CLK=PCLK).
+// Verified against waveshareteam/ESP32-C6-Touch-AMOLED-1.43 Example 04_SD_Card.
+// The LCD brings the bus up; esp_storage only adds the SD device (its own CS).
 // ─────────────────────────────────────────────────────────────────────────────
-#define BSP_SD_SPI_HOST            SPI2_HOST       // TODO(verify): shared with LCD? own host?
-#define BSP_SD_PIN_CS              GPIO_NUM_NC     // TODO(verify)
-#define BSP_SD_PIN_CLK             GPIO_NUM_NC     // TODO(verify)
-#define BSP_SD_PIN_MOSI            GPIO_NUM_NC     // TODO(verify)
-#define BSP_SD_PIN_MISO            GPIO_NUM_NC     // TODO(verify)
-#define BSP_SD_MOUNT_POINT         "/sd"
+#define BSP_SD_SPI_HOST            SPI2_HOST
+#define BSP_SD_PIN_CS              GPIO_NUM_15
+#define BSP_SD_PIN_CLK             GPIO_NUM_11     // == BSP_LCD_PIN_PCLK
+#define BSP_SD_PIN_MOSI            GPIO_NUM_4      // == BSP_LCD_PIN_DATA0
+#define BSP_SD_PIN_MISO            GPIO_NUM_5      // == BSP_LCD_PIN_DATA1
+#define BSP_SD_MOUNT_POINT         "/sdcard"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Audio — ES8311 DAC over I2S                                           [S1, S6] TODO(verify) pins
 // ─────────────────────────────────────────────────────────────────────────────
-#define BSP_AUDIO_ES8311_I2C_ADDR  0x18            // TODO(verify)
-#define BSP_AUDIO_PIN_I2S_MCLK     GPIO_NUM_NC     // TODO(verify)
-#define BSP_AUDIO_PIN_I2S_BCLK     GPIO_NUM_NC     // TODO(verify)
-#define BSP_AUDIO_PIN_I2S_WS       GPIO_NUM_NC     // TODO(verify)
-#define BSP_AUDIO_PIN_I2S_DOUT     GPIO_NUM_NC     // TODO(verify)
-#define BSP_AUDIO_PIN_I2S_DIN      GPIO_NUM_NC     // TODO(verify)
+// Verified against waveshareteam/…/08_Audio_Test codec_board board_cfg.txt
+// (Board: C6_AMOLED_1_43). ES7210 is the mic ADC (input path unused for now).
+#define BSP_AUDIO_ES8311_I2C_ADDR  0x18            // probes OK in app_main i2c_check
+#define BSP_AUDIO_PIN_I2S_MCLK     GPIO_NUM_19
+#define BSP_AUDIO_PIN_I2S_BCLK     GPIO_NUM_21
+#define BSP_AUDIO_PIN_I2S_WS       GPIO_NUM_22
+#define BSP_AUDIO_PIN_I2S_DOUT     GPIO_NUM_23     // ESP -> ES8311 (playback)
+#define BSP_AUDIO_PIN_I2S_DIN      GPIO_NUM_20     // ES7210 -> ESP (mic, unused)
 #define BSP_AUDIO_SAMPLE_RATE_HZ   16000
 #define BSP_AUDIO_BITS_PER_SAMPLE  16
 

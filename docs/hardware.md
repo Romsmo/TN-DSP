@@ -79,14 +79,23 @@
 - Touch reports coordinates when the panel is touched; the FT6x36 occasionally NACKs a poll while
   the panel DMA is busy (mitigated with a 100 kHz bus + one retry + silenced `i2c.master` log).
 
-## `TODO(verify)` — needs the C6 schematic PDF (`docs/vendor/`)
+## Pins recovered from the Waveshare examples (2026-08-30)
+
+From `waveshareteam/ESP32-C6-Touch-AMOLED-1.43` — `Example/ESP-IDF/04_SD_Card` and
+`08_Audio_Test/components/codec_board/board_cfg.txt` (`Board: C6_AMOLED_1_43`):
+
+| Bus | Pins |
+|---|---|
+| **microSD** (SPI, **shares SPI2 with the LCD**) | MOSI 4 (=LCD D0), MISO 5 (=LCD D1), CLK 11 (=LCD PCLK), **CS 15** · mount `/sdcard` |
+| **Audio I²S** (ES8311 playback + ES7210 mic) | BCLK 21, WS 22, DOUT 23, DIN 20, MCLK 19 · ES8311 `0x18` · speaker PA = TCA9554 **P7** · use MCLK, `pa_gain` 6 |
+
+The LCD `spi_bus_initialize`s SPI2; `esp_storage` only adds the SD device (its own CS). The SPI
+master driver serialises transactions across the two devices — SD reads are boot-time asset loads,
+so the odd LCD stall is acceptable.
+
+## `TODO(verify)` — still needs the C6 schematic PDF (`docs/vendor/`)
 
 - Battery-sense ADC GPIO + divider ratio; charge-status signal; charge IC part.
-- I²S pin map (BCLK / WS / DOUT / DIN / MCLK); whether ES7210 (mic) is used. (ES8311 addr `0x18` confirmed.)
-- **Whether SD truly shares `SPI2_HOST` with the display, or has its own pins/host.** S3 sets
-  `SDSPI_HOST == LCD_HOST == SPI2_HOST`. If shared, display DMA and SD access must be mutually
-  excluded → affects audio streaming off the render path.
-- SD card pins (CLK / CMD / D0 / CS).
 - TE (tearing-effect) line — init enables TE output (`0x35 0x00`); is a GPIO wired to the ESP?
 - PWR button behaviour.
 - Full TCA9554 pin assignment (what P0–P6 control: resets? SD power? backlight?).

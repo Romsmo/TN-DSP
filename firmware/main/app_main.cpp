@@ -77,6 +77,9 @@ extern "C" void app_main(void) {
     hal::esp::lvgl_runtime_start();
     heap_report("after LVGL");
 
+    // microSD rides the SPI2 bus the display just brought up. May be absent.
+    static hal::Storage* storage = hal::esp::storage_instance();
+
     static hal::Clock* clk = hal::esp::clock_instance();
     static transport::mock::MockTransport mock(*clk);
     mock.load(transport::mock::demo_script());
@@ -89,6 +92,7 @@ extern "C" void app_main(void) {
 #if defined(CONFIG_BDSP_FEATURE_SPEEDCAM)
         caps |= BDSP_CAP_SPEEDCAM_BUILD;
 #endif
+        if (storage && storage->mounted()) caps |= BDSP_CAP_HAS_SD;
         ble.set_caps(caps);
     }
     static transport::mux::MuxTransport mux(ble, mock);

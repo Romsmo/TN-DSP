@@ -15,6 +15,10 @@ hal::Nvs*        nvs_instance();
 hal::Buttons*    buttons_instance();
 hal::RtcDriver*  rtc_instance();
 
+// microSD (FATFS over the shared SPI2 bus). First call mounts; check mounted().
+// Only valid after the display has initialised the SPI2 bus.
+hal::Storage*    storage_instance();
+
 // Wipe the whole NVS partition (settings + offline cache + BLE bonds) and reboot.
 // Does not return.
 [[noreturn]] void factory_reset();
