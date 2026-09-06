@@ -26,14 +26,18 @@ SignColumn::~SignColumn() {
 }
 
 void SignColumn::set(const core::SignList& list) {
-    const int n = std::min(static_cast<int>(list.size()), max_);
+    const int total = static_cast<int>(list.size());
+    const int n = std::min(total, max_);
+    // Only three signs fit beside the speed sign. When the app sends more, keep
+    // the newest and let the oldest fall off the top (they arrive oldest-first).
+    const int off = total - n;
     // Shrink the box to the signs actually shown so the caller can centre the
     // block; a single sign then sits level with the speed sign, not slid to a
     // corner of the round face.
     const int shown = n > 0 ? n : 1;
     lv_obj_set_height(root_, shown * size_ + (shown - 1) * kGap);
     for (int i = 0; i < max_; ++i) {
-        slots_[i]->set_code(i < n ? list[i] : 0);
+        slots_[i]->set_code(i < n ? list[off + i] : 0);
     }
 }
 
