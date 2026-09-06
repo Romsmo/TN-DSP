@@ -44,6 +44,7 @@ CategoryVisual category_visual(core::HazardType type) {
         case HazardType::MobileSpeedCamera: return {0, Icon::Radar};
         case HazardType::TrailerCamera:     return {0, Icon::Caravan};
         case HazardType::DistanceControl:   return {0, Icon::ArrowLeftRight};
+        case HazardType::Accident:          return {0, Icon::CarCrash};
         case HazardType::Breakdown:         return {0, Icon::Wrench};
         default:                            return {0, Icon::TriangleAlert};
     }

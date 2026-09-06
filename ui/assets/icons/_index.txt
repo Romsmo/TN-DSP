@@ -2,6 +2,7 @@ arrow-left-right ic_arrow_left_right
 arrow-left ic_arrow_left
 bluetooth ic_bluetooth
 camera ic_camera
+car-crash ic_car_crash
 car-front ic_car_front
 caravan ic_caravan
 check ic_check

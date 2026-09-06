@@ -15,7 +15,7 @@ constexpr Category kAll[] = {
 
     {HazardType::Traffic,           HazardGroup::GeneralHazard, 12400, false},  // 124 Stau
     {HazardType::Ice,               HazardGroup::GeneralHazard, 10151, false},  // 101-51 Schnee-/Eisglätte
-    {HazardType::Accident,          HazardGroup::GeneralHazard, 10100, false},  // 101 Gefahrstelle
+    {HazardType::Accident,          HazardGroup::GeneralHazard, 0,     false},  // ui/ draws a crash glyph — no StVO sign fits
     {HazardType::Construction,      HazardGroup::GeneralHazard, 12300, false},  // 123 Arbeitsstelle
     {HazardType::Breakdown,         HazardGroup::GeneralHazard, 0,     false},
     {HazardType::Obstacle,          HazardGroup::GeneralHazard, 10100, false},  // 101 Gefahrstelle

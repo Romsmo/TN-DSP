@@ -5,6 +5,7 @@ LV_IMAGE_DECLARE(ic_arrow_left_right);
 LV_IMAGE_DECLARE(ic_arrow_left);
 LV_IMAGE_DECLARE(ic_bluetooth);
 LV_IMAGE_DECLARE(ic_camera);
+LV_IMAGE_DECLARE(ic_car_crash);
 LV_IMAGE_DECLARE(ic_car_front);
 LV_IMAGE_DECLARE(ic_caravan);
 LV_IMAGE_DECLARE(ic_check);
@@ -32,6 +33,7 @@ const lv_image_dsc_t* icon(Icon ic) {
         case Icon::ArrowLeft: return &ic_arrow_left;
         case Icon::Bluetooth: return &ic_bluetooth;
         case Icon::Camera: return &ic_camera;
+        case Icon::CarCrash: return &ic_car_crash;
         case Icon::CarFront: return &ic_car_front;
         case Icon::Caravan: return &ic_caravan;
         case Icon::Check: return &ic_check;

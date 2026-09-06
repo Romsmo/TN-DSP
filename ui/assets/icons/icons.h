@@ -9,6 +9,7 @@ enum class Icon {
     ArrowLeft,
     Bluetooth,
     Camera,
+    CarCrash,
     CarFront,
     Caravan,
     Check,
