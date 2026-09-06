@@ -28,8 +28,8 @@ mark is drawn.
 | Status badge | (112, 92) | globe 30 | globe on top, abbreviated `networkPeers` ("480K", 14 px muted) **stacked underneath** it. |
 | Direction chevrons | (233, 150) *(168 in the sketch; raised to clear the sign)* | block 130 × 100 | 3 stacked chevrons, bright green, only when `directionArrows` and no hazard. |
 | Speed-limit sign | (233, 310) | Ø 196 | white disc, ~22 px red ring, ~92 px bold digits. Drawn (border + label), not a bitmap. Fades out when `speedLimit` absent. |
-| Left sign column | centred on the speed sign at x ≈ 100 | signs ~48 px | `DisplayState.leftSigns` (VzNr codes), by convention prohibitions (276 = Überholverbot …). Up to 3; the box shrinks to the count so a single sign sits level with the speed sign, not slid into the round bezel. |
-| Right sign column | centred on the speed sign at x ≈ 366 | signs ~48 px, **same size as left** | `DisplayState.rightSigns`, by convention danger signs (142-10 Wildwechsel, 110-4 Steigung …). Up to 3. |
+| Left sign column | centred on the speed sign at x ≈ 100 | signs ~48 px | `DisplayState.leftSigns` (VzNr codes), by convention prohibitions (276 = Überholverbot …). Newest 3; if the app sends 4 the oldest falls off the top. The box shrinks to the count so a single sign sits level with the speed sign, not slid into the round bezel. |
+| Right sign column | centred on the speed sign at x ≈ 366 | signs ~48 px, **same size as left** | `DisplayState.rightSigns`, by convention danger signs (142-10 Wildwechsel, 110-4 Steigung …). Newest 3, same overflow rule as the left column. |
 | "+" button | (435, 233) | Ø 46 | red circle, white plus, hard against the right bezel. Tap → Melden. A ~45 %-opacity "←" swipe hint fades after a few seconds. |
 | Settings gear | (233, 432) | 32 | **tap** → Settings. It is the only way in (Settings is not a swipe tile), so a stray vertical swipe can't land there. |
 
@@ -55,7 +55,7 @@ navigation still works.
 
 | Element | Position | Notes |
 |---|---|---|
-| Warn icon | left of centre, above the sign (180, 150), ~84 px | the **per-category** visual from `category_visual()` — an StVO sign where one fits (Stau, Glätte, Rotlicht …), else a category glyph (camera, radar, caravan, wrench …), recoloured red. **Blinks** 100 % ↔ 35 % at 1 Hz, ease-in-out. Never a one-size-fits-all "!". |
+| Warn icon | left of centre, above the sign (180, 150), ~84 px | the **per-category** visual from `category_visual()` — an StVO sign where one fits (Stau, Glätte, Rotlicht …), else a category glyph (camera, radar, caravan, wrench, car-crash …), recoloured red. **Blinks** 100 % ↔ 35 % at 1 Hz, ease-in-out. Never a one-size-fits-all "!". |
 | Distance bar | vertical, **just right of the icon** (x ≈ 244), above the sign | fills from the bottom as the distance shrinks; "600m" label beside it. The sign columns hide while it is up. |
 | Speed sign | as Home | shows `hazardSpeedLimit` if set, else `speedLimit`; soft red glow ring on change; number crossfades ~180 ms. |
 | Chevrons | — | hidden while the hazard is active. |
@@ -150,12 +150,17 @@ firmware updates arrive automatically over Bluetooth through the BlitzerdeDsp ap
   flick; snap animation ~220 ms ease-out.
 - Back to Home: opposite swipe / the Melden dismiss / the Settings down-chevron, a timeout, or a
   completed input.
+- **Programmatic** Home ↔ Melden changes (the back gesture, disconnect → Home) **cut**, they
+  don't slide: the panel has no TE line and LVGL renders in ~5 horizontal bands, so a moving
+  full-screen slide shows a skewed seam across the middle. Only the live finger-swipe animates.
 - Hazard, Confirm, Connect and Settings are **layers**, not tiles. Navigation is locked under the
   Confirm overlay.
 - Touch debounce: ignore contacts < 40 ms (the unit lives in a car).
 
-> **C6 performance note.** The full-screen finger-following page drag will be validated at M3; on
-> the single-core C6 it may run below 30 fps and fall back to sliding a cached bitmap / a fade.
+> **C6 performance note.** The full-screen finger-following page drag runs below 30 fps on the
+> single-core C6 and tears a seam mid-screen when it moves fast. Mitigation shipped: one tall
+> draw buffer (5 bands, not 10) and programmatic navigation cuts instead of sliding. A cached-
+> bitmap slide / fade for the live swipe is still possible if needed.
 
 ## 5.9 Design & motion
 
