@@ -138,10 +138,11 @@ lv_display_t* display_init(hal::DisplayDriver** out_driver) {
     lv_display_set_user_data(disp, g_panel);
     lv_display_add_event_cb(disp, rounder_cb, LV_EVENT_INVALIDATE_AREA, nullptr);
 
+    // One buffer: the flush is synchronous, so a second buffer never overlapped
+    // render with DMA. A taller single buffer = fewer bands = less tear.
     const size_t buf_sz = BSP_LCD_H_RES * BSP_LCD_DRAW_BUF_HEIGHT * 2;
     void* b1 = heap_caps_malloc(buf_sz, MALLOC_CAP_DMA);
-    void* b2 = heap_caps_malloc(buf_sz, MALLOC_CAP_DMA);
-    lv_display_set_buffers(disp, b1, b2, buf_sz, LV_DISPLAY_RENDER_MODE_PARTIAL);
+    lv_display_set_buffers(disp, b1, nullptr, buf_sz, LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     static EspDisplay drv;
     if (out_driver) *out_driver = &drv;

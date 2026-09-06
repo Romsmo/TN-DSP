@@ -28,9 +28,13 @@
 #define BSP_LCD_PARAM_BITS         8
 #define BSP_LCD_ID_REG             0xDA            // read at bring-up: SH8601->0x86, CO5300->0xFF
 
-// LVGL partial-render buffers (internal RAM, no PSRAM on C6).           [S4]
-#define BSP_LCD_DRAW_BUF_HEIGHT    50              // lines per buffer; M1 may lower to 40 if RAM-tight
-#define BSP_LCD_DRAW_BUF_COUNT     2
+// LVGL partial-render buffer (internal RAM, no PSRAM on C6).            [S4]
+// One tall buffer, not two short ones: the flush is synchronous (SPI2 is
+// shared with the SD card) so a second buffer bought no overlap, and a taller
+// buffer means fewer bands per frame -> less top/bottom skew ("tear line")
+// during a full-screen slide. 100 lines -> 5 bands, ~93 KB (RAM-neutral).
+#define BSP_LCD_DRAW_BUF_HEIGHT    100
+#define BSP_LCD_DRAW_BUF_COUNT     1
 
 // AMOLED brightness: DCS write (no PWM backlight).
 #define BSP_LCD_CMD_BRIGHTNESS     0x51            // TODO(verify) against CO5300/SH8601 datasheet

@@ -152,8 +152,10 @@ void ScreenManager::set_view(const core::ViewModel& vm) {
         settings_->reset();   // next open starts on the buttons, not a sub-panel
     }
 
-    // Tiles (Home / Melden only).
-    if (!want_connect && !want_settings) go_to(tile_of(vm.screen), /*animate=*/true);
+    // Tiles (Home / Melden only). Cut, don't slide: a full-screen slide on this
+    // panel (partial render, no TE, ~5 bands/frame) tears a visible seam across
+    // the middle. A live finger-swipe still animates; a programmatic nav snaps.
+    if (!want_connect && !want_settings) go_to(tile_of(vm.screen), /*animate=*/false);
 
     // Confirm overlay + nav lock.
     if (vm.overlay == core::OverlayKind::Confirm && !confirm_->active()) {
