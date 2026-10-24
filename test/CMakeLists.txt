@@ -32,3 +32,21 @@ endif()
 
 add_test(NAME bdsp_tests COMMAND bdsp_tests --no-version)
 set_tests_properties(bdsp_tests PROPERTIES TIMEOUT 60)
+
+# Golden vectors of the BLE contract (docs/contract/vectors/), generated from the
+# real codec. The test fails if the committed files drift from what the codec emits.
+add_executable(bdsp_gen_vectors gen_vectors.cpp)
+target_link_libraries(bdsp_gen_vectors PRIVATE bdsp_core)
+if(TARGET bdsp_ui)
+  target_link_libraries(bdsp_gen_vectors PRIVATE bdsp_ui)
+  target_compile_definitions(bdsp_gen_vectors PRIVATE BDSP_HAVE_UI=1)
+endif()
+if(TARGET bdsp_warnings)
+  target_link_libraries(bdsp_gen_vectors PRIVATE bdsp_warnings)
+endif()
+add_test(NAME contract_vectors
+  COMMAND ${CMAKE_COMMAND}
+    -DGEN=$<TARGET_FILE:bdsp_gen_vectors>
+    -DOUT=${CMAKE_BINARY_DIR}/vectors-check
+    -DREF=${CMAKE_SOURCE_DIR}/docs/contract/vectors
+    -P ${CMAKE_SOURCE_DIR}/cmake/check_vectors.cmake)
