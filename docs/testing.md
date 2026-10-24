@@ -111,3 +111,90 @@ card: `python tools/gen_voice.py --upload` (Windows; generates them locally and 
 BLE) or copy `tools/sd_root/*` to the card root. The clips are not shipped in the repository.
 Chimes also live in flash, and a voice cue without its clips degrades to the chime, so a card is
 optional.
+
+
+## Board verification
+
+These are the checks the app side depends on and that have **not** been run on the board yet. Each has
+a procedure, the expected result and a row in the result table at the end — fill it in when you run
+it. Nothing below is assumed to pass.
+
+### Know the way back first
+
+A bad update rolls back by itself (the previous firmware stays in the other OTA slot, the new image
+must confirm itself after ~3 s). If the board does not boot at all, USB still works:
+
+1. Get a known-good set of files: the CI artifact `firmware-<sha>` (bootloader, partition table, OTA
+   data, app) or a local build in `firmware/build/`.
+2. If no serial port appears, **hold BOOT while plugging in the USB cable** (ROM download mode).
+3. Re-flash (ESP-IDF's Python; `<COM>` is your port):
+
+   ```
+   python -m esptool --chip esp32c6 -p <COM> -b 460800 write_flash --flash_mode dio --flash_size 16MB --flash_freq 80m 0x0 bootloader.bin 0x8000 partition-table.bin 0xf000 ota_data_initial.bin 0x20000 blitzerdsp.bin
+   ```
+
+   This keeps settings, bonds and the SD card (the NVS partition at `0x9000` is not written). For a
+   completely blank start add `python -m esptool --chip esp32c6 -p <COM> erase_flash` first.
+4. Watch the log with `idf.py -p <COM> monitor` (or any terminal at 115200 baud).
+
+### 1. OTA, end to end
+
+Setup: PC Bluetooth on, board powered, `python tools/fake_app.py --repl` (the fault modes are REPL-only).
+To *see* the update in `DeviceInfo`, build the test image with a bumped `BSP_FW_VERSION`
+(`firmware/main/board_config.h`) so `info` reports a different version.
+
+| # | Test | Command | Expected |
+|---|---|---|---|
+| a | normal update | `ota firmware/build/blitzerdsp.bin` | slot erase, stream, `ok`, reboot, `info` shows the new version; the tool prints erase / stream / total times and KiB/s — **record them** |
+| b | interrupted transfer | start `ota …`, switch the PC's Bluetooth off at ~50 % | device drops the transfer, returns to the normal UI, **old firmware keeps running**; a fresh `ota …` then succeeds |
+| c | wrong checksum | `ota firmware/build/blitzerdsp.bin bad-sha` | full stream, then the device refuses (error 4); old firmware keeps running |
+| d | image too large | `ota firmware/build/blitzerdsp.bin oversize` | refused at `begin` (error 2), no data sent |
+| e | corrupt image | `ota firmware/build/blitzerdsp.bin corrupt` | hash matches, image validation fails (error 5); old firmware keeps running |
+| f | **rollback** | build the crash image (below), then `ota firmware/build-crash/blitzerdsp.bin` | device accepts, reboots, logs `TEST BUILD: crashing on purpose` ~2 s after boot, reboots again, the bootloader rolls back, `info` shows the **old** version |
+
+Build the rollback test image (a normal image that deliberately aborts before it can confirm itself;
+never a release build):
+
+```powershell
+cd firmware
+idf.py -B build-crash -D SDKCONFIG=build-crash/sdkconfig -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.test-crash" build
+```
+
+### 2. UiConfig write and persistence
+
+`ui meldenPage off` → the "+" disappears and the swipe into Melden is blocked; `uiconfig` reads back
+with bit 0 clear; **power-cycle the board**; `uiconfig` again → still off; `ui all on` restores it.
+
+### 3. Factory reset
+
+Settings → *Zurücksetzen* → confirm. Expected: the board reboots to the **Connect** screen (not Home
+with the last speed limit); after reconnecting, `settings` shows the defaults (sound off, volume 70) and
+`uiconfig` shows all features on.
+
+### 4. Audio, by ear
+
+Put the voice clips on the card (`python tools/gen_voice.py --upload`), then `set sound on`,
+`set vol 70`, `cue approach voice mobilecam 300 50` (a 6–7 s announcement): listen for crackle, stutter
+and wrong pitch. Also `cue imminent tones`, `cue confirm`, and `set vol 20` / `set vol 90`. Then remove
+the card (or the clips) and repeat the voice cue: it must play the chime instead of staying silent.
+
+### 5. Items from `TODO(verify)` that matter to the app
+
+`night on` / `night off` should dim and restore the panel (the brightness command `0x51` is
+unconfirmed against the datasheet but is expected to work). The IMU, battery ADC and TCA9554 pins do
+not touch the protocol and stay open.
+
+### Results
+
+| # | Check | Date | Result | Notes (timings, versions) |
+|---|---|---|---|---|
+| 1a | OTA normal | | | |
+| 1b | OTA interrupted | | | |
+| 1c | OTA bad checksum | | | |
+| 1d | OTA oversize | | | |
+| 1e | OTA corrupt image | | | |
+| 1f | OTA rollback | | | |
+| 2 | UiConfig write + persistence | | | |
+| 3 | Factory reset | | | |
+| 4 | Audio by ear (+ no-clips fallback) | | | |
+| 5 | Night dimming | | | |

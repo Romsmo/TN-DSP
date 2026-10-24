@@ -36,7 +36,7 @@ state it receives and emits raw interaction events.
 > The companion **Flutter app is not in this repo**. This repo defines the BLE protocol
 > ([`docs/ble-protocol.md`](docs/ble-protocol.md)), an interactive Python test console that
 > replaces the app for now ([`tools/fake_app.py`](tools/fake_app.py) — see
-> [`docs/testing.md`](docs/testing.md)), and a Dart reference ([`docs/app-reference/`](docs/app-reference/)).
+> [`docs/testing.md`](docs/testing.md)), and a tested Dart protocol package ([`protocol/dart/`](protocol/dart/)) with the BLE contract in [`docs/contract/`](docs/contract/) — start at [`docs/app-integration.md`](docs/app-integration.md).
 
 ## Repository layout
 
@@ -50,7 +50,8 @@ state it receives and emits raw interaction events.
 | `test/` | Host unit tests (CTest, doctest). |
 | `firmware/` | The ESP-IDF application + ESP-specific HAL / BLE transport. |
 | `tools/` | Asset pipelines (fonts, signs, icons, audio), `fake_app.py`. |
-| `docs/` | `plan.md`, `hardware.md`, `architecture.md`, `ui-spec.md`, `ble-protocol.md`, `firmware-bringup.md`, `testing.md`, `audio-assets.md`. |
+| `docs/` | `architecture.md`, `hardware.md`, `ui-spec.md`, `firmware-bringup.md`, `testing.md`, `audio-assets.md`; the BLE contract — `ble-protocol.md`, [`contract/`](docs/contract/), `app-integration.md`, `compatibility.md`; updates — `release-format.md`, `update-authenticity.md`. |
+| `protocol/dart/` | `tn_display_protocol` — pure-Dart implementation of the BLE protocol (no Flutter, no Bluetooth), tested against the golden vectors. |
 
 Read [`docs/architecture.md`](docs/architecture.md) first — the guiding rule is *the display
 renders, it never computes*.

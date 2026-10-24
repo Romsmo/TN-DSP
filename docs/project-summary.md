@@ -20,7 +20,7 @@ the i18n layer · strict layering · **one dark theme, always** (no day/night sw
 
 The companion **Flutter app is out of scope** for this repo. In its place:
 [`tools/fake_app.py`](../tools/fake_app.py) — a PC test console (tkinter GUI + REPL) that speaks the
-full BLE protocol — and a Dart protocol reference in [`docs/app-reference/`](app-reference/).
+full BLE protocol — and a tested Dart protocol package in [`protocol/dart/`](../protocol/dart/) with the contract in [`docs/contract/`](contract/).
 
 ## 2. Hardware
 
@@ -198,6 +198,9 @@ generates and uploads them locally. Without them a voice cue degrades to the eve
 - Finalise the BLE UUID base (still provisional; defined once in `ble_uuids.h`).
 - Repo naming and visibility decision (target repo `Romsmo/TN-DSP`). (`LICENSE` is MIT, © R. Smolenski.)
 - Real voice recordings (or a decision to ship none) — the TTS placeholders are not published.
+- **Security level of the BLE link** — today nothing requires pairing/encryption, so OTA and asset upload are open to any central in range (`ble-protocol.md`, *Security level*; options in `update-authenticity.md`).
+- **Name and third-party references before the repo goes public** — the product name embeds a third-party brand; `docs/plan.md` mentions a licensing discussion with named parties; `BSP_PAIR_URL` / the pairing QR point at a third-party domain.
+- Contract proposals awaiting a decision: UUID base, Melden lock (`docs/contract/`).
 
 **Verify on hardware**
 - OTA cycle; UiConfig write round-trip; audible quality; swipe tear.
@@ -240,3 +243,8 @@ python tools/gen_voice.py --upload            # (re)generate + upload voice clip
 | [`testing.md`](testing.md) | BLE test-console walkthrough and the on-device checklist |
 | [`m9-completion-plan.md`](m9-completion-plan.md) | the post-plan completion milestones M9-A…E |
 | [`building.md`](building.md) | host toolchain notes |
+| [`app-integration.md`](app-integration.md) / [`.de`](app-integration.de.md) | handover to the app side: duties, capability bits, limitations, open decisions |
+| [`contract/`](contract/README.md) | golden vectors, sign rules, responsibilities, UUID + report-lock proposals, manifest schema |
+| [`release-format.md`](release-format.md), [`compatibility.md`](compatibility.md) | update manifest, version rules, firmware ↔ app table |
+| [`update-authenticity.md`](update-authenticity.md) | signing / secure-boot options with irreversibility notes |
+| [`legal-notice-draft.md`](legal-notice-draft.md) | draft legal notice for review |

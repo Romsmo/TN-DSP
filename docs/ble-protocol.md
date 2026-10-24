@@ -5,10 +5,11 @@ payload is a map with **integer keys**; **key 0 is the protocol version** (`1`).
 **ignored, never rejected** — that is how the protocol stays forward-compatible.
 
 Reference implementations: `core/codec/protocol.cpp` (device), `tools/fake_app.py` (Python app
-stand-in), `docs/app-reference/blitzerdsp_protocol.dart` (Flutter sketch).
+stand-in), `protocol/dart/` (tested pure-Dart package).
 
-> **UUIDs are PROVISIONAL** — base `079aXXXX-d673-469c-98a0-12c0c5eb43b3`, finalized at M8.
-> One place: `firmware/components/transport_ble/ble_uuids.h`.
+> **UUIDs are PROVISIONAL** — base `079aXXXX-d673-469c-98a0-12c0c5eb43b3`; a proposal for the
+> final base is in [`contract/uuid-proposal.md`](contract/uuid-proposal.md). One place on the device:
+> `firmware/components/transport_ble/ble_uuids.h` (and `uuidBase*` in the Dart package).
 
 ## Service & characteristics
 
@@ -27,6 +28,83 @@ stand-in), `docs/app-reference/blitzerdsp_protocol.dart` (Flutter sketch).
 Payloads fit one ATT packet (`kMaxPayload = 244`, targeting a 247-byte MTU). A typical State
 packet is 25–50 bytes.
 
+## Contract status
+
+| | |
+|---|---|
+| Protocol version | **1** (key 0 of every CBOR map) |
+| Contract revision | **1.0.0-draft** — becomes `protocol-v1.0.0` once the open items below are decided |
+| Frozen | characteristic slots, every CBOR key number and type, flag bits, event tags, `HazardType` values, capability bits, OTA/Asset opcodes, `UiConfig` bit numbers — verified by the golden vectors in [`docs/contract/vectors/`](contract/vectors/) |
+| **Not frozen yet** | (1) the UUID base — see [`contract/uuid-proposal.md`](contract/uuid-proposal.md); (2) the security level — see *Security level* below; (3) an optional additive "report lock" flag — see [`contract/melden-lock-proposal.md`](contract/melden-lock-proposal.md) |
+
+Machine-readable companions (generated from the firmware / reference code, checked in CI):
+`docs/contract/vectors/*.json` (golden vectors, categories, constants),
+`docs/contract/sign-rules.json` (sign placement and replacement), and the tested Dart package in
+[`protocol/dart/`](../protocol/dart/). Who does what: [`contract/responsibilities.md`](contract/responsibilities.md).
+
+## Security level (as built — read this before relying on OTA)
+
+- **No characteristic requires an encrypted, bonded or authenticated link.** The device accepts one
+  connection at a time from *any* BLE central in range, and that central can read and write every
+  characteristic — including **OTA (`0007`)** and **Asset (`0008`)** — without pairing.
+- LE Secure Connections and bond persistence are compiled in. Bonds are stored in NVS (up to 3)
+  *if the central starts pairing* ("Just Works": encryption without passkey, so no protection
+  against an active man-in-the-middle). The firmware itself neither requests pairing nor restricts
+  advertising to bonded centrals, and shows no passkey.
+- Therefore the SHA-256 in the OTA `begin` frame protects against **transfer errors only**: whoever
+  can connect can push an image together with its own matching hash. Authenticity options and a
+  recommendation: [`update-authenticity.md`](update-authenticity.md).
+- Proposed, **not implemented** (maintainer decision): require an encrypted (bonded) link for all
+  writes; use a passkey shown on the AMOLED so pairing is authenticated; verify a signature on OTA
+  images. Treat the device as *trusted environment only* until then.
+
+## Delivery semantics
+
+| Topic | Rule |
+|---|---|
+| State write type | write **without** response: the app gets no error if the device rejects a packet |
+| Latest wins | the device keeps **one** pending State; if a newer packet arrives before the display loop polled (≈ every 20–60 ms), the older one is replaced and never rendered |
+| Send rate | on every relevant change; steady state **≤ 2 packets/s**, bursts up to ~10/s. There is no throttle in the firmware — excess packets are simply superseded |
+| Keep-alive | send a State at least every **5 s** even if nothing changed (a new `stateSeq`). After **8 s** without a State the device shows the "no app" badge and renders from its cache (build option `CONFIG_BDSP_STATE_WATCHDOG_S`, default 8) |
+| Edge-triggered fields | `audioCue` and `confirmPromptActive` can be lost with a superseded packet. Keep the **same** `audioCue` (same `seq`) in the following State packets for ≥ 1 s — the device plays only when `seq` changes. Keep `confirmPromptActive` set for the whole timeout; the device counts down by itself |
+| Heartbeat | the device notifies `Heartbeat{uptimeS}` every 10 s on `0002` while the app is subscribed |
+| Settings / UiConfig / Time | write **with** response; a payload that does not decode is answered with ATT error `0x04` (Invalid PDU) |
+
+### `stateSeq`
+
+- `uint32`, **per connection**. The device drops a State with `0 < seq ≤ last accepted` **silently**.
+- Start at **1** on every new connection (the device clears its high-water mark on connect *and*
+  on disconnect, so an app restart or a reconnect never freezes the display). Increase by at least 1
+  per packet; never reuse a value. Wrap-around is not expected within a session (4.29 · 10⁹ packets);
+  if it ever happens, reconnect.
+- `seq = 0` means "unsequenced": always accepted, and it resets the mark. Do not use it in production.
+- A repeated State with unchanged content and a higher `seq` is the keep-alive.
+
+### Sizes and MTU
+
+- CBOR payloads are ≤ **244 bytes** (`maxPayloadBytes`; the device buffers 244 B, longer writes are
+  truncated and fail to decode). A full State with 4+4 signs, a hazard and a cue is ≈ 80 B.
+- The device asks for ATT MTU **256**. The app must use the **negotiated** MTU: a write holds at most
+  `MTU − 3` bytes, and iOS may cap write-without-response lower than the device allows.
+- OTA / Asset frames: **≤ 244 bytes including the opcode**. Use
+  `chunk = min(negotiated MTU − 3, 244) − 1` data bytes per frame (the PC tool uses 230).
+- Pacing (tested with `tools/fake_app.py`): after an OTA `begin`, **wait** for the device's first
+  progress notification (0 bytes — it has erased the target slot, which takes seconds), then pause
+  ~40 ms after every 10 frames. Assets: same pacing, wait for the `ok` notification after `end`,
+  250 ms between files (the SD card shares a bus with the display).
+
+### Defaults for missing fields (decoder behaviour, pinned by the vectors)
+
+| Message | Missing key → |
+|---|---|
+| State | flags 0 · no speed sign · `speedLimitUnit` km/h · `confirmPromptTimeoutS` **15** · `stateSeq` 0 · no signs · no cue |
+| AudioCue | `seq` 0 (never plays) · mode tones · event info · unit km/h |
+| Settings | sound off · tones · volume **70** · theme 0 · km/h · `filterBits` **0xFFFF** · night 20–06 · cache 10 min |
+| UiConfig | all features on |
+| Time | epoch 0 · offset 0 |
+
+Unknown keys of any supported CBOR type are skipped; a payload that is not a CBOR map is rejected.
+
 ## State  (`0001`, app → device)
 
 | Key | Type | Field | Notes |
@@ -42,8 +120,8 @@ packet is 25–50 bytes.
 | 8 | uint | stateSeq | monotonic; the device drops `seq ≤ last` |
 | 9 | uint | epochS | app wall-clock, for cache aging |
 | 10 | uint | networkPeers | raw count (the "480K" abbreviation is the device's job) |
-| 11 | array&lt;uint&gt; | leftSigns | VzNr codes (`major*100+minor`), prohibitions by convention, ≤ 4 |
-| 12 | array&lt;uint&gt; | rightSigns | VzNr codes, danger signs by convention, ≤ 4 |
+| 11 | array&lt;uint&gt; | leftSigns | VzNr codes (`major*100+minor`), prohibitions by convention, ≤ 4 on the wire; the display shows the **newest 3** (last entries). Which sign goes on which side and which signs replace each other is the **app's** job: [`contract/sign-rules.json`](contract/sign-rules.json) |
+| 12 | array&lt;uint&gt; | rightSigns | VzNr codes, danger signs by convention, ≤ 4 (display: newest 3). An unknown code renders an empty slot |
 | 13 | map | audioCue | see below; the device plays it on a new `seq` |
 
 **audioCue sub-map:** `0` seq · `1` mode (0 tones / 1 voice) · `2` event (0 approach · 1 imminent ·
@@ -65,7 +143,7 @@ Wildwechsel right.)
 | Key | Type | Field |
 |---|---|---|
 | 0 | uint | protocol version |
-| 1 | uint | tag: 0 ReportPressed · 1 ReportSubmitted · 2 ConfirmResponse · 3 SettingsPhoneConnect · 4 SettingsSoundToggle · 5 SettingsThemeChanged · 6 SettingsUnitChanged · 7 SettingsFilterChanged · 8 Heartbeat |
+| 1 | uint | tag: 0 ReportPressed · 1 ReportSubmitted · 2 ConfirmResponse · 3 SettingsPhoneConnect (legacy: no longer sent by the UI) · 4 SettingsSoundToggle · 5 SettingsThemeChanged · 6 SettingsUnitChanged · 7 SettingsFilterChanged · 8 Heartbeat |
 | 2 | uint | hazardType (ReportSubmitted) |
 | 3 | uint | speedKmh (ReportSubmitted, optional — km/h, rounded to 5) |
 | 4 | bool | seen (ConfirmResponse) |
@@ -112,7 +190,9 @@ client) reads back the current set. Changing it takes effect on the next render.
 ## DeviceInfo  (`0003`, read)
 
 `0` version · `1` fwVersion (text) · `2` caps (bitmask: bit0 hasAudio · bit1 hasImu · bit2 hasRtc ·
-bit3 hasSD · bit4 speedcamCompiled) · `3` width · `4` height.
+bit3 hasSD · bit4 speedcamBuild · bit5 hasOta) · `3` width · `4` height. `hasSD` is set only when a
+card is mounted at boot; `speedcamBuild` is clear in firmware built without any speed-camera code
+(then hazard ids 0–4 do not exist on that device).
 
 ## Time  (`0005`, write)
 
@@ -136,11 +216,42 @@ bit3 hasSD · bit4 speedcamCompiled) · `3` width · `4` height.
         re-advertises; auto-reconnects to a bonded central.
 ```
 
-Bonding is used (LE Secure Connections, "just works"). Bonds are persisted to NVS
-(`CONFIG_BT_NIMBLE_NVS_PERSIST`) so a bonded central re-encrypts silently after a device reboot
-(ignition cycle). The "Handy verbinden" screen is only shown before the first successful
-connection or on explicit request. Pairing is the central's choice — an unbonded connection is
-still accepted.
+Bonding: see *Security level* above — the firmware does not require or request it today. If a
+central bonds by itself, the bond is persisted in NVS (`CONFIG_BT_NIMBLE_NVS_PERSIST`, up to 3).
+
+## Connect sequence and failure behaviour
+
+Order the app follows after every (re)connect:
+
+1. **Scan** for the service UUID (it is in the advertising packet; the device *name* is only in the scan
+   response and is not an identity). One connection at a time; a second central cannot connect.
+2. **Connect**, let the OS negotiate the MTU (device asks for 256), discover the service.
+3. **Read DeviceInfo `0003`**: check `protoVersion` (key 0) equals the app's supported major version,
+   read `fwVersion` and the `caps` bits (what the app does when a bit is missing is in
+   [`contract/responsibilities.md`](contract/responsibilities.md)).
+4. **Subscribe** to notifications of Event `0002`, Settings `0004` and UiConfig `0006`
+   (OTA `0007` / Asset `0008` only while a transfer runs).
+5. **Write Time `0005`** (epoch seconds + UTC offset in minutes).
+6. **Sync Settings `0004`**: read it, then write the app's authoritative set. A Settings write
+   replaces **all** fields — a key you leave out reverts to its default (table above), so always send
+   the complete map.
+7. **Read UiConfig `0006`**; write it only if the app wants to change a feature switch.
+8. **Stream State `0001`**, `stateSeq` starting at **1**.
+
+| Situation | Device | App |
+|---|---|---|
+| App goes away / link drops | shows the "no app" badge after the watchdog, renders the last state from its cache, re-advertises, accepts the next central | reconnect and run the sequence again; **restart `stateSeq` at 1** |
+| App is silent for > 8 s | same badge + cache, link stays up | send keep-alive States (≥ every 5 s) |
+| Link drops during OTA | aborts, discards the partial image, keeps running the old firmware | restart from `begin` |
+| Link drops during an Asset upload | closes the partial file — it **stays on the card, incomplete** | re-send the file (the next `begin` overwrites it) |
+| OTA accepted (`0x11`) | reboots ~0.6 s later; the link drops by design; the new image must run ~3 s to confirm itself, otherwise the next reset **rolls back** | reconnect after ~5–10 s, read DeviceInfo; if `fwVersion` did not change, report "update failed" |
+| "Zurücksetzen" pressed on the device | erases settings, UiConfig, cache **and bonds**, reboots to the pairing screen | re-run the sequence; the phone's own bond record is not removed by the device (iOS: the user must *Forget This Device* in Settings → Bluetooth; an app cannot do it) |
+
+Pairing and bonding: see *Security level* above. Today nothing requires encryption, so a stale bond
+after a factory reset is harmless; if an encrypted link is made mandatory later, a stale bond becomes
+visible and the app must guide the user through forgetting the device. iOS pairs automatically when a
+protected characteristic is accessed (an app cannot start pairing itself); on Android the app can call
+`createBond`.
 
 ## Version compatibility
 
