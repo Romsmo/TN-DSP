@@ -1,7 +1,7 @@
 # Release format (the interface to the app)
 
-**Status: specification and draft. No release, tag or upload has been made — each needs the
-maintainer's explicit yes (see "Publishing").**
+**Status: specification; the first release `fw-v0.1.0` was published on 2026-10-24 (in the private
+repository) with the files below. Later releases follow the same recipe.**
 
 A release is what the phone app looks for when it checks for a firmware update. Everything the app
 needs is in **`manifest.json`**; the rest are the files it points to.
@@ -15,10 +15,10 @@ needs is in **`manifest.json`**; the rest are the files it points to.
 | `manifest.json` | machine-readable description, versioned, validated by [`contract/manifest.schema.json`](contract/manifest.schema.json); example: [`contract/manifest.example.json`](contract/manifest.example.json) |
 | `manifest.json.sig` | detached signature of the manifest — **planned** (option G in [`update-authenticity.md`](update-authenticity.md)); not produced yet |
 | `audio-pack-<version>.zip` (+ `.sha256`) | optional: the voice clips, if the maintainer decides to ship any (see below) |
-| `THIRD_PARTY.md` + `licenses/` | notices that must accompany the binary |
+| `tn-display-<version>-licenses.zip` + `THIRD_PARTY.md` | license texts that must accompany the binary (`tools/make_license_bundle.py`) |
 
-The `tn-display` stem is a placeholder until the project name is decided; the CI job currently
-produces the image as `blitzerdsp.bin`.
+The files are produced by `python tools/make_release.py` from the CI-built image; nothing is signed yet
+(`manifest.json.sig` is planned, see `update-authenticity.md`).
 
 ## `manifest.json`
 
@@ -48,8 +48,8 @@ exists) — see the authenticity note.
   protocol, and the protocol only bumps its *major* on a breaking change.
 - [`compatibility.md`](compatibility.md) lists which firmware speaks which protocol and which app
   protocol range can drive it.
-- The release tag for a firmware image is `fw-vX.Y.Z`; for the contract `protocol-vX.Y.Z`
-  (proposed names, nothing is tagged yet).
+- The release tag for a firmware image is `fw-vX.Y.Z` (a GitHub Release); the contract is tagged
+  `protocol-vX.Y.Z` (a plain tag — no Release object, so "latest release" always means firmware).
 
 ## Audio pack
 
@@ -70,7 +70,10 @@ characteristic (`0008`) after an update, and `categories.json` lists the exact f
 
 ## Publishing
 
-Creating a tag, a GitHub Release or uploading assets happens **only on the maintainer's explicit
-yes, per release**, and only after the on-board update test (D4 in `docs/testing.md`) has passed.
-The CI job already builds the image and a checksum as a workflow artifact; turning that into a
-release (`gh release create …`) is a manual, approved step.
+Recipe used for `fw-v0.1.0`: bump the version in `core/model/version.cpp` **and**
+`firmware/main/board_config.h` (`tools/check_version_sync.py` enforces equality) → push → let CI build
+the image → download the `firmware-<sha>` artifact → `python tools/make_release.py --image … --commit <sha>`
+→ tag the same commit `fw-vX.Y.Z` → `gh release create` with the files from `dist/release/` and
+`RELEASE_NOTES.md`. The release notes carry the verification status, so nothing is implied that was
+not run. Making the repository public, or removing the "private" restriction on the release, is a
+separate decision.

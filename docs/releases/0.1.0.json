@@ -1,0 +1,30 @@
+{
+  "changes": {
+    "de": [
+      "Erstes Release: komplette Anzeige (Tempo, Gefahren-Overlay, Gesehen?-Abfrage, Melden-Krone, Einstellungen, Kopplung)",
+      "BLE-Schnittstelle in Protokollversion 1 (acht Characteristics inkl. OTA-Update und SD-Dateiupload)",
+      "Straßenbild statt grüner Pfeile, Unfall-Symbol, Töne und Sprachansagen mit einstellbarer Lautstärke"
+    ],
+    "en": [
+      "First release: complete display (speed, hazard overlay, confirm prompt, report crown, settings, pairing)",
+      "BLE interface at protocol version 1 (eight characteristics incl. OTA update and SD file upload)",
+      "Road picture instead of green chevrons, accident glyph, chimes and voice announcements with adjustable volume"
+    ]
+  },
+  "verification": {
+    "verified": [
+      "Display, touch, all screens and overlays; BLE state/settings/time/reconnect with the PC test console",
+      "microSD mount and BLE file upload; audio playback in real time; volume 20/90/55 over BLE",
+      "Host tests (73 cases), contract vectors, Dart package (85 tests), firmware build in CI"
+    ],
+    "notVerifiedOnTheBoard": [
+      "The OTA transfer end to end, its failure cases and the boot rollback (test plan: docs/testing.md, Board verification)",
+      "UiConfig write + persistence after a reboot, the factory-reset flow, an audible check for crackle"
+    ]
+  },
+  "knownLimitations": [
+    "BLE link is open: no pairing or encryption is required, so any central in range can use every characteristic, including OTA and file upload (accepted for protocol v1).",
+    "No voice clips are included; without them voice announcements play the event chime.",
+    "Speed-camera categories can be removed at build time (CONFIG_BDSP_FEATURE_SPEEDCAM=n); see the legal notice in the README."
+  ]
+}

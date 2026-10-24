@@ -25,9 +25,9 @@ apps keep working with newer firmware inside one protocol version.
 
 | Firmware | Protocol | Smallest app protocol | Notable | Source |
 |---|---|---|---|---|
-| `0.1.0-dev` (the only line today; **no release has been published**) | 1 | 1 | all eight characteristics, OTA, asset upload, volume (Settings key 9), UiConfig | `main` |
+| `0.1.0` (tag `fw-v0.1.0`, first release) | 1 | 1 | all eight characteristics, OTA, asset upload, volume (Settings key 9), UiConfig; OTA transfer not yet verified on the board | GitHub Release `fw-v0.1.0` |
 
-Rows are added per published release; the manifest of each release carries the same numbers
+Rows are added per published release (the first one, `0.1.0`, is in a **private** repository for now); the manifest of each release carries the same numbers
 (`firmware.version`, `protocol.version`, `protocol.minAppProtocol`).
 
 ## Additions inside protocol 1 (all additive, in the order they landed)
@@ -38,4 +38,3 @@ Rows are added per published release; the manifest of each release carries the s
 | OTA `0007`, Asset `0008`, `hasOta` cap bit | absent | not used |
 | Settings key 9 `soundVolume` | ignores the key | omitting it leaves the device's stored volume |
 | `DeviceInfo` caps bit 5 | not set | ignored |
-| (proposed) `flags1` bit 6 `reportLocked` | ignores the bit | never sets it |
