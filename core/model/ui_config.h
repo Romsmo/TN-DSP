@@ -20,11 +20,11 @@ struct UiConfig {
 
     // Home elements.
     bool signColumns     = true;   // the left/right StVO sign columns
-    bool directionArrows = true;   // the green "free road" chevrons
+    bool directionArrows = true;   // the "free road" picture
     bool peerCount       = true;   // the "480K" under the globe
     bool gearButton      = true;   // the Settings gear (independent of settingsPage)
     bool connectQr       = true;   // the QR on "Handy verbinden"
-    bool bootAnimation   = true;   // the chevron sweep at power-on
+    bool bootAnimation   = true;   // the road sweep at power-on
 
     // ── wire form: bit n set == feature ON (so 0xFFFF… == all on) ───────────
     enum Bit : uint32_t {

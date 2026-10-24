@@ -2,7 +2,7 @@
 
 #include "ui/assets/icons/icons.h"
 #include "ui/theme/tokens.h"
-#include "ui/widgets/chevrons.h"
+#include "ui/widgets/road_view.h"
 #include "ui/widgets/plus_button.h"
 #include "ui/widgets/sign_column.h"
 #include "ui/widgets/speed_sign.h"
@@ -12,6 +12,7 @@
 namespace ui {
 
 namespace {
+constexpr int kRoadW = 112;    // "free road" picture, width at its bottom edge
 constexpr int kSideSign = 64;   // left/right context signs, same size both sides
 }
 
@@ -21,7 +22,7 @@ HomeScreen::HomeScreen(lv_obj_t* parent) {
     set_bg(root_, tok::kBg);
 
     badge_ = std::make_unique<StatusBadge>(root_);
-    chevrons_ = std::make_unique<Chevrons>(root_, 116, 60, 3);
+    road_ = std::make_unique<RoadView>(root_, kRoadW);
     sign_ = std::make_unique<SpeedSign>(root_, 196);
     left_ = std::make_unique<SignColumn>(root_, SignColumn::Side::Left, kSideSign, 3);
     right_ = std::make_unique<SignColumn>(root_, SignColumn::Side::Right, kSideSign, 3);
@@ -52,7 +53,7 @@ HomeScreen::HomeScreen(lv_obj_t* parent) {
     lv_obj_center(gimg);
 
     place_center(badge_->root(), 112, 92);
-    place_center(chevrons_->root(), 233, 168);
+    place_center(road_->root(), 233, 168);
     place_center(sign_->root(), 233, 310);
     plus_->set_center(435, 233);
     place_center(gear_, 233, 438);
@@ -83,7 +84,7 @@ void HomeScreen::set_state(const core::DisplayState& s) {
     badge_->set(s.internetConnected, ui_.peerCount ? s.networkPeers : 0);
 
     const bool hazard = s.hazardActive;
-    chevrons_->set_visible(s.directionArrows && !hazard && ui_.directionArrows);
+    road_->set_visible(s.directionArrows && !hazard && ui_.directionArrows);
 
     std::optional<int> shown = s.speedLimit;
     if (hazard && s.hazardSpeedLimit) shown = s.hazardSpeedLimit;
@@ -101,7 +102,7 @@ void HomeScreen::set_state(const core::DisplayState& s) {
     right_->set(s.rightSigns);
 
     place_center(sign_->root(), 233, 310);
-    place_center(chevrons_->root(), 233, shown ? 168 : 240);
+    place_center(road_->root(), 233, shown ? 168 : 240);
     // Columns flank the sign, vertically centred on it and pulled well inside the
     // round bezel.
     place_center(left_->root(), 91, 300);

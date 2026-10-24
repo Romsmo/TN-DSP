@@ -675,7 +675,7 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
     ttk.Label(r, text="Tempo").pack(side="left")
     ttk.Spinbox(r, from_=0, to=200, increment=5, width=5, textvariable=v["speed"]).pack(side="left", padx=4)
     ttk.Checkbutton(r, text="mph", variable=v["mph"]).pack(side="left")
-    ttk.Checkbutton(b, text="Richtungspfeile", variable=v["arrows"]).pack(anchor="w")
+    ttk.Checkbutton(b, text="Freie Fahrt (Straßenbild)", variable=v["arrows"]).pack(anchor="w")
     ttk.Checkbutton(b, text="Internet verbunden", variable=v["online"]).pack(anchor="w")
     ttk.Checkbutton(b, text="Nachtmodus (dimmt Panel)", variable=v["night"]).pack(anchor="w")
     r = ttk.Frame(b); r.pack(fill="x")
@@ -934,7 +934,7 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
 HELP = """\
 commands (state is remembered; every change re-sends the DisplayState):
   speed <n> [mph]            speed-limit sign value (+ 'mph' marks the sign unit)
-  arrows on|off              direction arrows
+  arrows on|off              free-road picture (direction arrows flag)
   ban on|off                 overtaking-ban sign (left column)
   signs L|R <name|code> ...   set a sign column  (names: %s)
   hazard <name|0-11> [dist] [splimit]   raise a hazard   |   hazard off

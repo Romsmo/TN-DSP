@@ -22,7 +22,7 @@ struct DisplayState {
     // Speed-limit sign (a SIGN value, shown unchanged in speedLimitUnit)
     std::optional<int> speedLimit;       // absent => no sign
     SpeedUnit          speedLimitUnit = SpeedUnit::Kmh;
-    bool               directionArrows = false;   // green "clear" chevrons
+    bool               directionArrows = false;   // the "free road" picture
 
     // Context signs the app wants painted beside the speed sign, as VzNr codes.
     // Convention: left = prohibitions (e.g. 27600 overtaking ban), right = danger

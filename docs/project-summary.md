@@ -90,9 +90,9 @@ is synchronous.
 
 | Screen / layer | Behaviour |
 |---|---|
-| **Boot** | chevron sweep animation (skippable via UiConfig) |
-| **Home** | speed-limit sign (drawn, 3-digit fits the ring), direction chevrons, globe + peer count (abbreviated "480K"), "+" button, gear. **Left column = prohibitions, right = danger signs; newest 3 per column** (oldest drops off) |
-| **Hazard overlay** | per-category blinking icon (StVO sign where one fits, else a glyph — camera, radar, caravan, wrench, **car-crash**), distance bar, hazard speed limit replaces the sign; chevrons/columns hide |
+| **Boot** | free-road picture sweeps up the screen once (skippable via UiConfig) |
+| **Home** | speed-limit sign (drawn, 3-digit fits the ring), free-road picture (replaced the green chevrons), globe + peer count (abbreviated "480K"), "+" button, gear. **Left column = prohibitions, right = danger signs; newest 3 per column** (oldest drops off) |
+| **Hazard overlay** | per-category blinking icon (StVO sign where one fits, else a glyph — camera, radar, caravan, wrench, **car-crash**), distance bar, hazard speed limit replaces the sign; road picture/columns hide |
 | **Confirm ("Gesehen?")** | scrim, Ja / Nein, countdown ring; navigation locked; silent timeout |
 | **Melden** | rotary crown: 11 categories ride the rim, grab anywhere to spin with momentum, tap the hub to send; back via down-fling or rightward swipe |
 | **Settings** | 2×2: Ton · Einheiten · **Zurücksetzen** (full factory reset: settings + cache + BLE bond, reboot to Connect) · **Updates** (info panel); footer shows version/proto/link |

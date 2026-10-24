@@ -1,5 +1,5 @@
-// ui/screens/boot_screen.h — startup splash: a big stack of "clear ahead"
-// chevrons sweeps up from below the screen and off the top, once.
+// ui/screens/boot_screen.h — startup splash: the oversized free-road picture
+// sweeps up from below the screen and off the top, once.
 #pragma once
 
 #include <functional>
@@ -9,7 +9,7 @@
 
 namespace ui {
 
-class Chevrons;
+class RoadView;
 
 class BootScreen {
 public:
@@ -22,7 +22,7 @@ public:
 
 private:
     lv_obj_t*                 root_ = nullptr;
-    std::unique_ptr<Chevrons> chevrons_;
+    std::unique_ptr<RoadView> road_;
     std::function<void()>     done_;
 };
 

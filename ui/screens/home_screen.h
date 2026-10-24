@@ -1,4 +1,4 @@
-// ui/screens/home_screen.h — the base screen: status badge, chevrons, speed sign,
+// ui/screens/home_screen.h — the base screen: status badge, free-road picture, speed sign,
 // left/right context-sign columns, "+" button, settings gear. Layout: docs/ui-spec.md 5.1.
 #pragma once
 
@@ -12,7 +12,7 @@
 namespace ui {
 
 class StatusBadge;
-class Chevrons;
+class RoadView;
 class SpeedSign;
 class SignColumn;
 class PlusButton;
@@ -36,7 +36,7 @@ private:
     lv_obj_t* root_ = nullptr;
 
     std::unique_ptr<StatusBadge> badge_;
-    std::unique_ptr<Chevrons>    chevrons_;
+    std::unique_ptr<RoadView>    road_;
     std::unique_ptr<SpeedSign>   sign_;
     std::unique_ptr<SignColumn>  left_;
     std::unique_ptr<SignColumn>  right_;

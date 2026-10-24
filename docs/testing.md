@@ -50,7 +50,7 @@ so the console keeps a running picture. Events (`<< event …`) and Settings not
 
 ```
 speed 30 [mph]                 speed-limit sign value
-arrows on|off                  direction chevrons
+arrows on|off                  free-road picture above the sign
 ban on|off                     overtaking-ban sign (left column)
 signs L|R <name|code> …        set a sign column   (names: ban deer slippery grade kids …)
 hazard mobilecam 250 50        raise a hazard: <name|0-11> [dist_m] [speedLimit]
@@ -81,8 +81,8 @@ printf 'speed 50\nsleep 2\nhazard ice 300\nsleep 6\nreconnect\nhazard accident 2
 |---|---|---|
 | Speed sign | `speed 30`, `speed 80 mph`, `speed 120` | big number, unit as sent; 3 digits still clear the ring |
 | Sign columns | GUI *Verkehrszeichen* ＋ / − (the tool routes each sign L/R by type and replaces same-category ones); REPL `signs L ban` / `signs R deer` | round prohibition signs left, triangular Gefahrzeichen right, centred, not clipped |
-| Direction chevrons | `arrows on` (no hazard) | green chevrons above the sign |
-| Hazard overlay | `hazard fixedcam 500` | per-type icon, distance bar, blink; chevrons hidden |
+| Free-road picture | `arrows on` (no hazard) | grey road with white edge lines + dashed centre line above the sign |
+| Hazard overlay | `hazard fixedcam 500` | per-type icon, distance bar, blink; road picture hidden |
 | Hazard → sign | `hazard mobilecam 300 50` | speed sign switches to the hazard limit (50) |
 | Unknown hazard | `hazard 11 400` | generic “!” icon, no crash |
 | Confirm prompt | `confirm 12` | scrim + Ja/Nein, ring counts down, tileview locked |

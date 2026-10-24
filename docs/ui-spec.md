@@ -16,7 +16,7 @@ regardless of theme.
 **Assets:** traffic signs are the official German StVO SVGs (Wikimedia Commons, public domain),
 rasterised at build time to LVGL image arrays — see `tools/signs/` + `tools/gen_assets.sh`, catalog
 in `ui/assets/signs/`. UI glyphs (globe, gear, arrow, check …) are Lucide icons (ISC), A8, recoloured
-at the call site. The speed-limit sign and the "clear" chevrons stay drawn (dynamic). The "+" plus
+at the call site. The speed-limit sign and the free-road picture stay drawn (dynamic). The "+" plus
 mark is drawn.
 
 ---
@@ -26,14 +26,14 @@ mark is drawn.
 | Element | Centre | Size | Notes |
 |---|---|---|---|
 | Status badge | (112, 92) | globe 30 | globe on top, abbreviated `networkPeers` ("480K", 14 px muted) **stacked underneath** it. |
-| Direction chevrons | (233, 150) *(168 in the sketch; raised to clear the sign)* | block 130 × 100 | 3 stacked chevrons, bright green, only when `directionArrows` and no hazard. |
+| Free-road picture | (233, 168) | 112 × 78 | a straight road in perspective — dark-grey surface, white edge lines, dashed white centre line (`ui/widgets/road_view`, drawn from triangles + rects, not a bitmap). Shown only when `directionArrows` (the wire flag keeps its name) is set and no hazard is active. Replaced the green chevrons. |
 | Speed-limit sign | (233, 310) | Ø 196 | white disc, ~22 px red ring, ~92 px bold digits. Drawn (border + label), not a bitmap. Fades out when `speedLimit` absent. |
 | Left sign column | centred on the speed sign at x ≈ 100 | signs ~48 px | `DisplayState.leftSigns` (VzNr codes), by convention prohibitions (276 = Überholverbot …). Newest 3; if the app sends 4 the oldest falls off the top. The box shrinks to the count so a single sign sits level with the speed sign, not slid into the round bezel. |
 | Right sign column | centred on the speed sign at x ≈ 366 | signs ~48 px, **same size as left** | `DisplayState.rightSigns`, by convention danger signs (142-10 Wildwechsel, 110-4 Steigung …). Newest 3, same overflow rule as the left column. |
 | "+" button | (435, 233) | Ø 46 | red circle, white plus, hard against the right bezel. Tap → Melden. A ~45 %-opacity "←" swipe hint fades after a few seconds. |
 | Settings gear | (233, 432) | 32 | **tap** → Settings. It is the only way in (Settings is not a swipe tile), so a stray vertical swipe can't land there. |
 
-When `speedLimit` is absent: the sign fades out and the chevrons move to the vertical centre (233).
+When `speedLimit` is absent: the sign fades out and the road moves to the vertical centre (240).
 While a hazard overlay is up, both sign columns hide so the hazard icon / distance bar own the flanks.
 
 ## 5.2 No internet
@@ -58,7 +58,7 @@ navigation still works.
 | Warn icon | left of centre, above the sign (180, 150), ~84 px | the **per-category** visual from `category_visual()` — an StVO sign where one fits (Stau, Glätte, Rotlicht …), else a category glyph (camera, radar, caravan, wrench, car-crash …), recoloured red. **Blinks** 100 % ↔ 35 % at 1 Hz, ease-in-out. Never a one-size-fits-all "!". |
 | Distance bar | vertical, **just right of the icon** (x ≈ 244), above the sign | fills from the bottom as the distance shrinks; "600m" label beside it. The sign columns hide while it is up. |
 | Speed sign | as Home | shows `hazardSpeedLimit` if set, else `speedLimit`; soft red glow ring on change; number crossfades ~180 ms. |
-| Chevrons | — | hidden while the hazard is active. |
+| Free-road picture | — | hidden while the hazard is active. |
 
 Nothing blinks faster than 2 Hz. If the hazard's `hazardType` is disabled in `WarningFilter`, the
 overlay is suppressed entirely.
@@ -97,8 +97,8 @@ A **rotary selector** that uses the round face:
 
 ## 5.0 Boot splash
 
-On startup, an oversized stack of four "clear ahead" chevrons (wider than the screen — it spills
-past the left/right edges) sweeps up from below the display and off the top over ~1.3 s, then the
+On startup, an oversized free-road picture (the same `RoadView` as on Home, 494 px wide — wider
+than the screen, so it spills past the left/right edges) sweeps up from below the display and off the top over ~1.3 s, then the
 Home UI appears. Plays once. Touches are swallowed while it runs.
 
 ## 5.6 Settings — M3 (reworked M9)

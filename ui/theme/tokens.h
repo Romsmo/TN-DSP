@@ -23,7 +23,12 @@ inline constexpr uint32_t kTextFaint    = 0x5A5A5A;
 inline constexpr uint32_t kHairline     = 0x3A3A3A;  // divider lines
 
 inline constexpr uint32_t kWarnRed      = 0xE5352B;  // sign ring, bans, hazard accents
-inline constexpr uint32_t kClearGreen   = 0x27C93F;  // direction chevrons only
+inline constexpr uint32_t kClearGreen   = 0x27C93F;  // "clear" accents (Melden lens, send flash, pairing ok)
+
+// The free-road picture (Home + boot): grey surface, white markings. Deliberately
+// not green/red — it is a picture of a road, not a status colour.
+inline constexpr uint32_t kRoadSurface  = 0x2B2B2B;
+inline constexpr uint32_t kRoadMark     = 0xF5F5F5;
 
 inline constexpr uint32_t kSignFace     = 0xFFFFFF;  // speed-sign disc
 inline constexpr uint32_t kSignDigits   = 0x0A0A0A;

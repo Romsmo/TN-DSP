@@ -1,7 +1,7 @@
 #include "ui/screens/boot_screen.h"
 
 #include "ui/theme/tokens.h"
-#include "ui/widgets/chevrons.h"
+#include "ui/widgets/road_view.h"
 #include "ui/widgets/widget_util.h"
 
 namespace ui {
@@ -17,9 +17,9 @@ BootScreen::BootScreen(lv_obj_t* parent, std::function<void()> on_done)
     set_bg(root_, tok::kBg);
     lv_obj_add_flag(root_, LV_OBJ_FLAG_CLICKABLE);   // swallow touches during boot
 
-    // Oversized on purpose — the chevrons just spill past the left/right edges.
-    chevrons_ = std::make_unique<Chevrons>(root_, 494, 210, 4);
-    lv_obj_t* c = chevrons_->root();
+    // Oversized on purpose — the road just spills past the left/right edges.
+    road_ = std::make_unique<RoadView>(root_, 494);
+    lv_obj_t* c = road_->root();
     lv_obj_update_layout(c);
     const int cw = lv_obj_get_width(c);
     const int chh = lv_obj_get_height(c);

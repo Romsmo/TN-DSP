@@ -100,11 +100,11 @@ config reads all-on and behaves normally).
 | 2 | `hazardOverlay` | hazard packets update the sign but raise no overlay |
 | 3 | `confirmOverlay` | the "Gesehen?" prompt never appears |
 | 4 | `signColumns` | the left/right StVO sign columns are hidden |
-| 5 | `directionArrows` | no green "free road" chevrons |
+| 5 | `directionArrows` | no "free road" picture (the wire flag is still `directionArrows`) |
 | 6 | `peerCount` | no "480K" under the globe |
 | 7 | `gearButton` | the Settings gear is hidden (independent of bit 1) |
 | 8 | `connectQr` | "Handy verbinden" shows no QR |
-| 9 | `bootAnimation` | no chevron sweep at power-on |
+| 9 | `bootAnimation` | no road sweep at power-on |
 
 The device persists the config to NVS and echoes it on notify, so a reconnecting app (or a second
 client) reads back the current set. Changing it takes effect on the next render.
