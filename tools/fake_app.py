@@ -89,76 +89,17 @@ SIGNS = {
     "priority": 30600,     # Vorfahrt
 }
 
-# VzNr -> German label for the vendored sign set (tools/../ui/assets/signs/_index.txt).
-SIGN_LABELS = {
-    "101": "Gefahrstelle", "101-10": "Flugbetrieb", "101-11": "Fußgängerüberweg",
-    "101-12": "Viehtrieb", "101-13": "Amphibienwanderung", "101-14": "Steinschlag",
-    "101-15": "Splitt/Schotter", "101-51": "Schnee/Eis", "101-52": "bewegliche Brücke",
-    "101-53": "Ufer", "101-54": "Stau", "101-55": "Fußgänger",
-    "102": "Kreuzung mit Vorfahrt von rechts", "103-10": "Kurve (rechts)",
-    "105-10": "Doppelkurve (rechts)", "108-4": "Gefälle 4%", "110-4": "Steigung 4%",
-    "112": "unebene Fahrbahn", "114": "Schleudergefahr", "117-10": "Seitenwind",
-    "120": "verengte Fahrbahn", "121-10": "einseitig verengt", "123": "Baustelle",
-    "124": "Stau", "125": "Gegenverkehr", "131": "Lichtzeichenanlage",
-    "133-10": "Fußgänger", "136-10": "Kinder", "138-10": "Radverkehr",
-    "142-10": "Wildwechsel", "151": "Bahnübergang",
-    "250": "Verbot für Fahrzeuge aller Art", "251": "Verbot für Kraftwagen",
-    "253": "Verbot für Kraftfahrzeuge über 3,5 t", "254": "Verbot für Radverkehr",
-    "255": "Verbot für Krafträder", "257-50": "Verbot für Mofas", "259": "Verbot für Fußgänger",
-    "260": "Verbot für Krafträder und Kraftwagen", "261": "Verbot für kennzeichnungspflichtige GfG",
-    "262-5": "tatsächliche Masse 5 t", "263-8": "tatsächliche Achslast 8 t",
-    "264-2": "Breite 2 m", "265-3": "Höhe 3 m", "266-10": "Länge 10 m",
-    "267": "Verbot der Einfahrt", "268": "Verbot für Fahrzeuge mit wassergef. Ladung",
-    "269": "Verbot für Fahrzeuge mit wassergefährdender Ladung", "270": "Umweltzone",
-    "272": "Wendeverbot", "273-70": "Verbot für Fahrzeuge über 70 dB",
-    "276": "Überholverbot", "277": "Überholverbot für Lkw", "280": "Ende Überholverbot",
-    "281": "Ende Überholverbot für Lkw", "282": "Ende sämtlicher Streckenverbote",
-    "283": "Absolutes Haltverbot", "286": "Eingeschränktes Haltverbot",
-}
+# Sign placement + replacement rules live in docs/contract/sign-rules.json and are
+# implemented by tools/sign_rules.py (the reference for the phone app).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from sign_rules import SignRules, vz_code as sign_code, vz_major  # noqa: E402
 
-# Signs that cannot stand together — adding one from a family removes the rest of
-# that family (in either column). The numbered variants of one VzNr (e.g. 101-11 /
-# 101-15, 262-5 / …) are handled separately by their shared major number.
-SIGN_GROUPS = {
-    "gefahrstelle":   {"101", "101-10", "101-11", "101-12", "101-13", "101-14", "101-15",
-                       "101-51", "101-52", "101-53", "101-54", "101-55"},
-    "kurve":          {"103-10", "105-10"},
-    "laengsneigung":  {"108-4", "110-4"},          # Gefälle / Steigung
-    "ueberholverbot": {"276", "277", "280", "281"},  # Verbot + jeweiliges "Ende"
-    "haltverbot":     {"283", "286"},                # absolut / eingeschränkt
-}
-_SIGN_GROUP = {vz: g for g, members in SIGN_GROUPS.items() for vz in members}
-
-# Adding these also removes further signs (beyond their own family).
-SIGN_CANCELS = {
-    "282": ("274", "276", "277"),   # Ende sämtlicher Streckenverbote
-}
-
-
-def sign_code(vznr: str) -> int:
-    major, _, minor = vznr.partition("-")
-    return int(major) * 100 + (int(minor) if minor else 0)
-
-
-def sign_major(code: int) -> int:
-    return code // 100
-
-
-def sign_conflicts(new_vz: str, other_vz: str) -> bool:
-    """True if adding new_vz should evict other_vz."""
-    g = _SIGN_GROUP.get(new_vz)
-    if g and _SIGN_GROUP.get(other_vz) == g:
-        return True
-    if sign_major(sign_code(new_vz)) == sign_major(sign_code(other_vz)):
-        return True
-    return other_vz.split("-")[0] in SIGN_CANCELS.get(new_vz, ())
+SIGN_RULES = SignRules.load()
+SIGN_LABELS = SIGN_RULES.labels
 
 
 def sign_side(vznr: str) -> str:
-    """Which Home column a sign belongs in — matches the firmware layout:
-    round prohibition/restriction signs (VzNr 2xx) go left, triangular
-    Gefahrzeichen (VzNr 1xx) go right."""
-    return "left" if 200 <= sign_major(sign_code(vznr)) < 300 else "right"
+    return SIGN_RULES.side(vznr)
 
 
 # ── DisplayState builder ────────────────────────────────────────────────────
@@ -484,15 +425,36 @@ class Link:
         self.log(f"  ui-config: {describe_ui_config(bytes(data))}")
         self._changed()
 
-    def ota(self, path):
-        img = open(path, "rb").read()
+    def ota(self, path, fault=None):
+        """Push a firmware image. `fault` is for the on-board update tests only:
+          bad-sha   announce a wrong SHA-256            -> device must refuse (error 4), keep old firmware
+          corrupt   flip bytes inside the image, hash the corrupted bytes
+                                                         -> SHA matches, the image check fails (error 5)
+          oversize  announce more bytes than the slot holds
+                                                         -> device must refuse at begin (error 2)
+        Returns True only if the device accepted the image (fault modes return True when the
+        device refused as expected)."""
+        with open(path, "rb") as fh:
+            img = fh.read()
+        if fault == "corrupt":
+            b = bytearray(img)
+            for off in range(len(b) // 2, len(b) // 2 + 64):
+                b[off] ^= 0xFF
+            img = bytes(b)
         sha = hashlib.sha256(img).digest()
-        self._ota_total = len(img)
+        announced = len(img)
+        if fault == "bad-sha":
+            sha = bytes([sha[0] ^ 0xFF]) + sha[1:]
+        if fault == "oversize":
+            announced = 3 * 1024 * 1024 + 4096
+        self._ota_total = announced
         self.ota_progress = 0
         self._ota_done.clear()
         self._ota_began.clear()
-        self.log(f"  ota: {path}  {len(img)} bytes  sha256 {sha.hex()[:16]}…")
-        self._run(self.client.write_gatt_char(OTA_UUID, b"" + struct.pack("<I", len(img)) + sha,
+        self.log(f"  ota: {path}  {announced} bytes  sha256 {sha.hex()[:16]}…"
+                 + (f"   [FAULT TEST: {fault}]" if fault else ""))
+        t0 = time.time()
+        self._run(self.client.write_gatt_char(OTA_UUID, b"\x01" + struct.pack("<I", announced) + sha,
                                               response=False))
         # esp_ota_begin() erases the whole slot inside the BLE host task (seconds);
         # data sent before it returns would be dropped. The device answers "0 bytes"
@@ -501,20 +463,35 @@ class Link:
         if not self._ota_began.wait(timeout=90) or self.ota_progress == -1:
             if self.ota_progress != -1:
                 self.log("  ota: TIMEOUT waiting for the device — aborting")
-                self._run(self.client.write_gatt_char(OTA_UUID, b"", response=False))
+                self._run(self.client.write_gatt_char(OTA_UUID, b"\x04", response=False))
                 self.ota_progress = -1
-            return False
+                return False
+            refused = fault == "oversize"
+            self.log("  ota: device refused at begin" + (" — as expected" if refused else ""))
+            return refused
+        t_erase = time.time() - t0
+        self.log(f"  ota: slot erased after {t_erase:.1f} s, streaming …")
         CHUNK = 230
+        t1 = time.time()
 
         async def _send():
             for i, off in enumerate(range(0, len(img), CHUNK)):
-                await self.client.write_gatt_char(OTA_UUID, b"" + img[off:off + CHUNK],
+                await self.client.write_gatt_char(OTA_UUID, b"\x02" + img[off:off + CHUNK],
                                                   response=False)
                 if i % 10 == 9:
                     await asyncio.sleep(0.04)     # let the device drain to flash (as for assets)
-            await self.client.write_gatt_char(OTA_UUID, b"", response=False)
+            await self.client.write_gatt_char(OTA_UUID, b"\x03", response=False)
         self._run(_send())
+        t_sent = time.time() - t1
         self._ota_done.wait(timeout=180)
+        t_all = time.time() - t0
+        self.log(f"  ota: timing — erase {t_erase:.1f} s, stream {t_sent:.1f} s "
+                 f"({len(img) / 1024 / max(t_sent, 0.001):.1f} KiB/s), total incl. verify {t_all:.1f} s")
+        if fault in ("bad-sha", "corrupt"):
+            refused = self.ota_progress == -1
+            self.log("  ota: device refused the image" + (" — as expected" if refused
+                                                         else " — UNEXPECTED, it accepted it!"))
+            return refused
         return self.ota_progress == 100
 
     # -- asset (SD file) upload --
@@ -718,15 +695,8 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
         if not choice:
             return
         vznr = choice.split(" — ")[0]
-        side = sign_side(vznr)
-        # evict every sign the new one conflicts with, from both columns
-        removed = []
-        for col in signs.values():
-            keep = [s for s in col if not sign_conflicts(vznr, s)]
-            removed += [s for s in col if s not in keep]
-            col[:] = keep
-        if vznr not in signs[side] and len(signs[side]) < 4:
-            signs[side].append(vznr)
+        left, right, removed = SIGN_RULES.add(signs["left"], signs["right"], vznr)
+        signs["left"][:], signs["right"][:] = left, right
         if removed:
             link.log(f"  signs: {vznr} ersetzt {', '.join(removed)}")
         refresh_signs()
@@ -973,7 +943,7 @@ commands (state is remembered; every change re-sends the DisplayState):
   time [tzMinutes]           write the Time characteristic (now)
   info                       read DeviceInfo
   scenario <name>            run a scripted scenario (%s)
-  ota <file.bin>             push a firmware image
+  ota <file.bin> [bad-sha|corrupt|oversize]   push a firmware image (fault modes = update tests)
   upload <dir> [prefix] | upload <file> <remote>   copy files onto the SD card
   reconnect                  drop the link and reconnect (tests seq reset)
   sleep <secs>               pause (useful when piping a command script)
@@ -1068,7 +1038,7 @@ def repl(link: Link):
             elif cmd == "ui":
                 link.set_ui(args[0], args[1] == "on")
             elif cmd == "ota":
-                link.ota(args[0])
+                link.ota(args[0], args[1] if len(args) > 1 else None)
             elif cmd == "upload":
                 p = args[0]
                 (link.upload_tree(p, args[1] if len(args) > 1 else "")
