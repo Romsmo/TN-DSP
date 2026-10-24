@@ -1,7 +1,7 @@
 #include "core/model/version.h"
 
 #ifndef BDSP_FW_VERSION
-#define BDSP_FW_VERSION "0.1.0-dev"
+#define BDSP_FW_VERSION "0.1.0"
 #endif
 
 namespace core {

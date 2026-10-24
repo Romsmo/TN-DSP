@@ -14,7 +14,7 @@ namespace {
 constexpr int kQrSize = 168;
 constexpr int kQrPad = 12;
 // Placeholder until the composition root supplies the real link.
-const char* kInitialPayload = "https://blitzer.de/dsp";
+const char* kInitialPayload = "https://github.com/Romsmo/TN-DSP";   // = BSP_PAIR_URL
 }  // namespace
 
 ConnectScreen::ConnectScreen(lv_obj_t* parent) {

@@ -106,13 +106,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Firmware / protocol identity
 // ─────────────────────────────────────────────────────────────────────────────
-#define BSP_FW_VERSION             "0.1.0-dev"
+#define BSP_FW_VERSION             "0.1.0"   // keep == core/model/version.cpp (tools/check_version_sync.py)
 #define BSP_PROTOCOL_VERSION       1
 
-// The pairing QR on the "Handy verbinden" screen points here — a link that
-// forwards to the companion app in the Play Store / App Store.
-// TODO(verify): replace with the real store / smart link once it exists.
-#define BSP_PAIR_URL               "https://blitzer.de/dsp"
+// The pairing QR on the "Handy verbinden" screen points here: the repository page,
+// whose README explains how to connect the display to the app. (Decision 2026-10-24;
+// swap for a store / smart link when the app is published. ui/screens/connect_screen.cpp
+// carries the same default until set_connect_qr() is called.)
+#define BSP_PAIR_URL               "https://github.com/Romsmo/TN-DSP"
 
 // NVS namespaces
 #define BSP_NVS_NS_SETTINGS        "settings"

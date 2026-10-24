@@ -52,6 +52,8 @@ jobs:
         run: |
           python tools/fake_app.py --dry --scenario approach
           python tools/fake_app.py --dry --scenario confirm
+      - name: firmware version is the same in core/ and board_config.h
+        run: python tools/check_version_sync.py
       - name: sign-rule vectors match the reference implementation
         run: python tools/gen_sign_vectors.py --check
       - name: embedded Dart sign data matches sign-rules.json
