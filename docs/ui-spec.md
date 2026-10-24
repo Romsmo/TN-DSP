@@ -26,7 +26,7 @@ mark is drawn.
 | Element | Centre | Size | Notes |
 |---|---|---|---|
 | Status badge | (112, 92) | globe 30 | globe on top, abbreviated `networkPeers` ("480K", 14 px muted) **stacked underneath** it. |
-| Free-road picture | (233, 168) | 112 × 78 | a straight road in perspective — dark-grey surface, white edge lines, dashed white centre line (`ui/widgets/road_view`, drawn from triangles + rects, not a bitmap). Shown only when `directionArrows` (the wire flag keeps its name) is set and no hazard is active. Replaced the green chevrons. |
+| Free-road picture | (233, 154) | 112 × 78 | a straight road in perspective — dark-grey surface, white edge lines, dashed white centre line (`ui/widgets/road_view`, drawn from triangles + rects, not a bitmap). Shown only when `directionArrows` (the wire flag keeps its name) is set and no hazard is active. Replaced the green chevrons. |
 | Speed-limit sign | (233, 310) | Ø 196 | white disc, ~22 px red ring, ~92 px bold digits. Drawn (border + label), not a bitmap. Fades out when `speedLimit` absent. |
 | Left sign column | centred on the speed sign at x ≈ 100 | signs ~48 px | `DisplayState.leftSigns` (VzNr codes), by convention prohibitions (276 = Überholverbot …). Newest 3; if the app sends 4 the oldest falls off the top. The box shrinks to the count so a single sign sits level with the speed sign, not slid into the round bezel. |
 | Right sign column | centred on the speed sign at x ≈ 366 | signs ~48 px, **same size as left** | `DisplayState.rightSigns`, by convention danger signs (142-10 Wildwechsel, 110-4 Steigung …). Newest 3, same overflow rule as the left column. |

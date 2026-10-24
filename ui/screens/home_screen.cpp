@@ -13,6 +13,7 @@ namespace ui {
 
 namespace {
 constexpr int kRoadW = 112;    // "free road" picture, width at its bottom edge
+constexpr int kRoadY = 154;    // its centre line when a speed sign is shown (was 168)
 constexpr int kSideSign = 64;   // left/right context signs, same size both sides
 }
 
@@ -53,7 +54,7 @@ HomeScreen::HomeScreen(lv_obj_t* parent) {
     lv_obj_center(gimg);
 
     place_center(badge_->root(), 112, 92);
-    place_center(road_->root(), 233, 168);
+    place_center(road_->root(), 233, kRoadY);
     place_center(sign_->root(), 233, 310);
     plus_->set_center(435, 233);
     place_center(gear_, 233, 438);
@@ -102,7 +103,7 @@ void HomeScreen::set_state(const core::DisplayState& s) {
     right_->set(s.rightSigns);
 
     place_center(sign_->root(), 233, 310);
-    place_center(road_->root(), 233, shown ? 168 : 240);
+    place_center(road_->root(), 233, shown ? kRoadY : 240);
     // Columns flank the sign, vertically centred on it and pulled well inside the
     // round bezel.
     place_center(left_->root(), 91, 300);
