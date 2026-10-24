@@ -124,7 +124,10 @@ void start_advertising();
 void ota_notify(uint8_t op, uint32_t arg) {
     if (g_conn == BLE_HS_CONN_HANDLE_NONE || !g_ota_sub) return;
     uint8_t p[5] = {op, uint8_t(arg), uint8_t(arg >> 8), uint8_t(arg >> 16), uint8_t(arg >> 24)};
-    struct os_mbuf* om = ble_hs_mbuf_from_flat(p, (op == OTA_NTF_PROGRESS) ? 5 : 1);
+    // progress carries the received byte count, an error carries its code (1 byte),
+    // ok carries nothing — see docs/ble-protocol.md.
+    const uint16_t len = (op == OTA_NTF_PROGRESS) ? 5 : (op == OTA_NTF_ERR ? 2 : 1);
+    struct os_mbuf* om = ble_hs_mbuf_from_flat(p, len);
     if (om) ble_gatts_notify_custom(g_conn, g_ota_h, om);
 }
 

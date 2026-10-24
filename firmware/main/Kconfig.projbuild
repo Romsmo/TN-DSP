@@ -27,7 +27,8 @@ menu "BlitzerdeDsp"
         help
             When disabled, the speed-camera HazardType range, its icons and the
             "Blitzer" column of the report screen are removed from the build, and
-            incoming speed-camera hazards are suppressed. For §23 (1b) StVO builds.
+            incoming speed-camera hazards are suppressed. For jurisdictions where
+            warning about traffic enforcement is not allowed (see the README legal notice).
 
     config BDSP_DEMO_LONGPRESS_MS
         int "BOOT long-press (ms) to toggle demo mode"
@@ -36,5 +37,14 @@ menu "BlitzerdeDsp"
     config BDSP_STATE_WATCHDOG_S
         int "Seconds without a DisplayState before the link is treated as stale"
         default 8
+
+    config BDSP_TEST_CRASH_ON_BOOT
+        bool "TEST ONLY: abort() two seconds after boot (rollback test image)"
+        default n
+        help
+            Builds an image that crashes before it can confirm itself (the app confirms an
+            OTA image after ~3 s). Push it over BLE to prove the bootloader rolls back to
+            the previous firmware. NEVER enable this in a release build.
+            Build: see docs/testing.md, "Board verification".
 
 endmenu

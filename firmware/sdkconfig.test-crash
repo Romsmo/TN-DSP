@@ -1,0 +1,3 @@
+# Test-only image: crashes 2 s after boot so the OTA rollback can be proven on the board.
+# Never part of a release build. See docs/testing.md.
+CONFIG_BDSP_TEST_CRASH_ON_BOOT=y

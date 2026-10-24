@@ -50,3 +50,6 @@ docs/screenshots/*_round.png
 
 # Voice clips are generated locally (tools/gen_voice.py) and not distributed
 tools/audio/voice/
+
+# Extra firmware build trees (rollback test image etc.)
+firmware/build-*/

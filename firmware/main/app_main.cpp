@@ -296,6 +296,12 @@ extern "C" void app_main(void) {
         ++ticks;
         // Confirm this image once it has clearly booted, so the rollback watchdog
         // (CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE) doesn't revert a good OTA.
+#if defined(CONFIG_BDSP_TEST_CRASH_ON_BOOT)
+        if (ticks == 100) {   // before the confirm below: exercises the rollback path
+            ESP_LOGE(TAG, "TEST BUILD: crashing on purpose (CONFIG_BDSP_TEST_CRASH_ON_BOOT)");
+            abort();
+        }
+#endif
         if (ticks == 150) {
             if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK)
                 ESP_LOGI(TAG, "OTA image confirmed valid");

@@ -1,7 +1,7 @@
 // ble_uuids.h — the ONE place BLE UUIDs are defined.
 //
-// PROVISIONAL. Base generated randomly for development; finalized at milestone M8
-// (may change if Eifrig Media supplies a vendor base during licensing talks).
+// PROVISIONAL until the contract is frozen (docs/contract/uuid-proposal.md). The base
+// was generated randomly; it contains no product or brand name.
 //
 // Base:  079aXXXX-d673-469c-98a0-12c0c5eb43b3   (XXXX = 16-bit slot)
 #pragma once
