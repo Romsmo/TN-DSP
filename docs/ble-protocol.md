@@ -7,9 +7,9 @@ payload is a map with **integer keys**; **key 0 is the protocol version** (`1`).
 Reference implementations: `core/codec/protocol.cpp` (device), `tools/fake_app.py` (Python app
 stand-in), `protocol/dart/` (tested pure-Dart package).
 
-> **UUIDs are PROVISIONAL** — base `079aXXXX-d673-469c-98a0-12c0c5eb43b3`; a proposal for the
-> final base is in [`contract/uuid-proposal.md`](contract/uuid-proposal.md). One place on the device:
-> `firmware/components/transport_ble/ble_uuids.h` (and `uuidBase*` in the Dart package).
+> **UUIDs are FINAL for protocol v1** — base `079aXXXX-d673-469c-98a0-12c0c5eb43b3` (decision
+> 2026-10-24, rationale in [`contract/uuid-proposal.md`](contract/uuid-proposal.md)). One place on the
+> device: `firmware/components/transport_ble/ble_uuids.h` (and `uuidBase*` in the Dart package).
 
 ## Service & characteristics
 
@@ -33,9 +33,9 @@ packet is 25–50 bytes.
 | | |
 |---|---|
 | Protocol version | **1** (key 0 of every CBOR map) |
-| Contract revision | **1.0.0-draft** — becomes `protocol-v1.0.0` once the open items below are decided |
+| Contract revision | **1.0.0** — tag `protocol-v1.0.0` |
 | Frozen | characteristic slots, every CBOR key number and type, flag bits, event tags, `HazardType` values, capability bits, OTA/Asset opcodes, `UiConfig` bit numbers — verified by the golden vectors in [`docs/contract/vectors/`](contract/vectors/) |
-| **Not frozen yet** | (1) the UUID base — see [`contract/uuid-proposal.md`](contract/uuid-proposal.md); (2) the security level — see *Security level* below; (3) an optional additive "report lock" flag — see [`contract/melden-lock-proposal.md`](contract/melden-lock-proposal.md) |
+| Decisions taken (2026-10-24) | UUID base **frozen** as shown above · security level **stays open** for v1 (see below, accepted) · the optional "report lock" flag was **dropped** ([`contract/melden-lock-proposal.md`](contract/melden-lock-proposal.md)) |
 
 Machine-readable companions (generated from the firmware / reference code, checked in CI):
 `docs/contract/vectors/*.json` (golden vectors, categories, constants),
@@ -54,9 +54,10 @@ Machine-readable companions (generated from the firmware / reference code, check
 - Therefore the SHA-256 in the OTA `begin` frame protects against **transfer errors only**: whoever
   can connect can push an image together with its own matching hash. Authenticity options and a
   recommendation: [`update-authenticity.md`](update-authenticity.md).
-- Proposed, **not implemented** (maintainer decision): require an encrypted (bonded) link for all
-  writes; use a passkey shown on the AMOLED so pairing is authenticated; verify a signature on OTA
-  images. Treat the device as *trusted environment only* until then.
+- **Decision (2026-10-24): protocol v1 ships with the open link.** Encrypted/bonded writes, a passkey
+  on the AMOLED and signed OTA images were considered and are **not planned for now**; they would be
+  additive firmware changes (the wire format does not change). Treat the device as *trusted
+  environment only* and revisit before wider distribution.
 
 ## Delivery semantics
 

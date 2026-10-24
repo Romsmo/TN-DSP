@@ -1,7 +1,7 @@
 # App-Übergabe — Kurzfassung (Deutsch)
 
-Vertragsstand: **1.0.0-draft** (Protokollversion 1). Vorgeschlagener Tag: `protocol-v1.0.0` — **noch
-nicht gesetzt**, dafür brauche ich dein Ja. Die ausführliche englische Fassung steht in
+Vertragsstand: **1.0.0** (Protokollversion 1), Tag `protocol-v1.0.0`; erstes Firmware-Release
+`fw-v0.1.0`. Die ausführliche englische Fassung steht in
 [`app-integration.md`](app-integration.md).
 
 **Was der App-Chat bekommt:** die Spezifikation ([`ble-protocol.md`](ble-protocol.md)), die
@@ -16,12 +16,12 @@ App entscheidet: Schildspalte und Ersetzungen, Gefahrenfilter, wann angesagt wir
 Einheiten, Update-Auslieferung.
 
 **Bekannte Einschränkungen:** Sicherheitsstufe offen (keine Verschlüsselung/Kopplung erforderlich —
-auch OTA!), UUID-Basis noch vorläufig, RAM auf dem Gerät knapp, „latest wins“ bei State, mögliches
-Reißen beim schnellen Wischen, Sprachclips nicht im Repo.
+auch OTA!; bewusst so entschieden), RAM auf dem Gerät knapp, „latest wins“ bei State, mögliches Reißen
+beim schnellen Wischen, Sprachclips nicht im Repo.
 
-**Offene Entscheidungen von dir:** (1) UUID-Basis einfrieren? (2) Sicherheitsstufe: verschlüsselte
-Verbindung, Passkey auf dem Display, signierte Images? (3) Sperre der Melden-Seite durch die App?
-(4) Name, BLE-Gerätename und Pairing-URL. (5) Sprachclips: aufnehmen/lizenzieren oder keine mitliefern.
+**Entscheidungen (24.10.2026):** UUID-Basis eingefroren · Sicherheitsstufe bleibt offen · keine
+Melden-Sperre · Pairing-QR zeigt auf die Repo-Seite (BLE-Name bleibt `BlitzerdeDsp`) · keine Sprachclips
+im Release.
 
 **Noch nicht am Brett geprüft:** OTA komplett, UiConfig schreiben + Neustart, Zurücksetzen, Audio ohne
 Knistern — der Prüfplan steht in [`testing.md`](testing.md), Abschnitt „Board verification“.

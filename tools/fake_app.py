@@ -38,7 +38,7 @@ def emit(msg=""):
     print(msg)
 
 
-# ── UUIDs: base 079aXXXX-d673-469c-98a0-12c0c5eb43b3 (PROVISIONAL, see ble_uuids.h)
+# ── UUIDs: base 079aXXXX-d673-469c-98a0-12c0c5eb43b3 (final for protocol v1, see ble_uuids.h)
 def _uuid(slot: int) -> str:
     return f"079a{slot:04x}-d673-469c-98a0-12c0c5eb43b3"
 

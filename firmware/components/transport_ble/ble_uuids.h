@@ -1,7 +1,8 @@
 // ble_uuids.h — the ONE place BLE UUIDs are defined.
 //
-// PROVISIONAL until the contract is frozen (docs/contract/uuid-proposal.md). The base
-// was generated randomly; it contains no product or brand name.
+// FINAL for protocol v1 (decision 2026-10-24, docs/contract/uuid-proposal.md). The base
+// was generated randomly; it contains no product or brand name. Do not change it: the
+// service UUID is in the advertising packet and apps scan for it.
 //
 // Base:  079aXXXX-d673-469c-98a0-12c0c5eb43b3   (XXXX = 16-bit slot)
 #pragma once

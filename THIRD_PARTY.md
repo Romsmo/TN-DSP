@@ -146,8 +146,9 @@ were taken from Waveshare's example repository
 assignments and register addresses are facts about the hardware; the firmware's drivers are
 written independently. The init table in `firmware/components/hal_esp/esp_display.cpp`
 (`kInit[]`, seven register writes) is the one piece that mirrors Waveshare's example.
-`TODO(verify)`: replace it with values from the CO5300 / SH8601 datasheet, or ask Waveshare for
-permission, before any public release.
+Decision 2026-10-24: kept as is (the easiest option); it is seven register writes that the panel
+needs, listed here so a reader can judge it. `TODO(verify)`: replace them with values from the CO5300 /
+SH8601 datasheet, or ask Waveshare for permission, before a *public* release.
 
 ## 5. Tooling (not distributed with the firmware)
 
@@ -163,7 +164,7 @@ permission, before any public release.
 
 ## 6. Not distributed
 
-- **Voice clips.** The German phrase clips were generated with the Windows SAPI voice
+- **Voice clips** (decision 2026-10-24: ship none). The German phrase clips were generated with the Windows SAPI voice
   *Microsoft Hedda*. Whether audio produced that way may be redistributed in an open-source
   repository could not be confirmed, so the files are not published. `tools/gen_voice.py`
   regenerates them locally; the firmware degrades to its event chime without them.

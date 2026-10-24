@@ -38,6 +38,24 @@ state it receives and emits raw interaction events.
 > replaces the app for now ([`tools/fake_app.py`](tools/fake_app.py) — see
 > [`docs/testing.md`](docs/testing.md)), and a tested Dart protocol package ([`protocol/dart/`](protocol/dart/)) with the BLE contract in [`docs/contract/`](docs/contract/) — start at [`docs/app-integration.md`](docs/app-integration.md).
 
+## Pairing the display with the app
+
+1. Power the display. On first boot (and after *Settings → Zurücksetzen*) it shows
+   **"Verbinde dein Mobilgerät"**. *Handy verbinden* opens a QR code that leads to this page, with the
+   three steps: *Bluetooth einschalten · mit "BlitzerdeDsp" verbinden · App öffnen*.
+2. In the companion app choose the display — it advertises the service UUID from
+   [`docs/ble-protocol.md`](docs/ble-protocol.md) and the name `BlitzerdeDsp` — and connect. There is
+   **no PIN**: the app connects directly over BLE, and once it streams state the display leaves the
+   pairing screen.
+3. The display keeps its last state across ignition cycles and re-advertises whenever the app is gone;
+   the app reconnects on its own and restarts its sequence numbers (see the connect sequence in the
+   protocol document).
+4. No phone app yet? Use the PC test console: `pip install bleak cbor2`, then
+   `python tools/fake_app.py` (GUI) — details in [`docs/testing.md`](docs/testing.md).
+5. Security note: today any BLE device in range can connect (no encryption or passkey is required).
+   That is a documented, accepted limitation of protocol v1 — see
+   [`docs/ble-protocol.md`](docs/ble-protocol.md), *Security level*.
+
 ## Repository layout
 
 | Path | Contents |

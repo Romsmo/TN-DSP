@@ -11,7 +11,7 @@ about the road, the user or the data belongs to the app.
 | Context signs | picks which signs exist, which **column** each goes in and which signs **replace** each other ([`sign-rules.json`](sign-rules.json)); sends ≤ 4 per column, oldest first | renders the two lists as received (newest 3 per column); unknown codes show an empty slot |
 | Free-road picture | sets `directionArrows` | draws it (hidden while a hazard overlay is up) |
 | Confirm prompt ("Gesehen?") | decides when; sets `confirmPromptActive` + timeout | shows it, counts down, sends `ConfirmResponse` or times out silently |
-| Report (Melden) | receives `ReportSubmitted` and decides what to do with it; may strip the page with `UiConfig` bit 0 | shows the crown, sends the event; **does not lock while driving** (proposal: [`melden-lock-proposal.md`](melden-lock-proposal.md)) |
+| Report (Melden) | receives `ReportSubmitted` and decides what to do with it; may strip the page with `UiConfig` bit 0 | shows the crown, sends the event; **does not lock while driving** (a lock was considered and dropped: [`melden-lock-proposal.md`](melden-lock-proposal.md)) |
 | Audio | decides *when* to announce: sends an `audioCue` with a new `seq`; owns sound on/off, mode and volume (Settings) | decides *how it sounds*: picks the chime or composes the phrase from the clips on its card; degrades to the chime if any clip is missing |
 | Wall clock | writes `Time` after every connect | keeps it in the RTC |
 | Settings | writes the complete set after connect; reflects changes the user makes on the device (notify) | persists them (NVS) |

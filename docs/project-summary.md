@@ -101,7 +101,7 @@ is synchronous.
 Home ↔ Melden transitions triggered programmatically **cut** instead of sliding (see §7). Details
 and pixel specs: [`ui-spec.md`](ui-spec.md); renders: [`screenshots/`](screenshots/).
 
-### BLE protocol (service base `079aXXXX-d673-469c-98a0-12c0c5eb43b3`, **UUIDs still provisional**)
+### BLE protocol (service base `079aXXXX-d673-469c-98a0-12c0c5eb43b3`, **frozen for v1**)
 
 | Slot | Name | Props | Purpose |
 |---|---|---|---|
@@ -194,13 +194,12 @@ generates and uploads them locally. Without them a voice cue degrades to the eve
 ## 8. Open items
 
 **Waiting on the owner**
-- `BSP_PAIR_URL` — the real app-store / smart link for the Connect-screen QR.
-- Finalise the BLE UUID base (still provisional; defined once in `ble_uuids.h`).
+- `BSP_PAIR_URL` — now the repository page; swap for a store link when the app is published.
 - Repo naming and visibility decision (target repo `Romsmo/TN-DSP`). (`LICENSE` is MIT, © R. Smolenski.)
 - Real voice recordings (or a decision to ship none) — the TTS placeholders are not published.
 - **Security level of the BLE link** — today nothing requires pairing/encryption, so OTA and asset upload are open to any central in range (`ble-protocol.md`, *Security level*; options in `update-authenticity.md`).
 - **Name and third-party references before the repo goes public** — the product name embeds a third-party brand; `docs/plan.md` mentions a licensing discussion with named parties; `BSP_PAIR_URL` / the pairing QR point at a third-party domain.
-- Contract proposals awaiting a decision: UUID base, Melden lock (`docs/contract/`).
+- Decided 2026-10-24: UUID base frozen, security level stays open for v1, no Melden lock, no voice clips shipped, Waveshare init table kept (documented).
 
 **Verify on hardware**
 - OTA cycle; UiConfig write round-trip; audible quality; swipe tear.

@@ -137,8 +137,9 @@ covers the UI. The end-to-end transfer on hardware is still to be verified (see 
   centred at (233, 160)) with a 3-step guide below it: *1 Bluetooth einschalten · 2 Mit
   "BlitzerdeDsp" verbinden · 3 App öffnen*. A status line ("Advertising …" / "Verbunden") sits
   under that. Tap the QR to go back to the prompt.
-- The QR encodes a link to the companion app **in the store** (`BSP_PAIR_URL`, board_config.h —
-  **provisional**, needs the real store / smart link). `ScreenManager::set_connect_qr()` sets it.
+- The QR encodes `BSP_PAIR_URL` (board_config.h) — the repository page whose README explains how to
+  pair; swap it for a store / smart link once the app is published.
+  `ScreenManager::set_connect_qr()` sets it.
 - Shown on first boot and whenever the BLE link is missing; swipe-up to Settings still works.
 
 ## 5.8 Navigation & gestures — M3

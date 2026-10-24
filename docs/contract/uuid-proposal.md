@@ -1,6 +1,6 @@
 # Proposal: the final UUID base
 
-**Status: proposal — the maintainer decides.** Today the base is *provisional*:
+**Status: DECIDED 2026-10-24 — the current base is final for protocol v1** (the maintainer delegated the choice; the recommendation below was adopted). It was provisional until then:
 
 ```
 079aXXXX-d673-469c-98a0-12c0c5eb43b3        XXXX = 16-bit slot, 0000 = service, 0001..0008 = characteristics

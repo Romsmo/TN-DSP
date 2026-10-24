@@ -1,4 +1,4 @@
-// Guards the provisional BLE UUID scheme: byte layout and slot encoding.
+// Guards the (frozen) BLE UUID scheme: byte layout and slot encoding.
 #include "doctest/doctest.h"
 
 #include <array>

@@ -15,7 +15,7 @@ routes to BLE by default; a BOOT long-press starts the mock demo script and rout
 `AppRunner` downgrades a quiet `Connected` link to `Advertising` after
 `CONFIG_BDSP_STATE_WATCHDOG_S` (cache + "no app" badge).
 
-BLE UUIDs (provisional) in `firmware/components/transport_ble/ble_uuids.h`; wire tables in
+BLE UUIDs (final for protocol v1) in `firmware/components/transport_ble/ble_uuids.h`; wire tables in
 `docs/ble-protocol.md`. Test without the phone app with `tools/fake_app.py` (an interactive BLE
 console) — full walk-through in [`docs/testing.md`](testing.md).
 

@@ -28,10 +28,10 @@ the law where you drive.
    `TODO(verify)`: whether the repository should recommend that build as the default for
    distribution.
 3. **Interaction while driving.** The device has a touch "Melden" (report) page. Reporting while
-   driving is a distraction risk and may itself be restricted. The protocol currently has **no
-   field with which the app can lock the Melden page**; the app's own driving lock does not
-   automatically apply to the display. A backwards-compatible extension is proposed in
-   `docs/contract/melden-lock-proposal.md` — the decision is the maintainer's.
+   driving is a distraction risk and may itself be restricted. The protocol has **no field with
+   which the app can lock the Melden page**; the app's own driving lock does not automatically apply to
+   the display. A backwards-compatible extension was considered and **dropped by the maintainer**
+   (`docs/contract/melden-lock-proposal.md`); the review should note this.
 4. **No warranty / no safety function.** The device is an information display, not a driver-
    assistance system. Speed-limit and hazard data come from the app and may be wrong, late or
    missing. MIT license disclaimer applies; consider an explicit "not for safety-critical use"

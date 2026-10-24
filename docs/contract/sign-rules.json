@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.0.0-draft",
+  "contractVersion": "1.0.0",
   "description": "Rules the APP applies when it builds leftSigns / rightSigns for the display. The device renders the two lists exactly as sent; it applies none of these rules.",
   "labelSource": "Wikimedia Commons file titles of the vendored sign SVGs (checked 2026-10-24)",
   "codeFormula": "code = major * 100 + minor   (VzNr '142-10' -> 14210, '276' -> 27600)",

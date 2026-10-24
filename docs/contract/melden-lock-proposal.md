@@ -1,7 +1,8 @@
 # Proposal: let the app lock the Melden (report) page while driving
 
-**Status: proposal, not implemented. The decision whether the lock also applies to the display is
-the maintainer's.** Everything here is additive and backwards compatible with protocol v1.
+**Status: WITHDRAWN (2026-10-24) — the maintainer does not want a report lock; nothing was built.** The text is
+kept as a record (it documents how the persistent UiConfig bit behaves today). Everything in it was
+additive and backwards compatible with protocol v1.
 
 ## What exists today
 

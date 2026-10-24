@@ -9,7 +9,7 @@ const int protocolVersion = 1;
 /// (fits a 247-byte ATT MTU).
 const int maxPayloadBytes = 244;
 
-/// GATT UUIDs. The base is PROVISIONAL (docs/ble-protocol.md) — it is defined in
+/// GATT UUIDs. The base is FINAL for protocol v1 (docs/ble-protocol.md) and defined in
 /// exactly this one place on the app side.
 const String uuidBaseSuffix = 'd673-469c-98a0-12c0c5eb43b3';
 const String uuidBasePrefix = '079a';

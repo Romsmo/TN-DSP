@@ -1,7 +1,7 @@
 # App integration — handover to the app side
 
-**Contract revision: `1.0.0-draft`** (protocol version 1). Proposed tag once the open decisions below
-are settled: `protocol-v1.0.0` — **not set; tagging needs the maintainer's yes**.
+**Contract revision: `1.0.0`** (protocol version 1), tagged `protocol-v1.0.0`. The first firmware
+release is `fw-v0.1.0` (see `release-format.md`).
 German summary for the maintainer: [`app-integration.de.md`](app-integration.de.md).
 
 ## Where everything is
@@ -67,7 +67,6 @@ the package's own (the device uses a matching minimal codec), so no CBOR licence
 - **Security level is open today**: no characteristic requires pairing or encryption, so OTA and
   Asset can be used by any central in range. This is documented as a decision, not a feature
   ([`ble-protocol.md`](ble-protocol.md) *Security level*, [`update-authenticity.md`](update-authenticity.md)).
-- **UUID base is provisional** until decided.
 - **Memory is tight** on the device (~41 KB free internal RAM in steady state): the protocol keeps
   payloads small; do not expect large additions without a firmware release.
 - **Latest wins** for State and a send-rate recommendation instead of a hard limit (see Delivery
@@ -77,15 +76,15 @@ the package's own (the device uses a matching minimal codec), so no CBOR licence
 - The German **voice clips are not distributed**; without them the device plays its chime.
 - `TODO(verify)` hardware items remain (brightness command, IMU/battery stubs) — none affects the
   protocol.
-- **Not verified on the board at the time of writing** (tracked in `testing.md`, "Board verification"):
+- **Not verified on the board at the time of release `0.1.0`** (tracked in `testing.md`, "Board verification"):
   the OTA transfer end to end, UiConfig write + persistence, audible clean playback, factory reset.
 
-## Decisions still open (maintainer)
+## Decisions taken (maintainer, 2026-10-24)
 
-1. UUID base — keep the current one? ([`contract/uuid-proposal.md`](contract/uuid-proposal.md))
-2. Security level — require an encrypted/bonded link; passkey on the display; signed images
-   ([`update-authenticity.md`](update-authenticity.md)).
-3. Report lock — should the app be able to lock the Melden page, and what happens when the link
-   drops ([`contract/melden-lock-proposal.md`](contract/melden-lock-proposal.md)).
-4. Naming — product/repository/BLE advertising name and the pairing-QR URL (`BSP_PAIR_URL`).
-5. Voice clips — record or license a set, or ship none.
+1. **UUID base frozen** as in `ble-protocol.md` ([`contract/uuid-proposal.md`](contract/uuid-proposal.md)).
+2. **Security level stays open for v1** — no encryption/passkey/signing for now
+   ([`update-authenticity.md`](update-authenticity.md) keeps the options for later).
+3. **No report lock** — the app cannot lock the Melden page dynamically; the only switch is the
+   persistent UiConfig bit ([`contract/melden-lock-proposal.md`](contract/melden-lock-proposal.md), withdrawn).
+4. **Pairing QR** points at the repository page (`BSP_PAIR_URL`); the advertised name stays `BlitzerdeDsp`.
+5. **No voice clips are shipped**; the device plays its chime without them.
