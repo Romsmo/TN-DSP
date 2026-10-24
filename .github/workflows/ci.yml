@@ -24,6 +24,8 @@ jobs:
       - name: build
         run: cmake --build build
 
+      # Includes the "contract_vectors" test: the committed golden vectors in
+      # docs/contract/vectors/ must equal what the real codec emits.
       - name: test
         run: ctest --test-dir build --output-on-failure
 
@@ -37,24 +39,46 @@ jobs:
           name: screenshots
           path: docs/screenshots/*.png
 
-  protocol:
-    name: python protocol tooling
+  contract:
+    name: contract data (python reference + generated files)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install cbor2
-      - run: python tools/fake_app.py --dry --scenario approach
-      - run: python tools/fake_app.py --dry --scenario confirm
+      - run: pip install cbor2 jsonschema
+      - name: protocol tool dry runs
+        run: |
+          python tools/fake_app.py --dry --scenario approach
+          python tools/fake_app.py --dry --scenario confirm
+      - name: sign-rule vectors match the reference implementation
+        run: python tools/gen_sign_vectors.py --check
+      - name: embedded Dart sign data matches sign-rules.json
+        run: python tools/gen_dart_sign_rules.py --check
+      - name: OTA sender behaves against a simulated device
+        run: python tools/test_ota_sender.py
+      - name: release manifest example matches its schema
+        run: python tools/check_manifest_example.py
+
+  dart:
+    name: Dart protocol package
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: protocol/dart
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - run: dart analyze --fatal-infos
+      - run: dart test
 
   firmware:
     name: firmware build (esp32c6)
     runs-on: ubuntu-latest
-    # Builds the real firmware image (display + BLE + audio). Informational for
-    # now (continue-on-error); it becomes a required check once it is proven stable.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: idf.py build
@@ -63,3 +87,20 @@ jobs:
           esp_idf_version: v5.3.2
           target: esp32c6
           path: firmware
+      - name: collect the update image
+        run: |
+          mkdir -p dist
+          cp firmware/build/blitzerdsp.bin dist/
+          cp firmware/build/bootloader/bootloader.bin dist/
+          cp firmware/build/partition_table/partition-table.bin dist/
+          cp firmware/build/ota_data_initial.bin dist/
+          cp firmware/build/flasher_args.json dist/ || true
+          (cd dist && sha256sum blitzerdsp.bin > blitzerdsp.bin.sha256 && cat blitzerdsp.bin.sha256)
+          ls -l dist
+      # The OTA image (blitzerdsp.bin + .sha256) is what the app pushes over BLE; the rest
+      # is for a first USB flash. Naming follows the repository's final name once decided.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
