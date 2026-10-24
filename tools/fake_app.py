@@ -331,6 +331,7 @@ class Link:
         self._ota_total = 0
         self.ota_progress = None          # None idle, 0..100, -1 error
         self._ota_done = threading.Event()
+        self._ota_began = threading.Event()   # device finished erasing the target slot
         self._asset_done = threading.Event()
         self._asset_ok = False
         self._loop = asyncio.new_event_loop()
@@ -425,6 +426,8 @@ class Link:
             got = struct.unpack("<I", b[1:5])[0]
             pct = got * 100 // self._ota_total if self._ota_total else 0
             self.ota_progress = pct
+            if got == 0:
+                self._ota_began.set()      # sent once esp_ota_begin() (the slot erase) returned
             self.log(f"  ota: {pct:3d}%  ({got}/{self._ota_total})")
         elif op == 0x11:
             self.ota_progress = 100
@@ -435,6 +438,7 @@ class Link:
                        4: "sha mismatch", 5: "esp_ota_end/set_boot"}
             self.ota_progress = -1
             self.log(f"  ota: ERROR — {reasons.get(b[1] if len(b) > 1 else 0, b[1:])}")
+            self._ota_began.set()
             self._ota_done.set()
 
     # -- writes --
@@ -486,15 +490,32 @@ class Link:
         self._ota_total = len(img)
         self.ota_progress = 0
         self._ota_done.clear()
+        self._ota_began.clear()
         self.log(f"  ota: {path}  {len(img)} bytes  sha256 {sha.hex()[:16]}…")
-        self._run(self.client.write_gatt_char(OTA_UUID, b"\x01" + struct.pack("<I", len(img)) + sha,
+        self._run(self.client.write_gatt_char(OTA_UUID, b"" + struct.pack("<I", len(img)) + sha,
                                               response=False))
+        # esp_ota_begin() erases the whole slot inside the BLE host task (seconds);
+        # data sent before it returns would be dropped. The device answers "0 bytes"
+        # once it is ready.
+        self.log("  ota: waiting for the device to erase the update slot …")
+        if not self._ota_began.wait(timeout=90) or self.ota_progress == -1:
+            if self.ota_progress != -1:
+                self.log("  ota: TIMEOUT waiting for the device — aborting")
+                self._run(self.client.write_gatt_char(OTA_UUID, b"", response=False))
+                self.ota_progress = -1
+            return False
         CHUNK = 230
-        for off in range(0, len(img), CHUNK):
-            self._run(self.client.write_gatt_char(OTA_UUID, b"\x02" + img[off:off + CHUNK],
-                                                  response=False))
-        self._run(self.client.write_gatt_char(OTA_UUID, b"\x03", response=False))
+
+        async def _send():
+            for i, off in enumerate(range(0, len(img), CHUNK)):
+                await self.client.write_gatt_char(OTA_UUID, b"" + img[off:off + CHUNK],
+                                                  response=False)
+                if i % 10 == 9:
+                    await asyncio.sleep(0.04)     # let the device drain to flash (as for assets)
+            await self.client.write_gatt_char(OTA_UUID, b"", response=False)
+        self._run(_send())
         self._ota_done.wait(timeout=180)
+        return self.ota_progress == 100
 
     # -- asset (SD file) upload --
     def _on_asset(self, _c, d):
