@@ -35,6 +35,8 @@ def main():
     ap.add_argument("--out", default=os.path.join(ROOT, "dist", "release"))
     ap.add_argument("--released-at", default=datetime.date.today().isoformat())
     ap.add_argument("--min-from")
+    ap.add_argument("--note", action="append", default=[],
+                    help="extra line for the \"not yet verified\" list of the release notes (repeatable)")
     args = ap.parse_args()
 
     core_v, board_v = check_version_sync.versions()
@@ -100,7 +102,8 @@ def main():
     body += [f"- {c}" for c in notes["changes"]["de"]] + [""] + [f"- {c}" for c in notes["changes"]["en"]]
     body += ["", "## Verification status", ""]
     body += ["**Verified:**"] + [f"- {x}" for x in ver.get("verified", [])]
-    body += ["", "**Not yet verified on the board:**"] + [f"- {x}" for x in ver.get("notVerifiedOnTheBoard", [])]
+    body += ["", "**Not yet verified on the board:**"]
+    body += [f"- {x}" for x in ver.get("notVerifiedOnTheBoard", []) + args.note]
     body += ["", "## Known limitations", ""] + [f"- {x}" for x in notes.get("knownLimitations", [])]
     body += ["", "## Files", "",
              f"- `{bin_name}` — the OTA image (what the app pushes over BLE characteristic `0007`)",

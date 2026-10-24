@@ -1,6 +1,6 @@
 # BlitzerdeDsp — project summary & current status
 
-_Snapshot: 2026-10-24, `main` after the publication-readiness pass. Host suite: 73 test cases / 560 assertions green under `-Werror`._
+_Snapshot: 2026-10-24, firmware `0.1.0` released (tag `fw-v0.1.0`), contract `protocol-v1.0.0` (repository `Romsmo/TN-DSP`, private). Host suite: 73 test cases / 560 assertions, Dart package 85 tests, all CI jobs green._
 
 ## 1. What it is
 
@@ -210,6 +210,8 @@ generates and uploads them locally. Without them a voice cue degrades to the eve
 - The app owns hazard-category filtering (`filterBits`), the audio cue decision, volume, and OTA delivery.
 
 **Doc debt** — the stale README status, bring-up table, ui-spec OTA note, board_config audio comment, M9 plan status and CI comment were fixed in the publication-readiness pass (2026-10-24).
+
+**Release state:** `fw-v0.1.0` (image `tn-display-0.1.0.bin`, manifest, license bundle) and the plain tag `protocol-v1.0.0` exist in the private repository. Branch protection is not available for a private repo on the free GitHub plan. The OTA transfer, UiConfig write, factory reset and an audible check are still to be run on the board (`docs/testing.md`, *Board verification*).
 
 ## 9. Build & run cheat sheet
 
