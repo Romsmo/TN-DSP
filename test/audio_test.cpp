@@ -131,3 +131,65 @@ TEST_CASE("AudioService: falls back to a flash tone when the SD clip is missing"
     for (int i = 0; i < 500; ++i) svc.pump();
     CHECK(drv.written.size() > 0);          // played from flash
 }
+
+TEST_CASE("AudioService: a voice cue without the phrases on the card degrades to the chime") {
+    fakes::AudioDriver drv;
+    fakes::Storage sd;                   // mounted, but no voice clips (they are optional)
+    AudioService svc(&drv, &sd);
+    Settings st;
+    st.soundEnabled = true;
+    svc.apply_settings(st);
+
+    DisplayState s;
+    s.audioCue = voice_cue(3, HazardType::MobileSpeedCamera, 300);
+    svc.on_state(s);
+    REQUIRE(svc.playing());
+    Clip pl[kMaxPlaylist];
+    REQUIRE(svc.playlist(pl) == 1);
+    CHECK(pl[0] == Clip::ToneWarn);      // not 4 silent phrases
+    for (int i = 0; i < 500; ++i) svc.pump();
+    CHECK(drv.written.size() > 0);       // the flash chime actually played
+}
+
+TEST_CASE("AudioService: one missing phrase is enough to fall back; a full set plays as voice") {
+    fakes::AudioDriver drv;
+    fakes::Storage sd;
+    for (int i = 0; i < kClipCount; ++i) sd.put_wav("/audio/" + std::string(clip_path(Clip(i))), 200);
+    sd.files.erase("/audio/" + std::string(clip_path(Clip::In)));
+
+    AudioService svc(&drv, &sd);
+    Settings st;
+    st.soundEnabled = true;
+    svc.apply_settings(st);
+
+    DisplayState s;
+    s.audioCue = voice_cue(1, HazardType::Traffic, 300);
+    svc.on_state(s);
+    Clip pl[kMaxPlaylist];
+    CHECK(svc.playlist(pl) == 1);
+
+    sd.put_wav("/audio/" + std::string(clip_path(Clip::In)), 200);
+    s.audioCue = voice_cue(2, HazardType::Traffic, 300);
+    svc.on_state(s);
+    CHECK(svc.playlist(pl) == 4);
+}
+
+TEST_CASE("AudioService: a chime with no card and no flash copy still plays the warn chime") {
+    fakes::AudioDriver drv;
+    fakes::Storage sd;
+    sd.is_mounted = false;
+    AudioService svc(&drv, &sd);
+    Settings st;
+    st.soundEnabled = true;
+    svc.apply_settings(st);
+
+    DisplayState s;
+    AudioCue c;
+    c.seq = 9;
+    c.mode = AudioMode::Tones;
+    c.event = AudioEvent::HazardImminent;   // ToneAlert has no flash copy
+    s.audioCue = c;
+    svc.on_state(s);
+    for (int i = 0; i < 500; ++i) svc.pump();
+    CHECK(drv.written.size() > 0);
+}

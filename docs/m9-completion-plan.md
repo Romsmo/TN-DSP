@@ -17,21 +17,19 @@ Hardware pins recovered from `waveshareteam/ESP32-C6-Touch-AMOLED-1.43`:
 | SD (SPI, **shares SPI2 with the LCD**) | MOSI 4, MISO 5, CLK 11, CS 15 · mount `/sdcard` |
 | Audio I2S (ES8311 out + ES7210 mic) | BCLK 21, WS 22, DOUT 23, DIN 20, MCLK 19 · ES8311 @ 0x18 · PA = TCA9554 P7 · use MCLK, pa_gain 6 |
 
-## Status (2026-08-30)
+## Status
 
-All five milestones landed and on hardware (boots clean; 70 host tests / 548 assertions green).
-**End-to-end BLE verification of the new characteristics (UiConfig, OTA transfer, audible audio)
-is still pending — the PC Bluetooth radio was toggled off again mid-session.** Once it's back on:
-`python tools/fake_app.py` (GUI) → connect → flip feature switches, run scenarios, push
-`firmware/build/blitzerdsp.bin` via *Firmware-Update*.
+All five milestones landed and run on the real board. Host suite: see `project-summary.md`.
 
 | M | State |
 |---|---|
-| M9-A UiConfig | ✅ built, boots; BLE round-trip not yet driven |
-| M9-B SD card | ✅ **verified** — `sd: mounted /sdcard (14.6 GB)` |
-| M9-C Audio | ✅ **codec inits** (`ES8311 ready`); output needs ears |
-| M9-D OTA | ✅ dual-slot table live, image self-confirms; transfer not yet driven |
-| M9-E GUI | ✅ renders both tabs; device interaction needs BT on |
+| M9-A UiConfig | ✅ built; **read** verified on the board — the write + persistence round-trip is still to be driven |
+| M9-B SD card | ✅ verified — `sd: mounted /sdcard (14.6 GB)`; BLE asset upload 23/23 files |
+| M9-C Audio | ✅ verified — plays in real time (dedicated task, 6.58 s clip in 6.68 s); volume 0–100 over the Settings characteristic |
+| M9-D OTA | ✅ built — dual-slot table live, image self-confirms; **the transfer itself has not been run yet** |
+| M9-E GUI | ✅ both tabs; drives the device over BLE |
+
+The sections below are the original plan, kept for the decisions they record.
 
 ## Milestones (each: build + host tests + on-hardware check + Conventional-Commits commit + doc)
 

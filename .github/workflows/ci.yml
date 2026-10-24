@@ -52,8 +52,8 @@ jobs:
   firmware:
     name: firmware build (esp32c6)
     runs-on: ubuntu-latest
-    # The ESP HAL / BLE components are skeletons until an ESP-IDF environment +
-    # hardware are in the loop; this job is informational until then.
+    # Builds the real firmware image (display + BLE + audio). Informational for
+    # now (continue-on-error); it becomes a required check once it is proven stable.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4

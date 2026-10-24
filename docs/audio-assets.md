@@ -37,16 +37,22 @@ card inserted.
 
 Distance buckets round **down**: 100 / 200 / 300 / 500 / 800 m.
 
-## Generating the placeholder set
+## Which clips ship, which don't
 
-The clips in `tools/audio/` are **placeholders** — synthetic tones plus Microsoft-SAPI German TTS
-(*Microsoft Hedda*). Replace `voice/de/*.wav` with real recordings when available; keep the
-filenames and the 16 kHz/mono/16-bit format.
+- **Tones** (`tools/audio/tones/`) are synthesised by `tools/gen_audio_tones.py` — our own output,
+  committed to the repository. `warn` and `info` are also compiled into the firmware.
+- **Voice phrases are NOT in the repository.** The placeholder set was produced with the Windows
+  SAPI German voice (*Microsoft Hedda*); whether its output may be redistributed is unclear, so
+  it is not published. Generate it locally, or record your own — keep the filenames (the table
+  above) and the 16 kHz / mono / 16-bit format.
+- **Without the voice clips the device is still fine:** if any phrase of a voice playlist is
+  missing on the card (or there is no card), the cue degrades to the event chime; a chime with no
+  copy anywhere falls back to the built-in warn chime. A warning is never silent.
 
 ```bash
-python  tools/gen_audio_tones.py                      # tones + flash fallback C array
-powershell -File tools/gen_audio_voice.ps1            # German TTS voice clips  (Windows)
-tools/build_sd_audio.sh                               # assemble sd_root/audio/ for copying to a card
+python tools/gen_audio_tones.py                       # tones + flash fallback C array
+python tools/gen_voice.py                             # German TTS clips (Windows) + assemble tools/sd_root/
+python tools/gen_voice.py --upload                    # ... and send them to the device over BLE
 ```
 
 ## On the device

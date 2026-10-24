@@ -80,7 +80,7 @@
 #define BSP_SD_MOUNT_POINT         "/sdcard"
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Audio — ES8311 DAC over I2S                                           [S1, S6] TODO(verify) pins
+// Audio — ES8311 DAC over I2S                                           [S1, S6]
 // ─────────────────────────────────────────────────────────────────────────────
 // Verified against waveshareteam/…/08_Audio_Test codec_board board_cfg.txt
 // (Board: C6_AMOLED_1_43). ES7210 is the mic ADC (input path unused for now).

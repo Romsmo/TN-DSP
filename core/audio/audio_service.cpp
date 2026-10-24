@@ -30,8 +30,27 @@ void AudioService::on_state(const DisplayState& s) {
     if (!enabled_) return;
 
     Clip list[kMaxPlaylist];
-    const int n = compose(cue, list);
+    int n = compose(cue, list);
+    // The spoken phrases are optional (they are not shipped with the firmware and
+    // are copied onto the SD card separately). Without every phrase the voice
+    // cue degrades to the event chime — a warning is never silent.
+    if (cue.mode == AudioMode::Voice && !voice_available(list, n)) {
+        AudioCue chime = cue;
+        chime.mode = AudioMode::Tones;
+        n = compose(chime, list);
+    }
     if (n > 0) start(list, n);
+}
+
+bool AudioService::voice_available(const Clip* list, int n) {
+    for (int i = 0; i < n; ++i) {
+        if (is_tone(list[i])) continue;
+        if (!sd_ || !sd_->mounted() ||
+            !sd_->exists(std::string("/audio/") + clip_path(list[i]))) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void AudioService::start(const Clip* list, int n) {
@@ -101,7 +120,9 @@ bool AudioService::open_next() {
         }
 
         size_t ns = 0;
-        if (const int16_t* fb = fallback_pcm(c, ns)) {
+        const int16_t* fb = fallback_pcm(c, ns);
+        if (!fb && is_tone(c)) fb = fallback_pcm(Clip::ToneWarn, ns);   // any chime beats silence
+        if (fb) {
             flash_ = fb;
             flash_left_ = ns;
             return true;

@@ -99,13 +99,15 @@ printf 'speed 50\nsleep 2\nhazard ice 300\nsleep 6\nreconnect\nhazard accident 2
 
 ## Serial
 
-`scratchpad/mon.ps1 -Sec N` is a passive COM4 monitor (no reset) to line up device logs with the
-BLE traffic; `scratchpad/rstmon.ps1` pulses a reset first. The 3-second `beat:` line reports
+Watch the device log next to the BLE traffic with `idf.py -p <COM port> monitor` (Ctrl-] to exit),
+or any serial terminal at 115200 baud. The 3-second `beat:` line reports
 `screen` (0 Home · 1 Melden · 2 Settings · 3 Connect) and `overlay` (0 none · 1 Hazard · 2 Confirm).
 
 ## Needs ears / a card
 
 Audio output and the voice announcements need a speaker to confirm — drive them with a `cue` or
 the `approach` scenario, or the demo mode (BOOT long-press). The voice clips must be on the SD
-card: `tools/build_sd_audio.sh` then copy `tools/sd_root/*` to the card root (tones also live in
-flash, so chimes work with no card).
+card: `python tools/gen_voice.py --upload` (Windows; generates them locally and sends them over
+BLE) or copy `tools/sd_root/*` to the card root. The clips are not shipped in the repository.
+Chimes also live in flash, and a voice cue without its clips degrades to the chime, so a card is
+optional.

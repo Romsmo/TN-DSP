@@ -47,3 +47,6 @@ tools/signs/bildtafel.html
 tools/signs/bildtafel.json
 tools/sd_root/
 docs/screenshots/*_round.png
+
+# Voice clips are generated locally (tools/gen_voice.py) and not distributed
+tools/audio/voice/

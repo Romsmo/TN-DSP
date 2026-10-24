@@ -47,6 +47,7 @@ public:
 private:
     void start(const Clip* list, int n);   // caller holds mtx_
     void stop_locked();                    // caller holds mtx_
+    bool voice_available(const Clip* list, int n);   // every phrase present on the card?
     bool open_next();          // advance to the next clip; false when the list ends
     void close_current();
 

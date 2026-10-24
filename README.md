@@ -15,11 +15,23 @@ state it receives and emits raw interaction events.
 - **Target board:** Waveshare **ESP32-C6-Touch-AMOLED-1.43** (466×466 round AMOLED, no PSRAM). See
   [`docs/hardware.md`](docs/hardware.md).
 - **Stack:** ESP-IDF ≥ 5.3, LVGL 9, C++17, NimBLE, hand-rolled CBOR.
-- **Status:** M0–M8 complete (host-testable core + UI + simulator + protocol). Firmware **phases B
-  and D run on hardware**: CO5300 QSPI panel + LVGL + polled touch + the full UI, plus the NimBLE
-  GATT peripheral — `DisplayState` over BLE drives the screen, events flow back, Settings sync both
-  ways, Time sets the RTC. Phase C (SD) and on-target audio wait on the C6 pin map — see
+- **Status:** the display side is feature-complete and runs on the real board — full UI (Home,
+  hazard / confirm overlays, Melden crown, Settings, pairing), a NimBLE GATT peripheral with eight
+  characteristics (state, events, device info, settings, time, UI feature switches, **OTA firmware
+  update**, SD asset upload), microSD, audio (event chimes + composed voice announcements,
+  app-adjustable volume), offline cache and persisted settings. What is still unverified on
+  hardware (OTA end-to-end, UiConfig write, …) is listed in
+  [`docs/project-summary.md`](docs/project-summary.md); bring-up notes in
   [`docs/firmware-bringup.md`](docs/firmware-bringup.md).
+
+> **Legal notice (draft — pending legal review).** The device only shows what its companion app
+> sends. It *can* show speed-camera / hazard warnings if — and only if — the app is told to send
+> them, which the user must switch on explicitly. In several countries, including Germany (§ 23
+> StVO — `TODO(verify)` exact paragraph), using a device designed to warn of traffic enforcement
+> while driving is prohibited; other countries have stricter or different rules. Build with
+> `CONFIG_BDSP_FEATURE_SPEEDCAM=n` for firmware with no speed-camera code at all. You are
+> responsible for obeying the law where you drive. Full draft:
+> [`docs/legal-notice-draft.md`](docs/legal-notice-draft.md).
 
 > The companion **Flutter app is not in this repo**. This repo defines the BLE protocol
 > ([`docs/ble-protocol.md`](docs/ble-protocol.md)), an interactive Python test console that
@@ -76,7 +88,7 @@ idf.py build flash monitor
 
 Feature flags are Kconfig options under **BlitzerdeDsp** (`idf.py menuconfig`), notably
 `CONFIG_BDSP_FEATURE_SPEEDCAM` — turn it off for a build with no speed-camera code at all
-(§ 23 (1b) StVO).
+(see the legal notice above).
 
 Drive the flashed board over BLE from a PC (no phone app needed):
 
@@ -96,11 +108,15 @@ All regenerable; the generated outputs are committed so a plain `cmake` build ne
 | Montserrat fonts | `tools/gen_fonts.sh` | JulietaUla/Montserrat (OFL) |
 | Traffic signs | `tools/signs/*` + `tools/gen_assets.sh` | Wikimedia Commons German StVO (public domain) |
 | UI icons | `tools/gen_assets.sh` | Lucide (ISC) |
-| Audio | `tools/gen_audio_tones.py`, `tools/gen_audio_voice.ps1`, `tools/build_sd_audio.sh` | synth tones + SAPI TTS (placeholders) |
+| Audio | `tools/gen_audio_tones.py`, `tools/gen_voice.py` | synthetic tones (committed); German voice clips are **generated locally and not distributed** — see below |
 
-Copy `tools/sd_root/` onto the microSD card for on-device audio. Replace `tools/audio/voice/de/*.wav`
-with real recordings (same filenames, 16 kHz mono 16-bit) — see [`docs/audio-assets.md`](docs/audio-assets.md).
+Voice announcements need their phrase clips on the microSD card (`/audio/voice/de/*.wav`). They are
+**not part of this repository** (the placeholders are Windows-SAPI text-to-speech output; their
+redistribution terms are unclear). Generate them with `python tools/gen_voice.py` (Windows) or supply
+your own recordings — same filenames, 16 kHz mono 16-bit — then `python tools/gen_voice.py --upload`
+or copy `tools/sd_root/` to the card. Without the clips the device still works: a voice cue
+degrades to the event chime. See [`docs/audio-assets.md`](docs/audio-assets.md).
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE). Third-party asset licenses: [`third_party/README.md`](third_party/README.md).
+MIT — see [`LICENSE`](LICENSE). Third-party code, assets and their licenses: [`THIRD_PARTY.md`](THIRD_PARTY.md).

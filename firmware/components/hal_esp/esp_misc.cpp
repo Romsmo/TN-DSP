@@ -1,5 +1,6 @@
-// esp_misc.cpp — smaller HAL drivers: RTC (PCF85063), IMU (QMI8658), power (ADC).
-// Skeletons wired to the shared I2C bus; fill in as needed. TODO(verify) addrs/pins.
+// esp_misc.cpp — smaller HAL drivers on the shared I2C bus. The RTC (PCF85063) is
+// implemented; the IMU (QMI8658) and the battery monitor are stubs that report
+// "no data" (TODO(verify): IMU address, battery ADC pin + divider).
 #include "board_config.h"
 #include "esp_i2c.h"
 #include "hal/imu_driver.h"

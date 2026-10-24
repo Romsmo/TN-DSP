@@ -2,13 +2,13 @@
 
 The firmware is brought up in phases so each step is flashable and observable.
 
-| Phase | flags | What runs | Deps | State |
-|---|---|---|---|---|
-| **A** | display off | board smoke: NVS init, targeted I2C probe (touch / TCA9554 / RTC / IMU / codec), heap report, BOOT button click + long-press | `driver`, `esp_driver_i2c`, `nvs_flash` | ✅ runs |
-| **B** | display on | + CO5300 QSPI display (`esp_lcd_sh8601` driver), LVGL, polled touch, the real UI | + `esp_lcd_sh8601`, `lvgl` | ✅ runs on hardware |
-| **D** | + BLE on | + NimBLE GATT peripheral (`BleTransport`): one service, five chars (State / Event / DeviceInfo / Settings / Time), CBOR. Advertises "BlitzerdeDsp". BOOT long-press flips `MuxTransport` between the live link and the mock demo. Time write → PCF85063. Settings sync both ways + NVS persist. `nightMode` → panel dim. | + `bt`, `esp_timer` | ✅ advertises on hardware; ⏳ client end-to-end (needs a BLE host) |
-| **C** | later | + SD card (FATFS) — **blocked on the SD pin map** (`board_config.h` `TODO(verify)`). | + `fatfs`, `sdmmc` | blocked |
-| **D+** | later | + ES8311 audio | + `esp_codec_dev` | next |
+| Phase | flags | What runs | State |
+|---|---|---|---|
+| **A** | display off | board smoke: NVS init, targeted I²C probe (touch / TCA9554 / RTC / IMU / codec), heap report, BOOT button click + long-press | ✅ |
+| **B** | `CONFIG_BDSP_ENABLE_DISPLAY` | + CO5300 QSPI display (`esp_lcd_sh8601` driver), LVGL, polled touch, the real UI | ✅ on hardware |
+| **D** | + `CONFIG_BDSP_ENABLE_BLE` | + NimBLE GATT peripheral (`BleTransport`): one service, eight characteristics (State / Event / DeviceInfo / Settings / Time / UiConfig / OTA / Asset), CBOR (OTA and Asset use raw framing). Advertises "BlitzerdeDsp". BOOT long-press flips `MuxTransport` between the live link and the mock demo. | ✅ verified with `tools/fake_app.py` (the OTA transfer itself: not yet run) |
+| **C** | (when a card is present) | + microSD over FATFS on the SPI2 bus **shared with the LCD** (mutex + synchronous flush), long file names on | ✅ 14.6 GB card mounts; BLE asset upload 23/23 |
+| **D+** | + `CONFIG_BDSP_ENABLE_AUDIO` | + ES8311 audio over I²S: tones, composed voice announcements streamed from the card on a dedicated task, app-adjustable volume | ✅ plays in real time |
 
 Data path: `MuxTransport(ble, mock)` → `AppRunner` → `AppStateMachine` → `ScreenManager`. The mux
 routes to BLE by default; a BOOT long-press starts the mock demo script and routes to it instead.
@@ -48,9 +48,9 @@ fit in the 64 KB default. The panel is a **CO5300** (`0xDA` → `0xFF`), not an 
 ## Environment
 
 ```powershell
-$env:IDF_PATH = "D:\esp\esp-idf"; $env:IDF_TOOLS_PATH = "D:\esp\tools"
-. D:\esp\esp-idf\export.ps1
-cd D:\Recent\Projects\BlitzerdeDsp\firmware
+$env:IDF_PATH = "<path-to>\esp-idf"; $env:IDF_TOOLS_PATH = "<path-to>\esp-tools"   # ESP-IDF 5.3.2
+. $env:IDF_PATH\export.ps1
+cd <path-to-repo>\firmware
 ```
 
 ## Build / flash / monitor
@@ -77,7 +77,14 @@ Hold **BOOT** while plugging in only if auto-download fails.
 | `esp_display.cpp` | SH8601/CO5300 QSPI panel + the `lv_display_t` + brightness |
 | `esp_touch.cpp` | FT6x36 polled + the `lv_indev_t` |
 | `esp_lvgl.cpp` | LVGL tick timer, recursive port mutex, handler task |
-| `esp_misc.cpp` | PCF85063 RTC, QMI8658 IMU stub, battery ADC stub |
+| `esp_storage.cpp` | microSD (FATFS over the shared SPI2 bus, `hal::Storage`) |
+| `esp_audio.cpp` | ES8311 codec + I²S output (`hal::AudioDriver`) |
+| `esp_misc.cpp` | PCF85063 RTC (implemented); QMI8658 IMU and battery ADC are stubs |
 
-`board_config.h` is the single pin source. Values marked `TODO(verify)` (battery ADC,
-I²S pins, SD pins, TE) still need the C6 schematic.
+`board_config.h` is the single pin source. SD and I²S pins were taken from Waveshare's examples
+and are in use. Values still marked `TODO(verify)` (battery ADC pin + divider, TE line, TCA9554
+P0–P6, IMU address) need the C6 schematic.
+
+Memory today (everything enabled): ~137 KB internal RAM free after LVGL init, ~41 KB in steady
+state (~39 KB while BLE-connected and playing audio). The draw buffer is one 466×100 DMA buffer;
+the app image is ~1.9 MiB of a 3 MiB OTA slot.

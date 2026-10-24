@@ -126,8 +126,9 @@ safe default, top) and **"Zurücksetzen"** (plain, below). Confirm → `system_r
 the Connect screen like a first boot.
 
 **Update-info panel** — full-screen, tap anywhere (or the down-chevron) to close. Explains that
-firmware updates arrive automatically over Bluetooth through the BlitzerdeDsp app.
-`TODO(verify)`: OTA-over-BLE is not implemented yet — the panel is a promise for now.
+firmware updates arrive automatically over Bluetooth through the companion app. OTA-over-BLE is
+implemented (characteristic `0007`); while an image streams in, a full-screen "Update NN %" layer
+covers the UI. The end-to-end transfer on hardware is still to be verified (see `testing.md`).
 
 ## 5.7 Handy verbinden
 

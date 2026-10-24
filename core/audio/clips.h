@@ -23,6 +23,9 @@ inline constexpr int kClipCount = static_cast<int>(Clip::_Count);
 // Path relative to the SD audio root (BSP_SD_MOUNT_POINT "/audio/").
 const char* clip_path(Clip c);
 
+// True for the event chimes (as opposed to the spoken phrases).
+inline constexpr bool is_tone(Clip c) { return c <= Clip::ToneClear; }
+
 // True for the tones that are also compiled into flash.
 inline constexpr bool has_flash_fallback(Clip c) {
     return c == Clip::ToneWarn || c == Clip::ToneInfo;

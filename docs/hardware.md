@@ -37,7 +37,7 @@
 | Controller IC | **CO5300** — confirmed on hardware: ID reg `0xDA` reads `0xFF`. Driven by `esp_lcd_sh8601` v2.0.1 without issue (`disp_on_off` succeeds). | S1, S4, on-target |
 | Init sequence | 7 vendor commands in S4 (`0x44 0x01 0xD1`, `0x35 0x00`, `0x53 0x20`, …) | S4 |
 | Clock | 40 MHz, quad mode, `SPI_DMA_CH_AUTO`, max transfer `H*V*16/8` | S4 |
-| LVGL buffers | 2 × `466 × 50 × 2` bytes, `MALLOC_CAP_DMA`, partial render mode | S4 |
+| LVGL buffers | Waveshare example: 2 × `466 × 50 × 2` bytes, `MALLOC_CAP_DMA`, partial render. **This firmware:** one `466 × 100 × 2` buffer (same RAM, half the bands per frame; the flush is synchronous because SPI2 is shared with the SD card) | S4, on-target |
 | Brightness | DCS command (init enables brightness block via `0x53 0x20`); **`TODO(verify)` exact command (`0x51`?) against CO5300/SH8601 datasheet** | S4 |
 
 ### Pin map (`firmware/main/board_config.h` is the single source)
@@ -75,7 +75,7 @@
 - I²C bus at SDA=18 / SCL=8 works; every expected device ACKs its address:
   touch `0x38`, TCA9554 `0x20`, PCF85063 `0x51`, **QMI8658 `0x6B`** (SA0 = 1), ES8311 `0x18`.
 - BOOT button on **`GPIO9`** (input, pull-up) — click / long-press read fine.
-- RAM after LVGL + display + full UI: ~172 KB internal free, largest block ~144 KB. Fits with margin.
+- RAM (phase-B snapshot): ~172 KB internal free after LVGL + display + full UI. With BLE, audio and the SD card enabled the steady state is ~41 KB (see `firmware-bringup.md`) — tight.
 - Touch reports coordinates when the panel is touched; the FT6x36 occasionally NACKs a poll while
   the panel DMA is busy (mitigated with a 100 kHz bus + one retry + silenced `i2c.master` log).
 
@@ -98,7 +98,7 @@ card ops briefly stall the display, which is fine (they're rare). FATFS also nee
 ## `TODO(verify)` — still needs the C6 schematic PDF (`docs/vendor/`)
 
 - Battery-sense ADC GPIO + divider ratio; charge-status signal; charge IC part.
-- TE (tearing-effect) line — init enables TE output (`0x35 0x00`); is a GPIO wired to the ESP?
+- TE (tearing-effect) line — init enables TE output (`0x35 0x00`); is a GPIO wired to the ESP? (Not used today; a fast full-screen slide can tear — see `ui-spec.md` 5.8.)
 - PWR button behaviour.
 - Full TCA9554 pin assignment (what P0–P6 control: resets? SD power? backlight?).
 - Touch axis orientation vs. the panel (needs an interactive calibration check).

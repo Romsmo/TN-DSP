@@ -1,7 +1,6 @@
 # BlitzerdeDsp — project summary & current status
 
-_Snapshot: 2026-09-06, `main` @ `91002d4` (52 commits, started 2026-08-29). Host suite: 70 test
-cases / 553 assertions green under `-Werror`. Board flashed at `2751f7c` (HEAD is docs-only on top)._
+_Snapshot: 2026-10-24, `main` after the publication-readiness pass. Host suite: 73 test cases / 560 assertions green under `-Werror`._
 
 ## 1. What it is
 
@@ -126,8 +125,9 @@ type + "in" + distance bucket (100/200/300/500/800 m, rounded down). Clips are 1
 WAV **streamed from SD in 1 KB chunks** (loading a clip whole ran out of RAM); `warn`/`info` chimes
 are also embedded in flash as a no-SD fallback. The master gate is `Settings.soundEnabled`;
 volume is app-adjustable and applied live to the codec. Voice clips are **German Windows-SAPI TTS
-placeholders** generated and uploaded by [`tools/gen_voice.py`](../tools/gen_voice.py) — replace with
-real recordings later ([`audio-assets.md`](audio-assets.md)).
+placeholders that are not distributed** (redistribution terms unclear): [`tools/gen_voice.py`](../tools/gen_voice.py)
+generates and uploads them locally. Without them a voice cue degrades to the event chime
+([`audio-assets.md`](audio-assets.md)).
 
 ### Persistence & resilience
 
@@ -196,8 +196,8 @@ real recordings later ([`audio-assets.md`](audio-assets.md)).
 **Waiting on the owner**
 - `BSP_PAIR_URL` — the real app-store / smart link for the Connect-screen QR.
 - Finalise the BLE UUID base (still provisional; defined once in `ble_uuids.h`).
-- GitHub repo / organisation. (`LICENSE` is MIT, © R. Smolenski.)
-- Real voice recordings to replace the TTS clips.
+- Repo naming and visibility decision (target repo `Romsmo/TN-DSP`). (`LICENSE` is MIT, © R. Smolenski.)
+- Real voice recordings (or a decision to ship none) — the TTS placeholders are not published.
 
 **Verify on hardware**
 - OTA cycle; UiConfig write round-trip; audible quality; swipe tear.
@@ -207,12 +207,7 @@ real recordings later ([`audio-assets.md`](audio-assets.md)).
 - The sign **left/right placement and "this replaces that" families** (e.g. Halteverbot 283/286, Überholverbot 276/277/280/281, 282 cancelling streckenverbote) currently live in `fake_app.py` (`SIGN_GROUPS`, `SIGN_CANCELS`, `sign_side`). The real app must reproduce them — the device only renders `leftSigns` / `rightSigns` as sent.
 - The app owns hazard-category filtering (`filterBits`), the audio cue decision, volume, and OTA delivery.
 
-**Doc debt (stale text spotted while writing this)**
-- `README.md` Status paragraph still says SD/audio wait on the pin map.
-- `docs/firmware-bringup.md` phase table still lists SD as blocked and audio as "next".
-- `docs/ui-spec.md` §5.6 still carries `TODO(verify): OTA-over-BLE is not implemented yet`.
-- `board_config.h` audio block still says `TODO(verify) pins` (they were recovered and are in use).
-- `docs/m9-completion-plan.md` status block predates the verification above; CI's firmware job comment calls the HAL "skeletons".
+**Doc debt** — the stale README status, bring-up table, ui-spec OTA note, board_config audio comment, M9 plan status and CI comment were fixed in the publication-readiness pass (2026-10-24).
 
 ## 9. Build & run cheat sheet
 
