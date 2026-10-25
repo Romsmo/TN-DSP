@@ -36,14 +36,24 @@ void AppStateMachine::on_state(const DisplayState& s) {
 
     DisplayState filtered = s;
     apply_filter(filtered, settings_.filter);
+    // No announcements outside a trip (the display ignores hazards/prompts then too).
+    if (!filtered.driveActive) filtered.audioCue.reset();
 
     effective_ = filtered;
     have_live_ = true;
     cache_.put(filtered);
 }
 
+Presence AppStateMachine::presence() const {
+    if (demo_) return Presence::Driving;
+    if (link_ != transport::LinkStatus::Connected) return Presence::Offline;
+    if (!have_live_ || !effective_.driveActive) return Presence::Idle;
+    return Presence::Driving;
+}
+
 void AppStateMachine::open_melden() {
     if (!ui_.meldenPage) return;   // page stripped by the app
+    if (presence() != Presence::Driving) return;   // only Settings is offered outside a trip
     nav_ = Screen::Melden;
     melden_deadline_ms_ = 0;  // set on next tick
     sink_.emit(DeviceEvent{ReportPressed{}});
@@ -96,6 +106,11 @@ void AppStateMachine::toggle_demo() { demo_ = !demo_; }
 void AppStateMachine::tick(uint64_t now_ms, uint32_t now_epoch_s) {
     if (start_epoch_s_ == 0 && now_epoch_s != 0) start_epoch_s_ = now_epoch_s;
 
+    const bool driving = presence() == Presence::Driving;
+
+    // Melden is part of the trip UI: leave it the moment the trip (or the link) ends.
+    if (!driving && nav_ == Screen::Melden) nav_ = Screen::Home;
+
     // Melden idle timeout.
     if (nav_ == Screen::Melden) {
         if (melden_deadline_ms_ == 0) melden_deadline_ms_ = now_ms + kMeldenTimeoutMs * kMs;
@@ -106,7 +121,7 @@ void AppStateMachine::tick(uint64_t now_ms, uint32_t now_epoch_s) {
 
     // Confirm prompt lifetime (edge-triggered, latched so it doesn't re-arm after
     // the user answers / it times out while the app still has the flag set).
-    const bool want_confirm = effective_.confirmPromptActive;
+    const bool want_confirm = driving && effective_.confirmPromptActive;
     if (!want_confirm) {
         confirm_showing_ = false;
         confirm_handled_ = false;               // ready for the next prompt
@@ -165,9 +180,11 @@ void AppStateMachine::recompute(uint64_t now_ms, uint32_t now_epoch_s) {
             vm.confirmSecondsLeft =
                 static_cast<uint8_t>((confirm_deadline_ms_ - now_ms + 999) / 1000);
         }
-    } else if (effective_.hazardActive && ui_.hazardOverlay) {
+    } else if (presence() == Presence::Driving && effective_.hazardActive && ui_.hazardOverlay) {
         vm.overlay = OverlayKind::Hazard;
     }
+
+    vm.presence = presence();
 
     vm.ui = ui_;
     vm_ = vm;

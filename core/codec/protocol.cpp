@@ -16,7 +16,7 @@ namespace {
 enum SK {
     SK_VER = 0, SK_FLAGS1 = 1, SK_SPEED = 2, SK_SPEED_UNIT = 3, SK_HAZ_TYPE = 4,
     SK_HAZ_DIST = 5, SK_HAZ_SPEED = 6, SK_CONFIRM_TO = 7, SK_SEQ = 8, SK_EPOCH = 9,
-    SK_PEERS = 10, SK_LEFT = 11, SK_RIGHT = 12, SK_CUE = 13,
+    SK_PEERS = 10, SK_LEFT = 11, SK_RIGHT = 12, SK_CUE = 13, SK_DRIVE = 14,
 };
 enum SF {
     SF_INTERNET = 1 << 0, SF_ARROWS = 1 << 1, SF_HAZARD = 1 << 2,
@@ -72,6 +72,7 @@ size_t encode_state(const DisplayState& s, uint8_t* out, size_t cap) {
     if (!s.leftSigns.empty()) ++n;
     if (!s.rightSigns.empty()) ++n;
     if (s.audioCue) ++n;
+    if (!s.driveActive) ++n;   // key 14 is written only when false (absent == true)
 
     w.map(n);
     w.kv(SK_VER, kVersion);
@@ -103,6 +104,7 @@ size_t encode_state(const DisplayState& s, uint8_t* out, size_t cap) {
         if (c.speedValue) w.kv(CK_SPEED, static_cast<uint64_t>(*c.speedValue));
         w.kv(CK_UNIT, static_cast<uint64_t>(c.speedUnit));
     }
+    if (!s.driveActive) w.kv_bool(SK_DRIVE, false);
     return w.ok() ? w.size() : 0;
 }
 
@@ -246,6 +248,7 @@ bool decode_state(const uint8_t* in, size_t len, DisplayState& out) {
                 }
                 break;
             }
+            case SK_DRIVE: out.driveActive = r.read_bool(); break;
             case SK_CUE: {
                 AudioCue c;
                 const size_t cn = r.enter();

@@ -15,6 +15,7 @@ LVGLIMG="tools/LVGLImage.py"
 
 SIGN_SIZE="${SIGN_SIZE:-64}"    # side-column / hazard sign
 ICON_SIZE="${ICON_SIZE:-40}"    # UI glyphs (rendered smaller, recoloured at use)
+LOGO_W="${LOGO_W:-252}"      # the TNV monogram (Home "idle" screen), width in px, aspect kept
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -38,7 +39,11 @@ mkdir -p ui/assets/icons "$work/icons"
 for svg in tools/icons/svg/*.svg; do
   name="$(basename "$svg" .svg)"
   var="ic_$(sanitize "$name")"
-  "$RSVG" -w "$ICON_SIZE" -h "$ICON_SIZE" -a "$svg" -o "$work/icons/$var.png"
+  if [ "$name" = "tnv-logo" ]; then
+    "$RSVG" -w "$LOGO_W" -a "$svg" -o "$work/icons/$var.png"
+  else
+    "$RSVG" -w "$ICON_SIZE" -h "$ICON_SIZE" -a "$svg" -o "$work/icons/$var.png"
+  fi
   echo "$name $var" >> ui/assets/icons/_index.txt
 done
 "$PY" "$LVGLIMG" --ofmt C --cf A8 --compress NONE -o ui/assets/icons "$work/icons"

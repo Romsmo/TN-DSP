@@ -53,6 +53,15 @@ HomeScreen::HomeScreen(lv_obj_t* parent) {
     lv_obj_set_style_image_recolor_opa(gimg, LV_OPA_COVER, 0);
     lv_obj_center(gimg);
 
+    // The app's TNV monogram, white on black, centred while connected but not on a trip.
+    logo_ = lv_image_create(root_);
+    lv_image_set_src(logo_, ui::assets::icon(ui::assets::Icon::TnvLogo));
+    lv_obj_set_style_image_recolor(logo_, tok::col(tok::kRoadMark), 0);
+    lv_obj_set_style_image_recolor_opa(logo_, LV_OPA_COVER, 0);
+    lv_obj_add_flag(logo_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(logo_, LV_OBJ_FLAG_CLICKABLE);
+    place_center(logo_, 233, 233);
+
     place_center(badge_->root(), 112, 92);
     place_center(road_->root(), 233, kRoadY);
     place_center(sign_->root(), 233, 310);
@@ -66,7 +75,15 @@ HomeScreen::~HomeScreen() = default;
 
 void HomeScreen::on_plus(std::function<void()> cb) { plus_->on_press(std::move(cb)); }
 void HomeScreen::on_settings(std::function<void()> cb) { settings_cb_ = std::move(cb); }
-void HomeScreen::show_swipe_hint() { plus_->show_hint(); }
+void HomeScreen::show_swipe_hint() {
+    if (presence_ == core::Presence::Driving && ui_.meldenPage) plus_->show_hint();
+}
+
+void HomeScreen::set_presence(core::Presence p) {
+    if (p == presence_) return;
+    presence_ = p;
+    set_state(state_);
+}
 
 void HomeScreen::set_ui_config(const core::UiConfig& c) {
     ui_ = c;
@@ -74,18 +91,32 @@ void HomeScreen::set_ui_config(const core::UiConfig& c) {
         if (on) lv_obj_remove_flag(o, LV_OBJ_FLAG_HIDDEN);
         else lv_obj_add_flag(o, LV_OBJ_FLAG_HIDDEN);
     };
-    vis(gear_, c.gearButton);
-    vis(plus_->root(), c.meldenPage);
-    set_state(state_);   // re-apply element visibility that depends on the config
+    vis(gear_, c.gearButton);   // Settings stays reachable in every presence
+    set_state(state_);   // re-apply element visibility that depends on the config (and the "+")
 }
 
 void HomeScreen::set_state(const core::DisplayState& s) {
     state_ = s;
 
-    badge_->set(s.internetConnected, ui_.peerCount ? s.networkPeers : 0);
+    auto vis = [](lv_obj_t* o, bool on) {
+        if (on) lv_obj_remove_flag(o, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(o, LV_OBJ_FLAG_HIDDEN);
+    };
+    const bool driving = presence_ == core::Presence::Driving;
+    const bool linked = presence_ != core::Presence::Offline;
 
-    const bool hazard = s.hazardActive;
-    road_->set_visible(s.directionArrows && !hazard && ui_.directionArrows);
+    // The globe is crossed out whenever there is no internet — and whenever there is no app
+    // to tell us (offline), because then we know nothing at all.
+    const bool online = linked && s.internetConnected;
+    badge_->set(online, (online && ui_.peerCount) ? s.networkPeers : 0, linked);
+
+    // Outside a trip only the badge, the gear and (idle) the logo are on screen.
+    vis(logo_, presence_ == core::Presence::Idle);
+    vis(plus_->root(), driving && ui_.meldenPage);
+    vis(sign_->root(), driving);
+
+    const bool hazard = driving && s.hazardActive;
+    road_->set_visible(driving && s.directionArrows && !hazard && ui_.directionArrows);
 
     std::optional<int> shown = s.speedLimit;
     if (hazard && s.hazardSpeedLimit) shown = s.hazardSpeedLimit;
@@ -94,7 +125,7 @@ void HomeScreen::set_state(const core::DisplayState& s) {
     // The context-sign columns step aside while a hazard overlay is up so the
     // hazard icon + distance bar own the flanks — and stay hidden if the app
     // stripped them entirely.
-    const bool cols = ui_.signColumns && !hazard;
+    const bool cols = driving && ui_.signColumns && !hazard;
     for (lv_obj_t* col : {left_->root(), right_->root()}) {
         if (cols) lv_obj_remove_flag(col, LV_OBJ_FLAG_HIDDEN);
         else lv_obj_add_flag(col, LV_OBJ_FLAG_HIDDEN);

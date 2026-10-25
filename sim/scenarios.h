@@ -5,7 +5,7 @@
 
 namespace sim {
 
-enum class Nav { Home, Melden, Settings, ConnectOverlay };
+enum class Nav { Home, Melden, Settings, ConnectOverlay, Offline };   // Offline: bonded, link down
 
 struct Scenario {
     const char*        key;    // single keyboard key, e.g. "1"

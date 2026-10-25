@@ -83,6 +83,9 @@ private:
     Tile      current_ = Tile::Home;
     Overlay   overlay_ = Overlay::None;
     core::DisplayState state_{};
+    bool               hazard_allowed_ = false;   // the view model wants the hazard overlay up
+
+    void apply_hazard();
     int       last_speed_kmh_ = 50;
     bool      use_mph_ = false;
 };

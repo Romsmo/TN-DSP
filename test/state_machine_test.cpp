@@ -85,6 +85,7 @@ TEST_CASE("Melden activity resets the idle timeout") {
     Rig r;
     r.sm.set_bonded(true);
     r.sm.on_link(LinkStatus::Connected);
+    r.sm.on_state(r.live(1));   // a trip is running: Melden is available
     r.sm.open_melden();
     r.tick(10000);
     r.sm.melden_activity();
@@ -282,4 +283,106 @@ TEST_CASE("toggle_demo flips the flag and shows in the view") {
     CHECK(r.sm.demo());
     CHECK(r.sm.view().demo);
     CHECK(r.sm.view().screen != Screen::Connect);   // demo bypasses the connect gate
+}
+
+// ── presence: Offline / Idle (connected, no trip) / Driving ─────────────────────────────────
+
+TEST_CASE("presence: offline without a link, idle before the first State, driving once a trip runs") {
+    Rig r;
+    r.sm.set_bonded(true);
+    r.sm.on_link(LinkStatus::Disconnected);
+    r.tick();
+    CHECK(r.sm.view().presence == Presence::Offline);
+
+    r.sm.on_link(LinkStatus::Connected);          // connected, nothing received yet
+    r.tick();
+    CHECK(r.sm.view().presence == Presence::Idle);
+
+    r.sm.on_state(r.live(1));                     // driveActive defaults to true
+    r.tick();
+    CHECK(r.sm.view().presence == Presence::Driving);
+
+    DisplayState off = r.live(2);
+    off.driveActive = false;                      // the app ended the trip
+    r.sm.on_state(off);
+    r.tick();
+    CHECK(r.sm.view().presence == Presence::Idle);
+
+    r.sm.on_link(LinkStatus::Advertising);        // app went away (or fell silent)
+    r.tick();
+    CHECK(r.sm.view().presence == Presence::Offline);
+}
+
+TEST_CASE("presence: a reconnect starts idle again until the app speaks") {
+    Rig r;
+    r.sm.set_bonded(true);
+    r.sm.on_link(LinkStatus::Connected);
+    r.sm.on_state(r.live(5));
+    r.tick();
+    REQUIRE(r.sm.view().presence == Presence::Driving);
+
+    r.sm.on_link(LinkStatus::Disconnected);
+    r.sm.on_link(LinkStatus::Connected);          // the cached State must not count as live
+    r.tick();
+    CHECK(r.sm.view().presence == Presence::Idle);
+}
+
+TEST_CASE("only Settings is offered outside a trip: no Melden, no overlays, no announcements") {
+    Rig r;
+    r.sm.set_bonded(true);
+    r.sm.on_link(LinkStatus::Connected);
+
+    DisplayState s = r.live(1);
+    s.driveActive = false;
+    s.hazardActive = true;
+    s.hazardType = HazardType::Accident;
+    s.confirmPromptActive = true;
+    AudioCue cue;
+    cue.seq = 3;
+    s.audioCue = cue;
+    r.sm.on_state(s);
+    r.tick();
+
+    CHECK(r.sm.view().presence == Presence::Idle);
+    CHECK(r.sm.view().overlay == OverlayKind::None);       // neither hazard nor prompt
+    CHECK_FALSE(r.sm.effective_state().audioCue.has_value());   // so nothing is announced
+
+    r.sm.open_melden();
+    r.tick();
+    CHECK(r.sm.view().screen == Screen::Home);              // refused
+    CHECK_FALSE(r.sink.has(EventTag::ReportPressed));
+
+    r.sm.open_settings();
+    r.tick();
+    CHECK(r.sm.view().screen == Screen::Settings);          // Settings always works
+}
+
+TEST_CASE("Melden is refused offline and closed when the trip or the link ends") {
+    Rig r;
+    r.sm.set_bonded(true);
+    r.sm.on_link(LinkStatus::Disconnected);
+    r.sm.open_melden();
+    r.tick();
+    CHECK(r.sm.view().screen == Screen::Home);
+
+    r.sm.on_link(LinkStatus::Connected);
+    r.sm.on_state(r.live(1));
+    r.sm.open_melden();
+    r.tick();
+    REQUIRE(r.sm.view().screen == Screen::Melden);
+
+    DisplayState off = r.live(2);
+    off.driveActive = false;
+    r.sm.on_state(off);
+    r.tick();
+    CHECK(r.sm.view().screen == Screen::Home);              // trip ended: Melden closes
+}
+
+TEST_CASE("demo mode always drives") {
+    Rig r;
+    r.sm.set_bonded(true);
+    r.sm.toggle_demo();
+    r.sm.on_link(LinkStatus::Disconnected);
+    r.tick();
+    CHECK(r.sm.view().presence == Presence::Driving);
 }

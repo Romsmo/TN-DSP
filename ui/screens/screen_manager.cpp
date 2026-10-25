@@ -127,12 +127,27 @@ void ScreenManager::set_state(const core::DisplayState& s) {
     settings_->set_units_mph(s.useMph);
     melden_->set_speed_context(last_speed_kmh_, use_mph_);
     home_->set_state(s);
-    hazard_->update(s);
+    apply_hazard();
+}
+
+// The hazard overlay follows the VIEW MODEL, not the raw packet: outside a trip, or with the
+// overlay stripped by the app, a hazard in the state must not raise it.
+void ScreenManager::apply_hazard() {
+    if (hazard_allowed_) {
+        hazard_->update(state_);
+    } else {
+        core::DisplayState quiet = state_;
+        quiet.hazardActive = false;
+        hazard_->update(quiet);
+    }
 }
 
 void ScreenManager::set_view(const core::ViewModel& vm) {
     // Feature switches: hide the elements the app stripped.
     home_->set_ui_config(vm.ui);
+    home_->set_presence(vm.presence);
+    hazard_allowed_ = vm.overlay == core::OverlayKind::Hazard;
+    apply_hazard();
     connect_->set_qr_enabled(vm.ui.connectQr);
 
     // Connect screen (its own layer, on top of everything).
@@ -167,7 +182,9 @@ void ScreenManager::set_view(const core::ViewModel& vm) {
     // Lock the tileview under the confirm prompt, on Melden (the rotary crown
     // owns all drags there), and when the Melden page has been stripped (nothing
     // to swipe to).
-    if (vm.navLocked || vm.screen == core::Screen::Melden || !vm.ui.meldenPage) {
+    // Outside a trip (no app / no trip running) Melden does not exist either.
+    if (vm.navLocked || vm.screen == core::Screen::Melden || !vm.ui.meldenPage ||
+        vm.presence != core::Presence::Driving) {
         lv_obj_remove_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);
     } else {
         lv_obj_add_flag(tv_, LV_OBJ_FLAG_SCROLLABLE);

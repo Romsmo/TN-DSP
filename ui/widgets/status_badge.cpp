@@ -45,11 +45,11 @@ StatusBadge::StatusBadge(lv_obj_t* parent) {
     set(true, 0);
 }
 
-void StatusBadge::set(bool online, uint32_t peers) {
+void StatusBadge::set(bool online, uint32_t peers, bool linked) {
     lv_image_set_src(icon_, ui::assets::icon(online ? ui::assets::Icon::Globe
-                                                    : ui::assets::Icon::WifiOff));
+                                                    : ui::assets::Icon::GlobeOff));
     lv_obj_set_style_image_recolor(
-        icon_, tok::col(online ? tok::kTextPrimary : tok::kWarnRed), 0);
+        icon_, tok::col(online ? tok::kTextPrimary : (linked ? tok::kWarnRed : tok::kTextMuted)), 0);
 
     if (online && peers > 0) {
         char buf[12];

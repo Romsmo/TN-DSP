@@ -19,6 +19,11 @@ struct DisplayState {
     bool     internetConnected = false;
     uint32_t networkPeers      = 0;      // raw count; "480K" abbreviation is a UI concern only
 
+    // Trip (Fahrt) mode of the app. false = the app is connected but no trip is running:
+    // the display shows the idle logo, ignores hazards/prompts and offers only Settings.
+    // Absent on the wire means true, so senders that predate the field keep driving.
+    bool     driveActive       = true;
+
     // Speed-limit sign (a SIGN value, shown unchanged in speedLimitUnit)
     std::optional<int> speedLimit;       // absent => no sign
     SpeedUnit          speedLimitUnit = SpeedUnit::Kmh;
@@ -53,6 +58,7 @@ struct DisplayState {
 
     bool operator==(const DisplayState& o) const {
         return internetConnected == o.internetConnected && networkPeers == o.networkPeers &&
+               driveActive == o.driveActive &&
                speedLimit == o.speedLimit && speedLimitUnit == o.speedLimitUnit &&
                directionArrows == o.directionArrows && leftSigns == o.leftSigns &&
                rightSigns == o.rightSigns &&

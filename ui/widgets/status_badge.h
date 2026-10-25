@@ -1,4 +1,4 @@
-// ui/widgets/status_badge.h — globe icon + peer count; "no signal" icon when offline.
+// ui/widgets/status_badge.h — globe icon + peer count; a crossed-out globe when offline.
 #pragma once
 
 #include <cstdint>
@@ -11,7 +11,10 @@ class StatusBadge {
 public:
     explicit StatusBadge(lv_obj_t* parent);
 
-    void set(bool online, uint32_t peers);
+    // `online`: the app reports internet. `linked`: an app is connected at all — it only
+    // changes the colour of the crossed-out globe (red = the app says "no internet",
+    // grey = nobody is there to ask).
+    void set(bool online, uint32_t peers, bool linked = true);
     lv_obj_t* root() { return root_; }
 
 private:

@@ -93,8 +93,8 @@ void load_static(const sim::Scenario& sc) {
     g_current = &sc;
     g_demo = false;
     g_transport.stop();
-    const bool connected = sc.nav != sim::Nav::ConnectOverlay;
-    g_sm.set_bonded(connected);
+    const bool connected = sc.nav != sim::Nav::ConnectOverlay && sc.nav != sim::Nav::Offline;
+    g_sm.set_bonded(sc.nav != sim::Nav::ConnectOverlay);
     g_sm.on_link(connected ? transport::LinkStatus::Connected
                            : transport::LinkStatus::Disconnected);
     core::DisplayState st = sc.state;
@@ -218,7 +218,7 @@ int main(int argc, char** argv) {
 
     lv_sdl_mouse_create();
     SDL_AddEventWatch(event_watch, nullptr);
-    std::printf("keys: 1-7 scenarios | d demo | s screenshot | S dump all | q quit\n");
+    std::printf("keys: 1-9 scenarios | d demo | s screenshot | S dump all | q quit\n");
     if (demo_start) toggle_demo();
     else load_static(sim::scenario_at(0));
 

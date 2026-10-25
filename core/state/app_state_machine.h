@@ -64,6 +64,9 @@ public:
     void toggle_demo();
 
     // ── outbound ───────────────────────────────────────────────────────────
+    // Offline / Idle / Driving — derived from the link, whether a live State has arrived
+    // since the connect, and its driveActive flag. Demo mode always drives.
+    Presence            presence() const;
     const ViewModel&    view() const { return vm_; }
     const DisplayState& effective_state() const { return effective_; }
     bool                demo() const { return demo_; }

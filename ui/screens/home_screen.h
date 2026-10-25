@@ -7,6 +7,7 @@
 
 #include "core/model/display_state.h"
 #include "core/model/ui_config.h"
+#include "core/state/view_model.h"
 #include "lvgl.h"
 
 namespace ui {
@@ -27,6 +28,9 @@ public:
 
     void set_state(const core::DisplayState& s);
     void set_ui_config(const core::UiConfig& c);  // hide stripped elements
+    // Offline: black + crossed-out globe + gear only. Idle (app connected, no trip): the TNV
+    // logo in the middle. Driving: the full UI.
+    void set_presence(core::Presence p);
     void on_plus(std::function<void()> cb);      // "+" tapped -> Melden
     void on_settings(std::function<void()> cb);  // gear long-pressed / strong swipe-up -> Settings
     void show_swipe_hint();
@@ -42,8 +46,10 @@ private:
     std::unique_ptr<SignColumn>  right_;
     std::unique_ptr<PlusButton>  plus_;
     lv_obj_t*                    gear_ = nullptr;
+    lv_obj_t*                    logo_ = nullptr;   // TNV monogram, shown when idle
     std::function<void()>        settings_cb_;
 
+    core::Presence     presence_ = core::Presence::Driving;
     core::DisplayState state_{};
     core::UiConfig     ui_{};
 };

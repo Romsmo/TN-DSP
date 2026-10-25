@@ -11,7 +11,14 @@ namespace core {
 enum class Screen : uint8_t { Home, Melden, Settings, Connect };
 enum class OverlayKind : uint8_t { None, Hazard, Confirm };
 
+// What the display may offer right now.
+//   Offline — no app link (or the app went silent): black screen, crossed-out globe, only Settings.
+//   Idle    — app connected but no trip running: the TNV logo in the middle, only Settings.
+//   Driving — app connected and a trip running: the full driving UI (speed, signs, hazards, Melden).
+enum class Presence : uint8_t { Offline, Idle, Driving };
+
 struct ViewModel {
+    Presence    presence = Presence::Driving;   // see above
     Screen      screen = Screen::Home;
     OverlayKind overlay = OverlayKind::None;
     bool        navLocked = false;      // true while the confirm prompt is up
@@ -22,7 +29,7 @@ struct ViewModel {
     UiConfig    ui{};                   // which pages / elements are enabled
 
     bool operator==(const ViewModel& o) const {
-        return screen == o.screen && overlay == o.overlay && navLocked == o.navLocked &&
+        return presence == o.presence && screen == o.screen && overlay == o.overlay && navLocked == o.navLocked &&
                cacheStale == o.cacheStale && linkDown == o.linkDown && demo == o.demo &&
                confirmSecondsLeft == o.confirmSecondsLeft && ui == o.ui;
     }

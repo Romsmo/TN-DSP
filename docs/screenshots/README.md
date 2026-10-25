@@ -7,7 +7,9 @@ artifact on every run.
 |---|---|---|
 | `boot.png` | startup splash, mid-sweep | Oversized free-road picture sweeping up and off the top; plays once before Home. |
 | `home.png` | speed 60, free-road picture, overtaking-ban (left), Wildwechsel + Steigung (right) | Layout matches: globe with peer count stacked under it (top-left), road picture, centred sign, "+" hard right, gear bottom. Left/right sign columns are the agreed extension of the sketch (prohibitions left, danger signs right, same size). |
-| `no-internet.png` | link up, app offline | Globe → "no signal" glyph, peer count hidden. Values from `OfflineCache`. |
+| `no-internet.png` | link up, app reports no internet | Globe **crossed out in red**, peer count hidden; the rest of the driving UI as usual. |
+| `idle.png` | app connected, `driveActive = false` | The TNV monogram in the middle, globe + peers, gear — nothing else; only Settings is available. |
+| `offline.png` | bonded, no app link | Black; grey crossed-out globe and the gear — only Settings is available. |
 | `hazard.png` | mobile camera, 600 m, limit 50 | Per-category blinking icon left of centre + distance bar right next to it, ~74 % scrim, sign shows `hazardSpeedLimit`. |
 | `melden.png` | report screen | Rotary crown: categories ride the rim, green lens at 12 o'clock marks the pick, centre hub shows it large ("Melden:" + title) and is tapped to send. |
 | `confirm.png` | `confirmPromptActive` | ~96 % scrim over Home, "Gesehen?", Ja/Nein split, countdown ring inside the bezel. |

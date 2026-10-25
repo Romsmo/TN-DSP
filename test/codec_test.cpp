@@ -207,3 +207,27 @@ TEST_CASE("truncated / malformed input decodes to false") {
     uint8_t not_a_map[] = {0x00};
     CHECK_FALSE(decode_state(not_a_map, 1, out));
 }
+
+TEST_CASE("State: driveActive travels as key 14, only when false; absent means true") {
+    uint8_t buf[256];
+
+    DisplayState on;           // default: driving
+    on.stateSeq = 1;
+    const size_t n_on = encode_state(on, buf, sizeof(buf));
+    bool has14 = false;
+    for (size_t i = 0; i + 1 < n_on; ++i) {
+        if (buf[i] == 0x0E && buf[i + 1] == 0xF4) has14 = true;
+    }
+    CHECK_FALSE(has14);                                   // nothing extra on the wire
+    DisplayState back;
+    REQUIRE(decode_state(buf, n_on, back));
+    CHECK(back.driveActive);
+
+    DisplayState off = on;
+    off.driveActive = false;
+    const size_t n_off = encode_state(off, buf, sizeof(buf));
+    CHECK(n_off == n_on + 2);                             // key 14 + false
+    REQUIRE(decode_state(buf, n_off, back));
+    CHECK_FALSE(back.driveActive);
+    CHECK(back == off);
+}

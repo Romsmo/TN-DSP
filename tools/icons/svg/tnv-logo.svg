@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="147.2" height="97.8" viewBox="8.5 7.2 147.2 97.8">
+  <!-- The TNV monogram, cropped to its own bounding box. Source: the app's logo (1024x1024,
+       white path on black); the black background square is dropped so the glyph can be
+       recoloured. Path data unchanged. -->
+  <path fill="#FFFFFF" d="M8.5 7.2L49.5 7.2L103 83.7L103 7.2L115.4 7.2L115.4 81.8L141.8 7.2L155.7 7.2L120.6 105L101.6 105L49.2 29.2L49.2 105L35.8 105L35.8 18.2L8.5 18.2Z"/>
+</svg>

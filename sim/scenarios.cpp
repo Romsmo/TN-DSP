@@ -73,6 +73,13 @@ DisplayState settings_scr() {
     return s;
 }
 
+DisplayState idle() {            // app connected, no trip running
+    DisplayState s = home();
+    s.driveActive = false;
+    s.stateSeq = 7;
+    return s;
+}
+
 DisplayState connect() {
     DisplayState s;
     s.internetConnected = false;
@@ -80,7 +87,7 @@ DisplayState connect() {
     return s;
 }
 
-const std::array<Scenario, 7> kScenarios{{
+const std::array<Scenario, 9> kScenarios{{
     {"1", "home", Nav::Home, home()},
     {"2", "no-internet", Nav::Home, no_internet()},
     {"3", "hazard", Nav::Home, hazard()},
@@ -88,6 +95,8 @@ const std::array<Scenario, 7> kScenarios{{
     {"5", "confirm", Nav::Home, confirm()},
     {"6", "settings", Nav::Settings, settings_scr()},
     {"7", "connect", Nav::ConnectOverlay, connect()},
+    {"8", "idle", Nav::Home, idle()},
+    {"9", "offline", Nav::Offline, home()},
 }};
 
 }  // namespace
