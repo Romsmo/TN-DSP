@@ -32,7 +32,7 @@ tool finds it by name (override with `--address`).
 | `python tools/fake_app.py --dry` | print the scenario packets, no BLE |
 
 Scenarios: `approach` (hazard countdown + cues), `confirm` (the Gesehen? prompt),
-`offline` (internet drop), `night` (panel dim), `signs` (sign columns + a km/h→mph switch),
+`offline` (internet drop), `idle` (connected, no trip → logo → a trip → logo again), `night` (panel dim), `signs` (sign columns + a km/h→mph switch),
 `hazards` (every `HazardType` in turn, including an unknown value → generic icon).
 
 ## Firmware update (OTA)
@@ -58,6 +58,7 @@ hazard off
 confirm 10                     raise the Gesehen? prompt for 10 s   |   confirm off
 night on|off                   night bit → panel brightness 0x50 / 0xFF
 online on|off                  internetConnected
+drive on|off                   trip running? off = connected but idle (TNV logo, only Settings)
 peers 480000
 cue approach voice mobilecam 300 50    send an AudioCue
 set sound on|off | set units km|mph | set theme 0-2 | set filter 0x7ff
@@ -93,7 +94,9 @@ printf 'speed 50\nsleep 2\nhazard ice 300\nsleep 6\nreconnect\nhazard accident 2
 | Settings sync (out) | tap **Ton** / **km·mph** on the device | `<< settings …` with the new value |
 | Time | `time 60` | serial logs `RTC set from BLE: …`; clock survives reboot |
 | Night mode | `night on` / `night off` | panel dims / restores; theme stays dark |
-| Offline badge | `online off` | “no app” badge, renders from cache |
+| No internet | `online off` | globe **crossed out in red**, no peer number; the driving UI is otherwise unchanged |
+| Trip off (idle) | `drive off` (keep the tool connected) | the **TNV logo** in the middle, globe + gear only; no "+" and no swipe into Melden; hazards in the State are ignored; `drive on` brings the driving UI back |
+| No app (offline) | close the tool / switch the PC's Bluetooth off, wait ~8 s | black screen, **grey crossed-out globe**, gear only; the gear opens Settings; Melden is not reachable |
 | Reconnect | `reconnect` then any command | UI keeps updating (no freeze on the last frame) |
 | Factory reset | Settings → Zurücksetzen → confirm | reboots, comes back on the Connect screen (re-pair) |
 

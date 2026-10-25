@@ -25,7 +25,7 @@ mark is drawn.
 
 | Element | Centre | Size | Notes |
 |---|---|---|---|
-| Status badge | (112, 92) | globe 30 | globe on top, abbreviated `networkPeers` ("480K", 14 px muted) **stacked underneath** it. |
+| Status badge | (112, 92) | globe 30 | globe on top, abbreviated `networkPeers` ("480K", 14 px muted) **stacked underneath** it; the globe is crossed out without internet (see 5.2). |
 | Free-road picture | (233, 154) | 112 × 78 | a straight road in perspective — dark-grey surface, white edge lines, dashed white centre line (`ui/widgets/road_view`, drawn from triangles + rects, not a bitmap). Shown only when `directionArrows` (the wire flag keeps its name) is set and no hazard is active. Replaced the green chevrons. |
 | Speed-limit sign | (233, 310) | Ø 196 | white disc, ~22 px red ring, ~92 px bold digits. Drawn (border + label), not a bitmap. Fades out when `speedLimit` absent. |
 | Left sign column | centred on the speed sign at x ≈ 100 | signs ~48 px | `DisplayState.leftSigns` (VzNr codes), by convention prohibitions (276 = Überholverbot …). Newest 3; if the app sends 4 the oldest falls off the top. The box shrinks to the count so a single sign sits level with the speed sign, not slid into the round bezel. |
@@ -36,16 +36,26 @@ mark is drawn.
 When `speedLimit` is absent: the sign fades out and the road moves to the vertical centre (240).
 While a hazard overlay is up, both sign columns hide so the hazard icon / distance bar own the flanks.
 
-## 5.2 No internet
+## 5.2 Presence: offline, idle, driving (since firmware 0.2)
 
-As Home, but: globe drawn with a red diagonal slash, **no** peer number. Values come from
-`OfflineCache`. When the cache is older than `Settings::cacheStaleMinutes` (default 10), the sign
-face greys slightly (`tok::kSignStale`) — just enough to read "not live".
+What the display offers depends on three things it knows: is an app linked, has a State arrived since
+the connect, and is a trip (Fahrt) running (`driveActive`). `core::AppStateMachine::presence()`
+computes it; `ui/` only renders it.
 
-The last rendered `DisplayState` is also persisted to NVS (`CacheStore`, every ~30 s), so after an
-ignition cycle the board comes up straight onto Home showing that last-known limit (greyed as
-stale) rather than the pairing screen — until the app reconnects. A factory reset wipes it, so a
-truly fresh device still starts on Connect.
+| Presence | When | On screen | What works |
+|---|---|---|---|
+| **Offline** | no app link: never connected, link dropped, or no State for 8 s (the app must keep sending while idle) | black; **grey crossed-out globe** top-left, the gear at the bottom. No speed sign, no signs, no road picture, no "+". Nothing from the cache is shown | **only Settings**: the gear opens it. No Melden (also not by swipe), no overlays |
+| **Idle** | app connected, but `driveActive = false` — or connected and no State yet | the **TNV monogram** (the app's logo, white on black, 252 × 168 px) in the middle, globe + peer count, the gear | **only Settings**. Hazards, prompts and announcements in the State are ignored; an open Melden page closes |
+| **Driving** | app connected and a trip running (`driveActive` true or absent) | the full UI of 5.1 | everything: overlays, Melden, Settings |
+
+**The globe is crossed out** (a globe with a diagonal slash and a gap around it — `Icon::GlobeOff`,
+`tools/icons/svg/globe-off.svg`) whenever there is no internet: **red** when the app reports
+`internetConnected = false` (the app knows and says so — a warning), **grey** when no app is linked at
+all (nobody to ask). The peer number is hidden in both cases. Demo mode (BOOT long-press) always drives.
+
+Not shown any more: the last-known limit greyed from the offline cache. The cache is still stored,
+but with no app the display stays black on purpose — a stale limit in a car is worse than none.
+`Settings::cacheStaleMinutes` therefore has no visible effect for now.
 
 ## 5.3 Hazard / speed-camera nearby (overlay — M4)
 

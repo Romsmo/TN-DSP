@@ -52,7 +52,7 @@ UI_BITS = ["meldenPage", "settingsPage", "hazardOverlay", "confirmOverlay", "sig
 
 # ── DisplayState keys / flags (core/codec/protocol.cpp) ──────────────────────
 (SK_VER, SK_FLAGS, SK_SPEED, SK_SPEED_UNIT, SK_HAZ_TYPE, SK_HAZ_DIST, SK_HAZ_SPEED,
- SK_CONFIRM_TO, SK_SEQ, SK_EPOCH, SK_PEERS, SK_LEFT, SK_RIGHT, SK_CUE) = range(14)
+ SK_CONFIRM_TO, SK_SEQ, SK_EPOCH, SK_PEERS, SK_LEFT, SK_RIGHT, SK_CUE, SK_DRIVE) = range(15)
 SF_INTERNET, SF_ARROWS, SF_HAZARD, SF_CONFIRM, SF_NIGHT, SF_MPH = (1 << i for i in range(6))
 
 # audioCue sub-map keys
@@ -105,7 +105,7 @@ def sign_side(vznr: str) -> str:
 # ── DisplayState builder ────────────────────────────────────────────────────
 def encode_state(*, seq, internet=True, speed=None, unit=0, arrows=False,
                  hazard=None, dist=None, hazard_speed=None, confirm=False, confirm_to=15,
-                 night=False, mph=False, peers=0, left=None, right=None, cue=None):
+                 night=False, mph=False, peers=0, left=None, right=None, cue=None, drive=True):
     flags = ((SF_INTERNET if internet else 0) | (SF_ARROWS if arrows else 0)
              | (SF_HAZARD if hazard is not None else 0) | (SF_CONFIRM if confirm else 0)
              | (SF_NIGHT if night else 0) | (SF_MPH if mph else 0))
@@ -119,6 +119,7 @@ def encode_state(*, seq, internet=True, speed=None, unit=0, arrows=False,
     if left:                    m[SK_LEFT] = list(left)
     if right:                   m[SK_RIGHT] = list(right)
     if cue:                     m[SK_CUE] = cue
+    if not drive:               m[SK_DRIVE] = False   # trip off; absent == active
     return cbor2.dumps(m)
 
 
@@ -227,6 +228,12 @@ def scenario(name):
             (2.0, s(speed=100, internet=False)),
             (5.0, s(speed=100, arrows=True, peers=480000)),
         ]
+    if name == "idle":                       # connected, no trip: logo, then a trip, then idle again
+        return [
+            (0.0, s(speed=60, arrows=True, peers=480000, drive=False)),
+            (5.0, s(**base)),
+            (11.0, s(speed=60, arrows=True, peers=480000, drive=False)),
+        ]
     if name == "night":
         return [
             (0.0, s(speed=50, arrows=True, peers=480000)),
@@ -248,10 +255,10 @@ def scenario(name):
             t += 1.5
         steps.append((t, s(**base)))
         return steps
-    raise SystemExit(f"unknown scenario {name!r}  (approach confirm offline night signs hazards)")
+    raise SystemExit(f"unknown scenario {name!r}  (approach confirm offline idle night signs hazards)")
 
 
-SCENARIOS = ["approach", "confirm", "offline", "night", "signs", "hazards"]
+SCENARIOS = ["approach", "confirm", "offline", "idle", "night", "signs", "hazards"]
 
 
 # ── async link, driven from a background event loop ─────────────────────────
@@ -262,7 +269,7 @@ class Link:
     def __init__(self, log=emit):
         self.client = None
         self.seq = 0
-        self.state = dict(speed=50, arrows=True, internet=True, peers=480000)
+        self.state = dict(speed=50, arrows=True, internet=True, peers=480000, drive=True)
         self.settings = dict(self.DEFAULT_SETTINGS)
         self.ui_bits = (1 << len(UI_BITS)) - 1   # all features on
         self.info = {}
@@ -617,7 +624,8 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
     # ── vars ───────────────────────────────────────────────────────────────
     v = dict(
         speed=tk.IntVar(value=50), mph=tk.BooleanVar(), arrows=tk.BooleanVar(value=True),
-        online=tk.BooleanVar(value=True), night=tk.BooleanVar(), peers=tk.IntVar(value=480000),
+        online=tk.BooleanVar(value=True), drive=tk.BooleanVar(value=True), night=tk.BooleanVar(),
+        peers=tk.IntVar(value=480000),
         haz=tk.StringVar(value="(keine)"), hazdist=tk.IntVar(value=400), hazspd=tk.IntVar(value=0),
         confto=tk.IntVar(value=15),
         s_sound=tk.BooleanVar(value=True), s_mph=tk.BooleanVar(), s_theme=tk.IntVar(value=0),
@@ -636,7 +644,7 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
         if v["haz"].get().startswith("Unbekannt"):
             hzv = 11
         link.send(speed=v["speed"].get(), unit=1 if v["mph"].get() else 0, mph=v["mph"].get(),
-                  arrows=v["arrows"].get(), internet=v["online"].get(), night=v["night"].get(),
+                  arrows=v["arrows"].get(), internet=v["online"].get(), drive=v["drive"].get(), night=v["night"].get(),
                   peers=v["peers"].get(),
                   left=[sign_code(x) for x in signs["left"]],
                   right=[sign_code(x) for x in signs["right"]],
@@ -644,7 +652,7 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
                   hazard_speed=v["hazspd"].get() or None if hzv is not None else None,
                   confirm=v["_conf"].get(), confirm_to=v["confto"].get())
 
-    for key in ("speed", "mph", "arrows", "online", "night", "peers", "haz", "hazdist", "hazspd"):
+    for key in ("speed", "mph", "arrows", "online", "drive", "night", "peers", "haz", "hazdist", "hazspd"):
         v[key].trace_add("write", push_state)
 
     # ── DEV TAB ────────────────────────────────────────────────────────────
@@ -675,6 +683,8 @@ def run_gui(link, connect_name=ADV_NAME, connect_addr=None):
     ttk.Checkbutton(r, text="mph", variable=v["mph"]).pack(side="left")
     ttk.Checkbutton(b, text="Freie Fahrt (Straßenbild)", variable=v["arrows"]).pack(anchor="w")
     ttk.Checkbutton(b, text="Internet verbunden", variable=v["online"]).pack(anchor="w")
+    ttk.Checkbutton(b, text="Fahrt aktiv (aus = verbunden, nur TNV-Logo + Einstellungen)",
+                    variable=v["drive"]).pack(anchor="w")
     ttk.Checkbutton(b, text="Nachtmodus (dimmt Panel)", variable=v["night"]).pack(anchor="w")
     r = ttk.Frame(b); r.pack(fill="x")
     ttk.Label(r, text="Peers").pack(side="left")
@@ -932,6 +942,7 @@ commands (state is remembered; every change re-sends the DisplayState):
   confirm [secs]             raise the confirm prompt     |   confirm off
   night on|off               night bit (dims the panel)
   online on|off              internetConnected
+  drive on|off               trip running? off = connected but idle (TNV logo, only Settings)
   peers <n>                  network peer count
   cue <approach|imminent|confirm|cleared|info> [voice|tones] [haz] [dist] [spd]
   send                       re-send the current state
@@ -1006,6 +1017,8 @@ def repl(link: Link):
                 link.send(night=(args[0] == "on"))
             elif cmd == "online":
                 link.send(internet=(args[0] == "on"))
+            elif cmd == "drive":
+                link.send(drive=(args[0] == "on"))
             elif cmd == "peers":
                 link.send(peers=int(args[0]))
             elif cmd == "cue":

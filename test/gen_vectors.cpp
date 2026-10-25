@@ -83,6 +83,7 @@ std::string j(const DisplayState& s) {
     std::optional<int> ht;
     if (s.hazardType) ht = static_cast<int>(*s.hazardType);
     return "{\"internetConnected\":" + bl(s.internetConnected) +
+           ",\"driveActive\":" + bl(s.driveActive) +
            ",\"networkPeers\":" + num(s.networkPeers) + ",\"speedLimit\":" + opt(s.speedLimit) +
            ",\"speedLimitUnit\":" + num(static_cast<int>(s.speedLimitUnit)) +
            ",\"directionArrows\":" + bl(s.directionArrows) + ",\"leftSigns\":" + arr(s.leftSigns) +
@@ -262,6 +263,17 @@ int main(int argc, char** argv) {
         t.event = AudioEvent::HazardImminent;
         tone.audioCue = t;
         add_encoded(v, "audio-cue-tone", "chime only, no hazard fields", tone, enc, dec);
+
+        DisplayState idle = bare;
+        idle.stateSeq = 13;
+        idle.internetConnected = true;
+        idle.networkPeers = 480000;
+        idle.driveActive = false;
+        add_encoded(v, "trip-off-idle-logo", "app connected, no trip: key 14 = false, the display shows the idle logo and only Settings", idle, enc, dec);
+        add_input<DisplayState>(v, "drive-key-absent-means-active", "an older sender without key 14: the trip counts as active (driveActive true)",
+                                "a200010814", dec);
+        add_input<DisplayState>(v, "drive-key-explicit-true", "key 14 = true is accepted (canonical encoders omit it)",
+                                "a3000108150ef5", dec);
 
         // hand-written inputs
         add_input<DisplayState>(v, "forward-compat-unknown-keys", "keys 99 (uint) and 100 (nested map) are unknown and must be skipped",

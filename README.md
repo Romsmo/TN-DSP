@@ -87,7 +87,7 @@ ctest --test-dir build --output-on-failure
 Run the simulator (mouse = touch):
 
 ```bash
-./build/sim/bdsp_sim            # keys 1-7 = scenarios, d = demo timeline, s = screenshot
+./build/sim/bdsp_sim            # keys 1-9 = scenarios, d = demo timeline, s = screenshot
 ./build/sim/bdsp_sim --demo     # start in the mock demo (audible warnings)
 ./build/sim/bdsp_sim --shot     # headless: write docs/screenshots/*.png
 ```

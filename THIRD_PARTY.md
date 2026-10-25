@@ -115,13 +115,20 @@ assessment, not a legal opinion; the project relies on it. Source URLs for re-ch
 The sign *shapes* are official traffic signs; showing them on a display does not make this product
 an official traffic-sign device.
 
-### Icons — `ui/assets/icons/`, sources in `tools/icons/svg/` (22 from Lucide + 1 own)
+### Icons — `ui/assets/icons/`, sources in `tools/icons/svg/` (22 from Lucide + 3 own: `car-crash`, `globe-off`, `tnv-logo`)
 
 [Lucide](https://lucide.dev) icons, ISC license (© Lucide Icons and Contributors), with the
 portions derived from Feather under the MIT license (© Cole Bemis). Both license texts are in
 [`tools/icons/LICENSE`](tools/icons/LICENSE) and must accompany redistributions. The car-crash
 icon (`tools/icons/svg/car-crash.svg`) is original work of this project (MIT), drawn in Lucide's
-style from Lucide's `car` outline plus four strokes.
+style from Lucide's `car` outline plus four strokes; the crossed-out globe (`globe-off.svg`) is Lucide's
+`globe` with a diagonal slash and a knock-out gap, also ours. The TNV monogram is separate (below).
+
+### TNV monogram — `tools/icons/svg/tnv-logo.svg`
+
+The companion app's logo (a white monogram), supplied by the maintainer and used as the display's idle
+screen. It is the maintainer's own mark: the MIT license of the code does not grant rights in the logo
+itself.
 
 ### Font — `ui/theme/fonts/`, `tools/fonts/ttf/`
 

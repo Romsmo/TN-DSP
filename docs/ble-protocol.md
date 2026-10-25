@@ -33,7 +33,7 @@ packet is 25–50 bytes.
 | | |
 |---|---|
 | Protocol version | **1** (key 0 of every CBOR map) |
-| Contract revision | **1.0.0** — tag `protocol-v1.0.0` |
+| Contract revision | **1.1.0** (additive: State key 14 `driveActive`; unreleased). Last tagged: `protocol-v1.0.0` |
 | Frozen | characteristic slots, every CBOR key number and type, flag bits, event tags, `HazardType` values, capability bits, OTA/Asset opcodes, `UiConfig` bit numbers — verified by the golden vectors in [`docs/contract/vectors/`](contract/vectors/) |
 | Decisions taken (2026-10-24) | UUID base **frozen** as shown above · security level **stays open** for v1 (see below, accepted) · the optional "report lock" flag was **dropped** ([`contract/melden-lock-proposal.md`](contract/melden-lock-proposal.md)) |
 
@@ -98,7 +98,7 @@ Machine-readable companions (generated from the firmware / reference code, check
 
 | Message | Missing key → |
 |---|---|
-| State | flags 0 · no speed sign · `speedLimitUnit` km/h · `confirmPromptTimeoutS` **15** · `stateSeq` 0 · no signs · no cue |
+| State | flags 0 · no speed sign · `speedLimitUnit` km/h · `confirmPromptTimeoutS` **15** · `stateSeq` 0 · no signs · no cue · **`driveActive` true** |
 | AudioCue | `seq` 0 (never plays) · mode tones · event info · unit km/h |
 | Settings | sound off · tones · volume **70** · theme 0 · km/h · `filterBits` **0xFFFF** · night 20–06 · cache 10 min |
 | UiConfig | all features on |
@@ -124,6 +124,19 @@ Unknown keys of any supported CBOR type are skipped; a payload that is not a CBO
 | 11 | array&lt;uint&gt; | leftSigns | VzNr codes (`major*100+minor`), prohibitions by convention, ≤ 4 on the wire; the display shows the **newest 3** (last entries). Which sign goes on which side and which signs replace each other is the **app's** job: [`contract/sign-rules.json`](contract/sign-rules.json) |
 | 12 | array&lt;uint&gt; | rightSigns | VzNr codes, danger signs by convention, ≤ 4 (display: newest 3). An unknown code renders an empty slot |
 | 13 | map | audioCue | see below; the device plays it on a new `seq` |
+| 14 | bool | driveActive | **is a trip (Fahrt) running?** Written only when `false`; **absent = `true`**, so senders that predate the field keep the driving UI. `false` = the app is connected but idle: the display shows the TNV logo and offers only Settings (hazards, prompts and announcements are ignored). Added in contract 1.1.0 |
+
+### What the display offers (presence)
+
+| Situation | Display |
+|---|---|
+| no app link (never connected, link dropped, **no State for 8 s**) | **Offline** — black, grey crossed-out globe, only the Settings gear |
+| app connected, `driveActive = false` (or no State received yet) | **Idle** — the TNV logo in the middle, globe + peers, gear; no Melden; hazards/prompts/cues ignored |
+| app connected, `driveActive` true or absent | **Driving** — the full UI |
+
+The globe is crossed out **red** when `internetConnected = false` and **grey** when no app is linked.
+So an app that is connected but not on a trip must **keep sending State** (a new `stateSeq` at least
+every 5 s, `driveActive = false`); silence for 8 s drops the display to Offline.
 
 **audioCue sub-map:** `0` seq · `1` mode (0 tones / 1 voice) · `2` event (0 approach · 1 imminent ·
 2 confirm · 3 cleared · 4 info) · `3` hazardType? · `4` distanceM? · `5` speedValue? · `6` speedUnit.

@@ -38,3 +38,4 @@ Rows are added per published release (the first one, `0.1.0`, is in a **private*
 | OTA `0007`, Asset `0008`, `hasOta` cap bit | absent | not used |
 | Settings key 9 `soundVolume` | ignores the key | omitting it leaves the device's stored volume |
 | `DeviceInfo` caps bit 5 | not set | ignored |
+| State key 14 `driveActive` (contract 1.1.0, firmware ≥ 0.2) | ignores the key and always shows the driving UI | never sends it, which means "trip running" |

@@ -1,7 +1,7 @@
 # The BLE contract
 
 Everything an app needs to talk to the display, written so it can be built without asking.
-Contract revision **1.0.0** (tag `protocol-v1.0.0`), protocol version **1**.
+Contract revision **1.1.0** (State key 14 `driveActive`; unreleased — last tag `protocol-v1.0.0`), protocol version **1**.
 
 | File | What it is | How it is kept honest |
 |---|---|---|

@@ -23,6 +23,8 @@ German summary for the maintainer: [`app-integration.de.md`](app-integration.de.
 2. Subscribe to Event / Settings / UiConfig; write **Time**; write the complete **Settings** set;
    then stream **State** with `stateSeq` starting at **1** on every connection.
 3. Send a State **on every change** and at least **every 5 s** as a keep-alive; steady rate ≤ 2/s.
+   Also while connected but **not on a trip**: send `driveActive = false` (State key 14) so the display
+   shows its logo instead of going dark after 8 s.
 4. Keep an `audioCue` (same `seq`) in following States for ≥ 1 s; keep `confirmPromptActive` set for
    the whole timeout (the device may drop superseded packets).
 5. Own the decisions the display does not make: sign columns and replacement ([`contract/sign-rules.json`](contract/sign-rules.json)),

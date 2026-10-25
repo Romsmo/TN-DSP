@@ -90,6 +90,7 @@ is synchronous.
 | Screen / layer | Behaviour |
 |---|---|
 | **Boot** | free-road picture sweeps up the screen once (skippable via UiConfig) |
+| **Presence** (0.2) | **Offline** (no app): black, crossed-out globe, only Settings · **Idle** (app connected, `driveActive = false`): the TNV logo in the middle, only Settings · **Driving**: everything below |
 | **Home** | speed-limit sign (drawn, 3-digit fits the ring), free-road picture (replaced the green chevrons), globe + peer count (abbreviated "480K"), "+" button, gear. **Left column = prohibitions, right = danger signs; newest 3 per column** (oldest drops off) |
 | **Hazard overlay** | per-category blinking icon (StVO sign where one fits, else a glyph — camera, radar, caravan, wrench, **car-crash**), distance bar, hazard speed limit replaces the sign; road picture/columns hide |
 | **Confirm ("Gesehen?")** | scrim, Ja / Nein, countdown ring; navigation locked; silent timeout |
@@ -219,7 +220,7 @@ generates and uploads them locally. Without them a voice cue degrades to the eve
 # host: tests + simulator (MSYS2/UCRT64 on Windows; -DBDSP_WERROR=ON as CI does)
 cmake -S . -B build -G Ninja -DBDSP_WERROR=ON && cmake --build build
 ctest --test-dir build --output-on-failure
-./build/sim/bdsp_sim              # keys 1-7 scenarios, d demo, s shot ; --shot headless PNGs
+./build/sim/bdsp_sim              # keys 1-9 scenarios, d demo, s shot ; --shot headless PNGs
 
 # firmware (ESP-IDF 5.3.2, run from an IDF-exported PowerShell; board on COM4)
 cd firmware && idf.py build && idf.py -p COM4 -b 921600 flash

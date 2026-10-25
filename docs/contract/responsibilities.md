@@ -9,6 +9,7 @@ about the road, the user or the data belongs to the app.
 | Hazard warnings | decides *whether and when* (`hazardActive`, `hazardType`, `hazardDistanceM`, `hazardSpeedLimit`); only sends camera categories (ids 0–4) the user switched on | draws the overlay; as a second layer it suppresses hazards of categories that are off in `filterBits` |
 | Category filter | owns the user's choice; writes `filterBits` (Settings key 5) | stores it, applies it as above; unknown/future types are always shown |
 | Context signs | picks which signs exist, which **column** each goes in and which signs **replace** each other ([`sign-rules.json`](sign-rules.json)); sends ≤ 4 per column, oldest first | renders the two lists as received (newest 3 per column); unknown codes show an empty slot |
+| Trip (Fahrt) | decides when a trip runs; sends `driveActive = false` while connected but idle and keeps sending State | idle: shows the TNV logo and only Settings; offline (no app): black, only Settings; driving: the full UI |
 | Free-road picture | sets `directionArrows` | draws it (hidden while a hazard overlay is up) |
 | Confirm prompt ("Gesehen?") | decides when; sets `confirmPromptActive` + timeout | shows it, counts down, sends `ConfirmResponse` or times out silently |
 | Report (Melden) | receives `ReportSubmitted` and decides what to do with it; may strip the page with `UiConfig` bit 0 | shows the crown, sends the event; **does not lock while driving** (a lock was considered and dropped: [`melden-lock-proposal.md`](melden-lock-proposal.md)) |
