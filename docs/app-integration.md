@@ -9,6 +9,7 @@ German summary for the maintainer: [`app-integration.de.md`](app-integration.de.
 | Need | File |
 |---|---|
 | The specification | [`ble-protocol.md`](ble-protocol.md) |
+| **Every display function as a tick-off list** | [`app-feature-checklist.md`](app-feature-checklist.md) |
 | Who decides what | [`contract/responsibilities.md`](contract/responsibilities.md) |
 | Golden vectors, categories, constants | [`contract/vectors/`](contract/vectors/) · overview [`contract/README.md`](contract/README.md) |
 | Sign placement + replacement rules | [`contract/sign-rules.json`](contract/sign-rules.json) + `contract/vectors/sign-rules.json` |

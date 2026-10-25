@@ -245,6 +245,7 @@ python tools/gen_voice.py --upload            # (re)generate + upload voice clip
 | [`testing.md`](testing.md) | BLE test-console walkthrough and the on-device checklist |
 | [`m9-completion-plan.md`](m9-completion-plan.md) | the post-plan completion milestones M9-A…E |
 | [`building.md`](building.md) | host toolchain notes |
+| [`app-feature-checklist.md`](app-feature-checklist.md) | every display function as a checklist for the app side (what to send, what to handle, what is missing) |
 | [`app-integration.md`](app-integration.md) / [`.de`](app-integration.de.md) | handover to the app side: duties, capability bits, limitations, open decisions |
 | [`contract/`](contract/README.md) | golden vectors, sign rules, responsibilities, UUID + report-lock proposals, manifest schema |
 | [`release-format.md`](release-format.md), [`compatibility.md`](compatibility.md) | update manifest, version rules, firmware ↔ app table |

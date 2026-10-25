@@ -4,6 +4,8 @@ Vertragsstand: **1.0.0** (Protokollversion 1), Tag `protocol-v1.0.0`; erstes Fir
 `fw-v0.1.0`. Die ausführliche englische Fassung steht in
 [`app-integration.md`](app-integration.md).
 
+**Funktionsliste zum Abhaken:** [`app-feature-checklist.md`](app-feature-checklist.md) — jede Funktion des Displays mit dem, was die App senden/behandeln muss, plus was das Display *nicht* kann.
+
 **Was der App-Chat bekommt:** die Spezifikation ([`ble-protocol.md`](ble-protocol.md)), die
 Zuständigkeitstabelle, getestete Golden-Vektoren aus dem echten C++-Codec, die Schild- und
 Kategorieregeln als JSON mit Testvektoren und ein reines Dart-Paket (`protocol/dart/`, 85 Tests
