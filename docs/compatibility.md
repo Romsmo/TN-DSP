@@ -26,8 +26,9 @@ apps keep working with newer firmware inside one protocol version.
 | Firmware | Protocol | Smallest app protocol | Notable | Source |
 |---|---|---|---|---|
 | `0.1.0` (tag `fw-v0.1.0`, first release) | 1 | 1 | all eight characteristics, OTA, asset upload, volume (Settings key 9), UiConfig; OTA transfer not yet verified on the board | GitHub Release `fw-v0.1.0` |
+| `0.2.0` (tag `fw-v0.2.0`, contract 1.1.0) | 1 | 1 | offline / idle / driving presence, TNV logo, crossed-out globe, State key 14 `driveActive`; not yet booted on the board | GitHub Release `fw-v0.2.0` |
 
-Rows are added per published release (the first one, `0.1.0`, is in a **private** repository for now); the manifest of each release carries the same numbers
+Rows are added per published release; the manifest of each release carries the same numbers
 (`firmware.version`, `protocol.version`, `protocol.minAppProtocol`).
 
 ## Additions inside protocol 1 (all additive, in the order they landed)

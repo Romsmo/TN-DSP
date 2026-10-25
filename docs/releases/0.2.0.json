@@ -1,0 +1,35 @@
+{
+  "changes": {
+    "de": [
+      "Neue Anzeigezustände: ohne App-Verbindung schwarz mit durchgestrichenem grauen Globus; verbunden, aber keine Fahrt aktiv: TNV-Logo in der Mitte; erst während der Fahrt die volle Anzeige",
+      "Außerhalb der Fahrt ist nur das Einstellungsmenü bedienbar (Melden, Gefahren-Overlay, Gesehen?-Abfrage und Ansagen sind gesperrt)",
+      "Internet-Symbol wirklich durchgestrichen: rot, wenn die App kein Internet meldet, grau, wenn keine App verbunden ist",
+      "BLE-Vertrag 1.1.0 (additiv, Protokollversion bleibt 1): State-Schlüssel 14 „driveActive“; fehlt er, gilt „Fahrt läuft“, ältere Apps funktionieren unverändert",
+      "Fußzeile der Einstellungen zeigt die echte Firmware-Version"
+    ],
+    "en": [
+      "New display states: no app connected = black with a crossed-out grey globe; connected but no trip running = TNV logo in the centre; the full display only while driving",
+      "Outside a trip only the settings menu is usable (report page, hazard overlay, confirm prompt and announcements are locked)",
+      "Internet icon really crossed out: red when the app reports no internet, grey when no app is connected",
+      "BLE contract 1.1.0 (additive, protocol version stays 1): State key 14 `driveActive`; absent means \"trip running\", so older apps keep working unchanged",
+      "Settings footer shows the real firmware version"
+    ]
+  },
+  "verification": {
+    "verified": [
+      "All three presence states, the crossed-out globe and the locked pages in the PC simulator (screenshots in docs/screenshots)",
+      "Host tests (79 cases), contract vectors incl. the new key-14 vectors, Dart package (88 tests), firmware build in CI"
+    ],
+    "notVerifiedOnTheBoard": [
+      "This image has not been booted on the physical display yet: the new idle / offline screens and the TNV logo are untested on the AMOLED",
+      "Everything listed as unverified for 0.1.0 is still open: the OTA transfer end to end (including the update from 0.1.0 to this version), its failure cases and the boot rollback, UiConfig write + persistence, the factory-reset flow, an audible check for crackle (test plan: docs/testing.md, Board verification)"
+    ]
+  },
+  "knownLimitations": [
+    "BLE link is open: no pairing or encryption is required, so any central in range can use every characteristic, including OTA and file upload (accepted for protocol v1).",
+    "No voice clips are included; without them voice announcements play the event chime.",
+    "While offline the display shows nothing from its cache (black screen with the crossed-out globe); the last speed limit is not kept on screen.",
+    "Melden: for a limit given in mph the pre-selected speed is the mph number, not km/h.",
+    "Speed-camera categories can be removed at build time (CONFIG_BDSP_FEATURE_SPEEDCAM=n); see the legal notice in the README."
+  ]
+}

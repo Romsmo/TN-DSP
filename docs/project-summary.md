@@ -1,6 +1,6 @@
 # BlitzerdeDsp — project summary & current status
 
-_Snapshot: 2026-10-24, firmware `0.1.0` released (tag `fw-v0.1.0`), contract `protocol-v1.0.0` (repository `Romsmo/TN-DSP`, private). Host suite: 73 test cases / 560 assertions, Dart package 85 tests, all CI jobs green._
+_Snapshot: 2026-10-25, firmware `0.2.0` released (tag `fw-v0.2.0`; earlier `fw-v0.1.0`), contract `protocol-v1.1.0` (repository `Romsmo/TN-DSP`). Host suite: 79 test cases / 584 assertions, Dart package 88 tests, all CI jobs green._
 
 ## 1. What it is
 
@@ -212,7 +212,7 @@ generates and uploads them locally. Without them a voice cue degrades to the eve
 
 **Doc debt** — the stale README status, bring-up table, ui-spec OTA note, board_config audio comment, M9 plan status and CI comment were fixed in the publication-readiness pass (2026-10-24).
 
-**Release state:** `fw-v0.1.0` (image `tn-display-0.1.0.bin`, manifest, license bundle) and the plain tag `protocol-v1.0.0` exist in the private repository. Branch protection is not available for a private repo on the free GitHub plan. The OTA transfer, UiConfig write, factory reset and an audible check are still to be run on the board (`docs/testing.md`, *Board verification*).
+**Release state:** `fw-v0.1.0` and `fw-v0.2.0` (image `tn-display-<v>.bin`, manifest, license bundle) and the plain tags `protocol-v1.0.0` / `protocol-v1.1.0` exist on GitHub. Branch protection is not available for a private repo on the free GitHub plan. The OTA transfer, UiConfig write, factory reset, an audible check and the new idle / offline screens on the AMOLED are still to be run on the board (`docs/testing.md`, *Board verification*).
 
 ## 9. Build & run cheat sheet
 

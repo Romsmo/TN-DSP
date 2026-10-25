@@ -106,7 +106,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Firmware / protocol identity
 // ─────────────────────────────────────────────────────────────────────────────
-#define BSP_FW_VERSION             "0.2.0-dev"   // keep == core/model/version.cpp (tools/check_version_sync.py)
+#define BSP_FW_VERSION             "0.2.0"       // keep == core/model/version.cpp (tools/check_version_sync.py)
 #define BSP_PROTOCOL_VERSION       1
 
 // The pairing QR on the "Handy verbinden" screen points here: the repository page,

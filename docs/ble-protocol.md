@@ -33,7 +33,7 @@ packet is 25–50 bytes.
 | | |
 |---|---|
 | Protocol version | **1** (key 0 of every CBOR map) |
-| Contract revision | **1.1.0** (additive: State key 14 `driveActive`; unreleased). Last tagged: `protocol-v1.0.0` |
+| Contract revision | **1.1.0** (additive: State key 14 `driveActive`), tagged `protocol-v1.1.0`; previous: `protocol-v1.0.0` |
 | Frozen | characteristic slots, every CBOR key number and type, flag bits, event tags, `HazardType` values, capability bits, OTA/Asset opcodes, `UiConfig` bit numbers — verified by the golden vectors in [`docs/contract/vectors/`](contract/vectors/) |
 | Decisions taken (2026-10-24) | UUID base **frozen** as shown above · security level **stays open** for v1 (see below, accepted) · the optional "report lock" flag was **dropped** ([`contract/melden-lock-proposal.md`](contract/melden-lock-proposal.md)) |
 

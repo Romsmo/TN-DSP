@@ -1,7 +1,8 @@
 # App-Übergabe — Kurzfassung (Deutsch)
 
-Vertragsstand: **1.0.0** (Protokollversion 1), Tag `protocol-v1.0.0`; erstes Firmware-Release
-`fw-v0.1.0`. Die ausführliche englische Fassung steht in
+Vertragsstand: **1.1.0** (Protokollversion 1), Tag `protocol-v1.1.0` (neu gegenüber 1.0.0: State-Schlüssel 14
+`driveActive`, additiv); Firmware-Releases `fw-v0.1.0` (Vertrag 1.0.0) und `fw-v0.2.0` (Vertrag 1.1.0).
+Die ausführliche englische Fassung steht in
 [`app-integration.md`](app-integration.md).
 
 **Funktionsliste zum Abhaken:** [`app-feature-checklist.md`](app-feature-checklist.md) — jede Funktion des Displays mit dem, was die App senden/behandeln muss, plus was das Display *nicht* kann.
@@ -26,4 +27,4 @@ Melden-Sperre · Pairing-QR zeigt auf die Repo-Seite (BLE-Name bleibt `Blitzerde
 im Release.
 
 **Noch nicht am Brett geprüft:** OTA komplett, UiConfig schreiben + Neustart, Zurücksetzen, Audio ohne
-Knistern — der Prüfplan steht in [`testing.md`](testing.md), Abschnitt „Board verification“.
+Knistern, und die neuen Bildschirme „offline“ / „Leerlauf mit TNV-Logo“ (bisher nur im Simulator) — der Prüfplan steht in [`testing.md`](testing.md), Abschnitt „Board verification“.

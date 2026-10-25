@@ -1,7 +1,7 @@
 # Release format (the interface to the app)
 
-**Status: specification; the first release `fw-v0.1.0` was published on 2026-10-24 (in the private
-repository) with the files below. Later releases follow the same recipe.**
+**Status: specification; the first release `fw-v0.1.0` was published on 2026-10-24, `fw-v0.2.0` on
+2026-10-25, with the files below. Later releases follow the same recipe.**
 
 A release is what the phone app looks for when it checks for a firmware update. Everything the app
 needs is in **`manifest.json`**; the rest are the files it points to.
@@ -70,7 +70,7 @@ characteristic (`0008`) after an update, and `categories.json` lists the exact f
 
 ## Publishing
 
-Recipe used for `fw-v0.1.0`: bump the version in `core/model/version.cpp` **and**
+Recipe used for `fw-v0.1.0` and `fw-v0.2.0`: bump the version in `core/model/version.cpp` **and**
 `firmware/main/board_config.h` (`tools/check_version_sync.py` enforces equality) → push → let CI build
 the image → download the `firmware-<sha>` artifact → `python tools/make_release.py --image … --commit <sha>`
 → tag the same commit `fw-vX.Y.Z` → `gh release create` with the files from `dist/release/` and

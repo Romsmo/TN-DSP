@@ -1,7 +1,8 @@
 # App integration — handover to the app side
 
-**Contract revision: `1.0.0`** (protocol version 1), tagged `protocol-v1.0.0`. The first firmware
-release is `fw-v0.1.0` (see `release-format.md`).
+**Contract revision: `1.1.0`** (protocol version 1), tagged `protocol-v1.1.0` (1.0.0 → 1.1.0 added
+State key 14 `driveActive`, additive). Firmware releases: `fw-v0.1.0` (contract 1.0.0) and `fw-v0.2.0`
+(contract 1.1.0) — see `release-format.md`.
 German summary for the maintainer: [`app-integration.de.md`](app-integration.de.md).
 
 ## Where everything is
@@ -79,8 +80,9 @@ the package's own (the device uses a matching minimal codec), so no CBOR licence
 - The German **voice clips are not distributed**; without them the device plays its chime.
 - `TODO(verify)` hardware items remain (brightness command, IMU/battery stubs) — none affects the
   protocol.
-- **Not verified on the board at the time of release `0.1.0`** (tracked in `testing.md`, "Board verification"):
-  the OTA transfer end to end, UiConfig write + persistence, audible clean playback, factory reset.
+- **Not verified on the board at the time of release `0.2.0`** (tracked in `testing.md`, "Board verification"):
+  the OTA transfer end to end, UiConfig write + persistence, audible clean playback, factory reset —
+  and the new idle / offline screens have only run in the simulator.
 
 ## Decisions taken (maintainer, 2026-10-24)
 
